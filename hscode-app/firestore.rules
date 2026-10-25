@@ -71,7 +71,13 @@ service cloud.firestore {
     // ---------------------------------------------------------------- invites/{code}
     match /invites/{code} {
       allow read, delete: if isAdmin();
-      allow create: if isAdmin() && code.matches('^[0-9]{6}$');
+      // Created fresh: unused, uncancelled, server-stamped, with an optional short label.
+      allow create: if isAdmin() && code.matches('^[0-9]{6}$')
+        && incoming().keys().hasOnly(['label', 'usedBy', 'cancelled', 'createdAt'])
+        && incoming().keys().hasAll(['usedBy', 'cancelled', 'createdAt'])
+        && incoming().usedBy == null && incoming().cancelled == false
+        && incoming().createdAt == request.time
+        && optString(incoming(), 'label', 80);
       // The non-admin branch is the second half of the claim: it requires the user doc written in the
       // same batch to carry this code. A non-existent code is a *create*, which only the admin may do.
       allow update: if isAdmin() || (isGoogle()
