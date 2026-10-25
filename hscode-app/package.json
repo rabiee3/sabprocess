@@ -25,6 +25,7 @@
     "firebase": "^13.1.0",
     "i18next": "^26.5.10",
     "leaflet": "^1.9.4",
+    "minisearch": "^7.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-i18next": "^17.1.8",
