@@ -1,0 +1,1 @@
+import{d as e}from"./index-DODDuUgw.js";import{t}from"./Placeholder-Do_iHiss.js";var n=e();function r(){return(0,n.jsx)(t,{titleKey:`app.tagline`})}export{r as Component};
