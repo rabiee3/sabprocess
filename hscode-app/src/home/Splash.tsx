@@ -105,7 +105,9 @@ export function Component() {
             <span className="text-sm text-white/85">{t('home.try')}</span>
             {chips.map((c) => (
               <Link key={c} to={`/map?q=${encodeURIComponent(c)}`} className={CHIP}>
-                {c}
+                <span lang={c === t('home.chipFeed') ? 'ar' : undefined} dir={c === t('home.chipFeed') ? 'rtl' : undefined}>
+                  {c}
+                </span>
               </Link>
             ))}
           </div>

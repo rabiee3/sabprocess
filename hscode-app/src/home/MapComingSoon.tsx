@@ -48,7 +48,7 @@ export function Component() {
         <p className="text-body text-white/85">{t('map.body')}</p>
         {n !== null && (
           <p className="rounded bg-brand-500 px-4 py-2 text-body font-semibold text-ink-strong">
-            {t('map.count', { n })}
+            {t('map.count', { count: n })}
           </p>
         )}
         {q && (

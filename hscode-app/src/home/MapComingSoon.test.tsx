@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { initI18n } from '../i18n'
+import { initI18n, setLanguage } from '../i18n'
 
 vi.mock('../firebase', () => ({ db: {} }))
 const getDoc = vi.fn()
@@ -41,5 +41,20 @@ describe('MapComingSoon', () => {
     setup()
     await vi.waitFor(() => expect(getDoc).toHaveBeenCalled())
     expect(screen.queryByText(/factories mapped/)).toBeNull()
+  })
+
+  it.each([
+    ['en', 1, '1 factory mapped so far'],
+    ['en', 3, '3 factories mapped so far'],
+    ['ar', 1, 'مصنع واحد على الخريطة حتى الآن'],
+    ['ar', 2, 'مصنعان على الخريطة حتى الآن'],
+    ['ar', 5, '5 مصانع على الخريطة حتى الآن'],
+    ['ar', 11, '11 مصنعًا على الخريطة حتى الآن'],
+  ] as const)('pluralises correctly (%s, %i)', async (lang, n, text) => {
+    setLanguage(lang)
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ entries: Array.from({ length: n }, () => ({})) }) })
+    setup()
+    expect(await screen.findByText(text)).toBeInTheDocument()
+    setLanguage('en')
   })
 })

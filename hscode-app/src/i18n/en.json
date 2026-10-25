@@ -419,8 +419,9 @@
   "map": {
     "title": "The map is opening soon",
     "body": "We're finishing the public map. Check back shortly.",
-    "count": "{{n}} factories mapped so far",
     "searchedFor": "You searched for:",
-    "back": "Back"
+    "back": "Back",
+    "count_one": "{{count}} factory mapped so far",
+    "count_other": "{{count}} factories mapped so far"
   }
 }
