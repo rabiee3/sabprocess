@@ -193,3 +193,32 @@ test('(f) axe: invite screen, location step and My submissions', async ({ page }
   await expect(page.getByText(/GPS .*15 m/)).toBeVisible()
   await scan('location step')
 })
+
+test('(g) an overlong Facebook URL is blocked at the contacts step with an error, not submitted', async ({ page }) => {
+  await becomeSurveyor(page, newEmail('g'), await freshInvite())
+  await page.getByRole('link', { name: en.survey.list.add }).click()
+  await fillLocation(page)
+  await fillBasics(page, 'E2E Long Link Works')
+  await next(page) // no products is fine
+  await onStep(page, 'contacts')
+
+  const fb = page.getByLabel(en.survey.contacts.facebook)
+  await expect(fb).toHaveAttribute('maxlength', '300')
+  const long = `https://facebook.com/${'x'.repeat(300)}`
+  // A real paste: the browser would cut it at maxlength silently; the form keeps it whole so validation can flag it.
+  await fb.focus()
+  await fb.evaluate((el, text) => {
+    const data = new DataTransfer()
+    data.setData('text/plain', text)
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
+  }, long)
+  await expect(fb).toHaveValue(long)
+
+  await next(page)
+  await expect(page.getByText(en.errors.tooLong.replace('{{max}}', '300'))).toBeVisible()
+  await onStep(page, 'contacts')
+
+  await page.goto('./survey')
+  await expect(page.getByRole('heading', { level: 1, name: en.survey.list.title })).toBeVisible()
+  await expect(row(page, 'E2E Long Link Works')).toHaveCount(0)
+})
