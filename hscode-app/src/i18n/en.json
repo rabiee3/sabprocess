@@ -51,8 +51,8 @@
       "pending": "Pending",
       "approved": "Approved",
       "rejected": "Rejected",
-      "savedOnPhone": "Saved on phone",
-      "uploadFailed": "Upload failed — we'll keep trying",
+      "savedOnPhone": "Saved on this phone",
+      "uploadFailed": "Couldn't upload",
       "adminReason": "Admin's reason",
       "fixResubmit": "Fix and resubmit",
       "untitled": "Untitled factory"

@@ -124,4 +124,30 @@ describe('MySubmissions', () => {
     act(() => fail('offline'))
     expect(screen.getByText(en.errors.offline)).toBeInTheDocument()
   })
+
+  it('failed chip text is not a retry promise', () => {
+    entries = [{ fid: 'z', savedAt: 1, state: 'failed', error: 'accessOff' }]
+    setup()
+    act(() => emit([], { fromCache: true }))
+    const chip = screen.getByText(en.survey.list.uploadFailed, { selector: '[data-chip]' })
+    expect(chip).toHaveTextContent("Couldn't upload")
+    expect(chip.textContent).not.toMatch(/keep trying/)
+  })
+
+  it('shows loading, not the empty state, before the first snapshot', () => {
+    setup()
+    expect(screen.getByRole('status', { name: en.common.loading })).toBeInTheDocument()
+    expect(screen.queryByText(en.survey.list.empty)).toBeNull()
+    act(() => emit([], { fromCache: true }))
+    expect(screen.queryByRole('status', { name: en.common.loading })).toBeNull()
+    expect(screen.getByText(en.survey.list.empty)).toBeInTheDocument()
+  })
+
+  it('a failed entry whose doc arrives on a server snapshot is removed', () => {
+    entries = [{ fid: 'a', savedAt: 1, state: 'failed', error: 'generic' }]
+    setup()
+    act(() => emit([item(fac('a', 'pending'), false)], { fromCache: false }))
+    expect(remove).toHaveBeenCalledWith('a')
+    expect(screen.queryByText(en.survey.list.uploadFailed)).toBeNull()
+  })
 })

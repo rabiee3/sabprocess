@@ -51,8 +51,8 @@
       "pending": "قيد المراجعة",
       "approved": "مقبول",
       "rejected": "مرفوض",
-      "savedOnPhone": "محفوظ على الهاتف",
-      "uploadFailed": "فشل الرفع — سنعيد المحاولة",
+      "savedOnPhone": "محفوظ على هذا الهاتف",
+      "uploadFailed": "تعذّر الرفع",
       "adminReason": "سبب الرفض",
       "fixResubmit": "تعديل وإعادة الإرسال",
       "untitled": "مصنع بدون اسم"

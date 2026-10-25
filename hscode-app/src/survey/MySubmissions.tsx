@@ -17,7 +17,7 @@ import { subscribeMySubmissions, type SubmissionItem, type SurveyErrorCode } fro
 const PLACEHOLDERS = [siloImg, plantImg, warehouseImg]
 const placeholderFor = (fid: string) => PLACEHOLDERS[[...fid].reduce((n, c) => n + c.charCodeAt(0), 0) % PLACEHOLDERS.length]
 
-type Snapshot = { items: SubmissionItem[]; entries: OutboxEntry[] }
+type Snapshot = { uid?: string; items: SubmissionItem[]; entries: OutboxEntry[]; loaded: boolean }
 
 /** Confirms outbox entries the server has seen; flags ones a server snapshot lacks. Cache-only snapshots change nothing. */
 function reconcile(items: SubmissionItem[], fromCache: boolean): OutboxEntry[] {
@@ -34,18 +34,19 @@ export function MySubmissions() {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const uid = user?.uid
-  const [snap, setSnap] = useState<Snapshot>(() => ({ items: [], entries: outbox.list() }))
-  const [error, setError] = useState<SurveyErrorCode | null>(null)
+  const [state, setState] = useState<Snapshot & { error?: SurveyErrorCode }>({ items: [], entries: outbox.list(), loaded: false })
+  // Snapshot state belongs to one uid; a different uid starts again from scratch.
+  const snap: Snapshot = state.uid === uid ? state : { items: [], entries: outbox.list(), loaded: false }
+  const error = state.uid === uid ? state.error : undefined
 
   useEffect(() => {
     if (!uid) return
     return subscribeMySubmissions(
       uid,
       (items, meta) => {
-        setError(null)
-        setSnap({ items, entries: reconcile(items, meta.fromCache) })
+        setState({ uid, items, entries: reconcile(items, meta.fromCache), loaded: true })
       },
-      setError,
+      (code) => setState((s) => ({ ...(s.uid === uid ? s : { items: [], entries: outbox.list() }), uid, loaded: true, error: code })),
     )
   }, [uid])
 
@@ -68,7 +69,7 @@ export function MySubmissions() {
     { key: 'rejected', n: count('rejected'), box: 'bg-red-50 text-red-700' },
     ...(savedCount > 0 ? [{ key: 'savedOnPhone' as const, n: savedCount, box: 'bg-blue-50 text-blue-800' }] : []),
   ]
-  const empty = snap.items.length === 0 && standalone.length === 0
+  const empty = snap.loaded && snap.items.length === 0 && standalone.length === 0
 
   return (
     <>
@@ -83,6 +84,13 @@ export function MySubmissions() {
             </span>
           ))}
         </div>
+        {!snap.loaded && (
+          <div
+            role="status"
+            aria-label={t('common.loading')}
+            className="size-8 animate-spin rounded-full border-4 border-line border-t-brand-600"
+          />
+        )}
         {empty && !error && <p className="text-body text-ink-subtle">{t('survey.list.empty')}</p>}
         <ul className="space-y-3">
           {standalone.map((e) => (
