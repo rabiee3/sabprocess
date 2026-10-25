@@ -115,6 +115,14 @@ describe('AuthProvider', () => {
     expect(h.snaps).toHaveLength(0)
   })
 
+  it("(f) a users doc claiming role 'admin' resolves to client (admin comes only from the UID)", async () => {
+    mount()
+    await fire({ uid: 'u1' })
+    await flush()
+    act(() => h.snaps[0].ok(snap({ role: 'admin', active: true })))
+    expect(latest).toMatchObject({ role: 'client', active: true, loading: false })
+  })
+
   it('(e) unmount unsubscribes auth and snapshot', async () => {
     const { unmount } = mount()
     await fire({ uid: 'u1' })

@@ -6,7 +6,8 @@ import { auth, db } from '../firebase'
 import { ensureUserDoc } from './api'
 import { AuthContext, type AuthState, type Role } from './context'
 
-const ROLES: Role[] = ['client', 'surveyor', 'admin']
+// Roles a users doc may grant. The admin comes only from the UID, never from the doc.
+const ROLES: Role[] = ['client', 'surveyor']
 const VISITOR: AuthState = { user: null, role: 'visitor', active: false, loading: false }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

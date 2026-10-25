@@ -17,6 +17,20 @@ if (!readFileSync(indexPath, 'utf8').includes('/hscode/assets/')) {
 }
 
 const assetsDir = resolve(rootDir, 'hscode', 'assets')
+
+// Every /hscode/assets/* file index.html references must exist on disk.
+const indexHtml = readFileSync(indexPath, 'utf8')
+const referenced = [...indexHtml.matchAll(/\/hscode\/assets\/([^"'\s)?#]+)/g)].map((m) => m[1])
+const missing = referenced.filter((f) => !existsSync(resolve(assetsDir, f)))
+if (missing.length) fail(`hscode/index.html references missing assets: ${missing.join(', ')}`)
+
+// The production bundle must not carry emulator wiring (it would mean an emulator-mode build shipped).
+const FORBIDDEN = ['127.0.0.1:8080', '127.0.0.1:9099', 'demo-hscode']
+for (const f of readdirSync(assetsDir).filter((n) => n.endsWith('.js'))) {
+  const js = readFileSync(resolve(assetsDir, f), 'utf8')
+  const hit = FORBIDDEN.find((s) => js.includes(s))
+  if (hit) fail(`hscode/assets/${f} contains emulator string "${hit}"`)
+}
 const css = readdirSync(assetsDir).filter((f) => f.endsWith('.css')).map((f) => readFileSync(resolve(assetsDir, f), 'utf8')).join('')
 if (!/\.rounded\{border-radius:var\(--radius\)\}/.test(css) || !css.includes('--radius:8px')) {
   fail('bare .rounded does not compile to 8px (DEFAULT radius token missing)')
@@ -33,4 +47,6 @@ try {
 const status = git(['status', '--porcelain', '--', ...protectedPaths]).trim()
 if (status) fail(`root static site has changes:\n${status}`)
 
-console.log('check-build OK: hscode/index.html built, root static site untouched')
+console.log(
+  `check-build OK: hscode/index.html built (${referenced.length} assets present), no emulator strings in JS, root static site untouched`,
+)

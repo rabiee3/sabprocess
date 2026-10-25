@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import en from '../src/i18n/en.json' with { type: 'json' }
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/tile.openstreetmap.org/**', (route) => route.fulfill({ status: 204, body: '' }))
@@ -22,4 +23,5 @@ test('shell loads in EN, toggles to AR RTL without horizontal scroll, passes axe
 test('deep link /hscode/survey renders the app, not a 404', async ({ page }) => {
   await page.goto('./survey')
   await expect(page.getByRole('img', { name: 'HSCode' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: en.nav.surveyors })).toBeVisible()
 })
