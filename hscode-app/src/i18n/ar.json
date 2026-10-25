@@ -54,7 +54,8 @@
       "savedOnPhone": "محفوظ على الهاتف",
       "uploadFailed": "فشل الرفع — سنعيد المحاولة",
       "adminReason": "سبب الرفض",
-      "fixResubmit": "تعديل وإعادة الإرسال"
+      "fixResubmit": "تعديل وإعادة الإرسال",
+      "untitled": "مصنع بدون اسم"
     },
     "step": {
       "counter": "الخطوة {{n}} من {{total}}",

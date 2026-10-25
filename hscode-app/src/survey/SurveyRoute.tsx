@@ -8,6 +8,7 @@ import { Placeholder } from '../routes/Placeholder'
 import { AppHeader } from '../ui/AppHeader'
 import { Logo } from '../ui/Logo'
 import { InviteCodeScreen } from './InviteCodeScreen'
+import { MySubmissions } from './MySubmissions'
 
 function Shell({ children }: { children: ReactNode }) {
   return (
@@ -94,11 +95,11 @@ export function Component() {
       </Shell>
     )
   }
-  // Tasks 8/9 replace these placeholders with MySubmissions and FactoryStepper.
+  // Task 9 replaces these placeholders with FactoryStepper.
   const area = <Placeholder titleKey="nav.surveyors" areaLabel="surveyor" />
   return (
     <Routes>
-      <Route index element={area} />
+      <Route index element={<MySubmissions />} />
       <Route path="new" element={area} />
       <Route path="edit/:fid" element={area} />
       <Route path="*" element={area} />

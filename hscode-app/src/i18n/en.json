@@ -54,7 +54,8 @@
       "savedOnPhone": "Saved on phone",
       "uploadFailed": "Upload failed — we'll keep trying",
       "adminReason": "Admin's reason",
-      "fixResubmit": "Fix and resubmit"
+      "fixResubmit": "Fix and resubmit",
+      "untitled": "Untitled factory"
     },
     "step": {
       "counter": "Step {{n}} of {{total}}",
