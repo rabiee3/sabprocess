@@ -53,6 +53,7 @@ vi.mock('leaflet', async (orig) => {
   return { default: patched, ...patched }
 })
 
+import { initI18n } from '../i18n'
 import { ResultsMap } from './ResultsMap'
 import { ClusterLayer } from './ClusterLayer'
 import { clusterIcon } from './clusterIcon'
@@ -61,6 +62,7 @@ import type { IndexEntry } from '../lib/types'
 const e = (id: string, lat: number, lng: number): IndexEntry => ({ id, n: { en: id, ar: id }, lat, lng, a: 'x', m: [], d: [] })
 
 beforeEach(() => {
+  initI18n()
   for (const f of Object.values(map)) f.mockClear()
   created.length = 0
   group.layers = []
@@ -172,5 +174,15 @@ describe('ResultsMap', () => {
     expect(screen.queryByTestId('rl-marker')).toBeNull()
     rerender(<ResultsMap entries={a} userPos={{ lat: 30, lng: 31 }} onSelect={() => {}} />)
     expect(screen.getByTestId('rl-marker')).toHaveAttribute('data-lat', '30')
+  })
+})
+
+describe('ResultsMap fit key', () => {
+  it('does not refit when the same entries are only reordered (Near me)', () => {
+    const a = [e('1', 29.9, 30.9), e('2', 30.1, 31.1), e('3', 30.2, 31.2)]
+    const { rerender } = render(<ResultsMap entries={a} onSelect={() => {}} />)
+    expect(map.fitBounds).toHaveBeenCalledTimes(1)
+    rerender(<ResultsMap entries={[a[2], a[0], a[1]]} onSelect={() => {}} />)
+    expect(map.fitBounds).toHaveBeenCalledTimes(1)
   })
 })

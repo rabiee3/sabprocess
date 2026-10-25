@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import L from 'leaflet'
+import { useTranslation } from 'react-i18next'
 import { Marker, useMap } from 'react-leaflet'
 import { MapView } from './MapView'
 import { ClusterLayer } from './ClusterLayer'
@@ -20,7 +21,7 @@ const userIcon = L.divIcon({ html: myLocation, className: 'hs-me', iconSize: [28
 
 function Viewport({ entries, selectedId }: Pick<Props, 'entries' | 'selectedId'>) {
   const map = useMap()
-  const key = entries.map((e) => e.id).join('|')
+  const key = entries.map((e) => e.id).sort().join('|')
   const latest = useRef(entries)
   useEffect(() => {
     latest.current = entries
@@ -41,7 +42,12 @@ function Viewport({ entries, selectedId }: Pick<Props, 'entries' | 'selectedId'>
 }
 
 export function ResultsMap({ entries, selectedId, onSelect, userPos, className }: Props) {
-  const points = useMemo(() => entries.map((e) => ({ id: e.id, lat: e.lat, lng: e.lng })), [entries])
+  const { i18n } = useTranslation()
+  const ar = (i18n.resolvedLanguage ?? i18n.language) === 'ar'
+  const points = useMemo(
+    () => entries.map((e) => ({ id: e.id, lat: e.lat, lng: e.lng, label: (ar ? e.n.ar || e.n.en : e.n.en || e.n.ar) || undefined })),
+    [entries, ar],
+  )
   return (
     <MapView center={DEFAULT_VIEW} zoom={DEFAULT_VIEW.zoom} className={className}>
       <Viewport entries={entries} selectedId={selectedId} />
