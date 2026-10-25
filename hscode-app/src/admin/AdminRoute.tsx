@@ -4,6 +4,7 @@ import { signOutUser } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { AdminLayout } from './AdminLayout'
 import { AdminSignIn } from './AdminSignIn'
+import { Dashboard } from './Dashboard'
 import { FactoriesPage } from './FactoriesPage'
 import { FactoryAdminPage } from './FactoryAdminDetail'
 import { InvitesPage } from './InvitesPage'
@@ -70,7 +71,7 @@ export function Component() {
         <Route path="factories/:fid" element={<FactoryAdminPage />} />
         <Route path="invites" element={<InvitesPage />} />
         <Route path="surveyors" element={<SurveyorsPage />} />
-        <Route path="dashboard" element={<PagePlaceholder />} />
+        <Route path="dashboard" element={<Dashboard />} />
       </Route>
     </Routes>
   )

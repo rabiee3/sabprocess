@@ -320,7 +320,8 @@
       },
       "statusHidden": "Hidden",
       "open": "Open",
-      "reviewNamed": "Review {{name}}", "openNamed": "Open {{name}}",
+      "reviewNamed": "Review {{name}}",
+      "openNamed": "Open {{name}}",
       "review": "Review",
       "hide": "Hide",
       "hideNamed": "Hide {{name}}",
@@ -351,6 +352,20 @@
         "fixErrors": "Fix the highlighted fields before saving.",
         "createdBy": "Added {{date}}"
       }
+    },
+    "dash": {
+      "statusTitle": "Factories by status",
+      "indexTitle": "Public search index",
+      "indexLabel": "Search index fill",
+      "indexWarn": "The public search index is {{pct}}% full. It must be split before about 2,500 factories, or approvals will stop.",
+      "areasTitle": "By industrial area",
+      "surveyorsTitle": "By surveyor",
+      "colArea": "Area",
+      "colApproved": "Approved",
+      "colPending": "Pending",
+      "colRejected": "Rejected",
+      "colSurveyor": "Surveyor",
+      "updated": "Updated {{time}}"
     }
   }
 }

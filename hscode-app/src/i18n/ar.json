@@ -320,7 +320,8 @@
       },
       "statusHidden": "مخفي",
       "open": "فتح",
-      "reviewNamed": "مراجعة {{name}}", "openNamed": "فتح {{name}}",
+      "reviewNamed": "مراجعة {{name}}",
+      "openNamed": "فتح {{name}}",
       "review": "مراجعة",
       "hide": "إخفاء",
       "hideNamed": "إخفاء {{name}}",
@@ -351,6 +352,20 @@
         "fixErrors": "صحّح الحقول المميزة قبل الحفظ.",
         "createdBy": "أُضيف في {{date}}"
       }
+    },
+    "dash": {
+      "statusTitle": "المصانع حسب الحالة",
+      "indexTitle": "فهرس البحث العام",
+      "indexLabel": "امتلاء فهرس البحث",
+      "indexWarn": "فهرس البحث العام ممتلئ بنسبة {{pct}}%. يجب تقسيمه قبل نحو 2,500 مصنع وإلا ستتوقف الموافقات.",
+      "areasTitle": "حسب المنطقة الصناعية",
+      "surveyorsTitle": "حسب المساح",
+      "colArea": "المنطقة",
+      "colApproved": "معتمد",
+      "colPending": "قيد المراجعة",
+      "colRejected": "مرفوض",
+      "colSurveyor": "المساح",
+      "updated": "آخر تحديث {{time}}"
     }
   }
 }
