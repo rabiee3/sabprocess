@@ -20,23 +20,23 @@ const placeholderFor = (fid: string) => PLACEHOLDERS[[...fid].reduce((n, c) => n
 type Snapshot = { uid?: string; items: SubmissionItem[]; entries: OutboxEntry[]; loaded: boolean }
 
 /** Confirms outbox entries the server has seen; flags ones a server snapshot lacks. Cache-only snapshots change nothing. */
-function reconcile(items: SubmissionItem[], fromCache: boolean): OutboxEntry[] {
+function reconcile(uid: string, items: SubmissionItem[], fromCache: boolean): OutboxEntry[] {
   const byId = new Map(items.map((i) => [i.factory.id, i]))
-  for (const e of outbox.list()) {
+  for (const e of outbox.list(uid)) {
     const hit = byId.get(e.fid)
-    if (hit && !hit.pendingWrite) outbox.remove(e.fid)
-    else if (!hit && !fromCache && e.state === 'saved') outbox.markFailed(e.fid, 'generic')
+    if (hit && !hit.pendingWrite) outbox.remove(uid, e.fid)
+    else if (!hit && !fromCache && e.state === 'saved') outbox.markFailed(uid, e.fid, 'generic')
   }
-  return outbox.list()
+  return outbox.list(uid)
 }
 
 export function MySubmissions() {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const uid = user?.uid
-  const [state, setState] = useState<Snapshot & { error?: SurveyErrorCode }>({ items: [], entries: outbox.list(), loaded: false })
+  const [state, setState] = useState<Snapshot & { error?: SurveyErrorCode }>({ items: [], entries: [], loaded: false })
   // Snapshot state belongs to one uid; a different uid starts again from scratch.
-  const snap: Snapshot = state.uid === uid ? state : { items: [], entries: outbox.list(), loaded: false }
+  const snap: Snapshot = state.uid === uid ? state : { items: [], entries: uid ? outbox.list(uid) : [], loaded: false }
   const error = state.uid === uid ? state.error : undefined
 
   useEffect(() => {
@@ -44,9 +44,9 @@ export function MySubmissions() {
     return subscribeMySubmissions(
       uid,
       (items, meta) => {
-        setState({ uid, items, entries: reconcile(items, meta.fromCache), loaded: true })
+        setState({ uid, items, entries: reconcile(uid, items, meta.fromCache), loaded: true })
       },
-      (code) => setState((s) => ({ ...(s.uid === uid ? s : { items: [], entries: outbox.list() }), uid, loaded: true, error: code })),
+      (code) => setState((s) => ({ ...(s.uid === uid ? s : { items: [], entries: outbox.list(uid) }), uid, loaded: true, error: code })),
     )
   }, [uid])
 

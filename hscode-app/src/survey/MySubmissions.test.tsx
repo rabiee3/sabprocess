@@ -27,7 +27,11 @@ vi.mock('./repo', () => ({
   },
 }))
 vi.mock('./outbox', () => ({
-  outbox: { list: () => entries, remove: (f: string) => remove(f), markFailed: (f: string, e: SurveyErrorCode) => markFailed(f, e) },
+  outbox: {
+    list: (uid: string) => (uid === 'u1' ? entries : []),
+    remove: (_u: string, f: string) => remove(f),
+    markFailed: (_u: string, f: string, e: SurveyErrorCode) => markFailed(f, e),
+  },
 }))
 
 import { MySubmissions } from './MySubmissions'
@@ -72,7 +76,7 @@ describe('MySubmissions', () => {
   })
 
   it('a pendingWrite item shows the saved-on-phone chip and keeps its outbox entry', () => {
-    entries = [{ fid: 'a', savedAt: 1, state: 'saved' }]
+    entries = [{ fid: 'a', savedAt: 1, state: 'saved', submittedAt: 1 }]
     setup()
     act(() => emit([item(fac('a', 'pending'), true)], { fromCache: true }))
     expect(screen.getAllByText(en.survey.list.savedOnPhone).length).toBeGreaterThan(0)
@@ -92,7 +96,7 @@ describe('MySubmissions', () => {
   })
 
   it('a failed outbox entry shows upload failed with the access-off text', () => {
-    entries = [{ fid: 'z', savedAt: 1, state: 'failed', error: 'accessOff' }]
+    entries = [{ fid: 'z', savedAt: 1, state: 'failed', error: 'accessOff', submittedAt: 1 }]
     setup()
     act(() => emit([], { fromCache: true }))
     expect(screen.getByText(en.survey.list.uploadFailed)).toBeInTheDocument()
@@ -101,7 +105,7 @@ describe('MySubmissions', () => {
   })
 
   it('a server snapshot without an outbox fid marks it failed; a cache snapshot does not', () => {
-    entries = [{ fid: 'z', savedAt: 1, state: 'saved' }]
+    entries = [{ fid: 'z', savedAt: 1, state: 'saved', submittedAt: 1 }]
     setup()
     act(() => emit([], { fromCache: true }))
     expect(markFailed).not.toHaveBeenCalled()
@@ -112,7 +116,7 @@ describe('MySubmissions', () => {
   })
 
   it('confirmed docs are removed from the outbox', () => {
-    entries = [{ fid: 'a', savedAt: 1, state: 'saved' }]
+    entries = [{ fid: 'a', savedAt: 1, state: 'saved', submittedAt: 1 }]
     setup()
     act(() => emit([item(fac('a', 'pending'), false)], { fromCache: false }))
     expect(remove).toHaveBeenCalledWith('a')
@@ -126,7 +130,7 @@ describe('MySubmissions', () => {
   })
 
   it('failed chip text is not a retry promise', () => {
-    entries = [{ fid: 'z', savedAt: 1, state: 'failed', error: 'accessOff' }]
+    entries = [{ fid: 'z', savedAt: 1, state: 'failed', error: 'accessOff', submittedAt: 1 }]
     setup()
     act(() => emit([], { fromCache: true }))
     const chip = screen.getByText(en.survey.list.uploadFailed, { selector: '[data-chip]' })
@@ -144,7 +148,7 @@ describe('MySubmissions', () => {
   })
 
   it('a failed entry whose doc arrives on a server snapshot is removed', () => {
-    entries = [{ fid: 'a', savedAt: 1, state: 'failed', error: 'generic' }]
+    entries = [{ fid: 'a', savedAt: 1, state: 'failed', error: 'generic', submittedAt: 1 }]
     setup()
     act(() => emit([item(fac('a', 'pending'), false)], { fromCache: false }))
     expect(remove).toHaveBeenCalledWith('a')

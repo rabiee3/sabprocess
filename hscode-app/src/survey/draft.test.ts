@@ -15,6 +15,7 @@ import {
   toFactoryInput,
   type Draft,
 } from './draft'
+import { outbox } from './outbox'
 
 const loc = { lat: 29.97, lng: 30.94, accuracyM: 12, pinMoved: false }
 
@@ -154,30 +155,61 @@ describe('draftFromFactory', () => {
     expect(d.thumb).toBe('t')
   })
   it('edit drafts are not resumed as new', () => {
-    saveDraft(draftFromFactory(fac('e'), {}, []))
-    expect(latestNewDraft()).toBeNull()
+    saveDraft('u1', draftFromFactory(fac('e'), {}, []))
+    expect(latestNewDraft('u1')).toBeNull()
   })
 })
 
 describe('persistence', () => {
   it('save/load/clear', () => {
     const d = { ...emptyDraft('abc'), location: loc }
-    saveDraft(d)
-    expect(loadDraft('abc')).toEqual(d)
-    clearDraft('abc')
-    expect(loadDraft('abc')).toBeNull()
+    expect(saveDraft('u1', d)).toBe(true)
+    expect(loadDraft('u1', 'abc')).toEqual(d)
+    expect(localStorage.getItem('hscode.draft.u1.abc')).not.toBeNull()
+    clearDraft('u1', 'abc')
+    expect(loadDraft('u1', 'abc')).toBeNull()
+  })
+  it('saveDraft reports a full storage', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    expect(saveDraft('u1', emptyDraft('abc'))).toBe(false)
+    vi.restoreAllMocks()
   })
   it('latestNewDraft picks the most recent and ignores junk', () => {
     vi.useFakeTimers()
     vi.setSystemTime(1000)
-    saveDraft(emptyDraft('older'))
+    saveDraft('u1', emptyDraft('older'))
     vi.setSystemTime(2000)
-    saveDraft(emptyDraft('newer'))
-    localStorage.setItem('hscode.draft.junk', '{nope')
-    localStorage.setItem('hscode.draft.bad', JSON.stringify({ savedAt: 9999 }))
-    expect(latestNewDraft()?.fid).toBe('newer')
+    saveDraft('u1', emptyDraft('newer'))
+    localStorage.setItem('hscode.draft.u1.junk', '{nope')
+    localStorage.setItem('hscode.draft.u1.bad', JSON.stringify({ savedAt: 9999 }))
+    expect(latestNewDraft('u1')?.fid).toBe('newer')
   })
   it('latestNewDraft null when none', () => {
-    expect(latestNewDraft()).toBeNull()
+    expect(latestNewDraft('u1')).toBeNull()
+  })
+  it('drafts are scoped per user: B never sees A drafts', () => {
+    saveDraft('userA', { ...emptyDraft('fa'), name: { en: 'A secret', ar: '' } })
+    expect(latestNewDraft('userB')).toBeNull()
+    expect(loadDraft('userB', 'fa')).toBeNull()
+    clearDraft('userB', 'fa')
+    expect(loadDraft('userA', 'fa')?.name.en).toBe('A secret')
+  })
+  it('old unscoped drafts are ignored and removed', () => {
+    localStorage.setItem('hscode.draft.legacy1', JSON.stringify({ savedAt: 1, draft: emptyDraft('legacy1') }))
+    expect(latestNewDraft('u1')).toBeNull()
+    expect(localStorage.getItem('hscode.draft.legacy1')).toBeNull()
+  })
+  it('latestNewDraft skips a draft waiting in the outbox as saved, but resumes a failed one', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1000)
+    saveDraft('u1', emptyDraft('older'))
+    vi.setSystemTime(2000)
+    saveDraft('u1', emptyDraft('queued'))
+    outbox.add('u1', 'queued')
+    expect(latestNewDraft('u1')?.fid).toBe('older')
+    outbox.markFailed('u1', 'queued', 'generic')
+    expect(latestNewDraft('u1')?.fid).toBe('queued')
   })
 })

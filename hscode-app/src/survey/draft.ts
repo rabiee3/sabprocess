@@ -1,6 +1,7 @@
 import { insideEgypt } from '../lib/geo'
 import { validateHs } from '../lib/hs'
 import { safeStorage } from '../lib/safeStorage'
+import { outbox } from './outbox'
 import type { Factory, FactoryLocation, HsCode, Product } from '../lib/types'
 import type { ContactDraft, FactoryInput, PhotoData } from './types'
 
@@ -209,6 +210,7 @@ export function toFactoryInput(d: Draft): FactoryInput {
 }
 
 const PREFIX = 'hscode.draft.'
+const keyOf = (uid: string, fid: string) => `${PREFIX}${uid}.${fid}`
 type Stored = { savedAt: number; draft: Draft }
 
 function parse(raw: string | null): Stored | null {
@@ -227,35 +229,37 @@ function parse(raw: string | null): Stored | null {
   }
 }
 
-export function saveDraft(d: Draft): void {
+/** Drafts saved before per-user scoping (`hscode.draft.<fid>`, no dot after the prefix) belong to nobody: drop them. */
+function dropLegacy(keys: string[]): void {
+  for (const k of keys) if (k.startsWith(PREFIX) && !k.slice(PREFIX.length).includes('.')) safeStorage.remove(k)
+}
+
+/** False when storage did not accept the draft (blocked or full). */
+export function saveDraft(uid: string, d: Draft): boolean {
   const stored: Stored = { savedAt: Date.now(), draft: d }
-  safeStorage.set(PREFIX + d.fid, JSON.stringify(stored))
+  return safeStorage.set(keyOf(uid, d.fid), JSON.stringify(stored))
 }
 
-export function loadDraft(fid: string): Draft | null {
-  return parse(safeStorage.get(PREFIX + fid))?.draft ?? null
+export function loadDraft(uid: string, fid: string): Draft | null {
+  return parse(safeStorage.get(keyOf(uid, fid)))?.draft ?? null
 }
 
-export function clearDraft(fid: string): void {
-  try {
-    localStorage.removeItem(PREFIX + fid)
-  } catch {
-    // storage blocked: nothing to clear
-  }
+export function clearDraft(uid: string, fid: string): void {
+  safeStorage.remove(keyOf(uid, fid))
 }
 
-export function latestNewDraft(): Draft | null {
-  let keys: string[] = []
-  try {
-    keys = Object.keys(localStorage)
-  } catch {
-    return null
-  }
+/** The newest 'new' draft of this user, skipping ones already submitted and waiting in the outbox ('saved'). */
+export function latestNewDraft(uid: string): Draft | null {
+  const keys = safeStorage.keys()
+  dropLegacy(keys)
+  const queued = new Set(outbox.list(uid).filter((e) => e.state === 'saved').map((e) => e.fid))
+  const mine = `${PREFIX}${uid}.`
   let best: Stored | null = null
   for (const k of keys) {
-    if (!k.startsWith(PREFIX)) continue
+    if (!k.startsWith(mine)) continue
     const s = parse(safeStorage.get(k))
-    if (s && s.draft.mode === 'new' && (!best || s.savedAt > best.savedAt)) best = s
+    if (!s || s.draft.mode !== 'new' || queued.has(s.draft.fid)) continue
+    if (!best || s.savedAt > best.savedAt) best = s
   }
   return best?.draft ?? null
 }

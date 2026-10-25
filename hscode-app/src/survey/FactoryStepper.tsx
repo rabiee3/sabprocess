@@ -30,9 +30,8 @@ import { StepReview } from './steps/StepReview'
 
 const LIST = '/survey'
 
-function Form({ initial, mode }: { initial: Draft; mode: 'new' | 'edit' }) {
+function Form({ uid, initial, mode }: { uid: string; initial: Draft; mode: 'new' | 'edit' }) {
   const { t } = useTranslation()
-  const { user } = useAuth()
   const online = useOnline()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -42,8 +41,8 @@ function Form({ initial, mode }: { initial: Draft; mode: 'new' | 'edit' }) {
   const submitted = useRef(false)
 
   useEffect(() => {
-    if (draft !== initial && !submitted.current) saveDraft(draft)
-  }, [draft, initial])
+    if (draft !== initial && !submitted.current) saveDraft(uid, draft)
+  }, [uid, draft, initial])
 
   const param = params.get('step')
   const step: StepId = STEPS.find((s) => s === param) ?? 'location'
@@ -70,15 +69,15 @@ function Form({ initial, mode }: { initial: Draft; mode: 'new' | 'edit' }) {
     try {
       const input = toFactoryInput(draft)
       // Not awaited: offline, the write is queued locally and the promise settles only on reconnect.
-      commit = mode === 'edit' ? resubmitFactory(user?.uid ?? '', draft.fid, input, draft.previousPhotoIds) : submitFactory(user?.uid ?? '', draft.fid, input)
+      commit = mode === 'edit' ? resubmitFactory(uid, draft.fid, input, draft.previousPhotoIds) : submitFactory(uid, draft.fid, input)
     } catch (e) {
       setSubmitError(toSurveyError(e))
       return
     }
     submitted.current = true
-    outbox.add(draft.fid)
-    clearDraft(draft.fid)
-    commit.catch((e: unknown) => outbox.markFailed(draft.fid, toSurveyError(e)))
+    outbox.add(uid, draft.fid)
+    clearDraft(uid, draft.fid)
+    commit.catch((e: unknown) => outbox.markFailed(uid, draft.fid, toSurveyError(e)))
     navigate(LIST)
   }
 
@@ -117,7 +116,7 @@ function Form({ initial, mode }: { initial: Draft; mode: 'new' | 'edit' }) {
 
 type Loaded = { status: 'loading' } | { status: 'ready'; draft: Draft } | { status: 'missing' } | { status: 'error'; code: SurveyErrorCode }
 
-function EditLoader() {
+function EditLoader({ uid }: { uid: string }) {
   const { t } = useTranslation()
   const { fid = '' } = useParams()
   const [state, setState] = useState<{ fid: string; result: Loaded }>({ fid, result: { status: 'loading' } })
@@ -125,7 +124,7 @@ function EditLoader() {
   useEffect(() => {
     let live = true
     const done = (result: Loaded) => live && setState({ fid, result })
-    const saved = loadDraft(fid)
+    const saved = loadDraft(uid, fid)
     if (saved && saved.mode === 'edit') {
       done({ status: 'ready', draft: saved })
     } else {
@@ -137,10 +136,10 @@ function EditLoader() {
     return () => {
       live = false
     }
-  }, [fid])
+  }, [uid, fid])
 
   const result: Loaded = state.fid === fid ? state.result : { status: 'loading' }
-  if (result.status === 'ready') return <Form key={fid} initial={result.draft} mode="edit" />
+  if (result.status === 'ready') return <Form key={fid} uid={uid} initial={result.draft} mode="edit" />
   return (
     <main className="mx-auto max-w-md p-4">
       {result.status === 'loading' && (
@@ -157,11 +156,13 @@ function EditLoader() {
   )
 }
 
-function NewLoader() {
-  const [initial] = useState(() => latestNewDraft() ?? emptyDraft(newFactoryId()))
-  return <Form initial={initial} mode="new" />
+function NewLoader({ uid }: { uid: string }) {
+  const [initial] = useState(() => latestNewDraft(uid) ?? emptyDraft(newFactoryId()))
+  return <Form uid={uid} initial={initial} mode="new" />
 }
 
 export function FactoryStepper({ mode }: { mode: 'new' | 'edit' }) {
-  return mode === 'edit' ? <EditLoader /> : <NewLoader />
+  // Drafts and the outbox are per user; a different account remounts from scratch.
+  const uid = useAuth().user?.uid ?? ''
+  return mode === 'edit' ? <EditLoader key={uid} uid={uid} /> : <NewLoader key={uid} uid={uid} />
 }

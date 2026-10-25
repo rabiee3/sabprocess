@@ -127,14 +127,14 @@ describe('FactoryStepper', () => {
       photos: [{ id: 'p1', data: 'data:x' }],
       thumb: 'thumb',
     })
-    expect(outbox.list().map((e) => e.fid)).toEqual(['fnew'])
-    expect(loadDraft('fnew')).toBeNull()
+    expect(outbox.list('u1').map((e) => e.fid)).toEqual(['fnew'])
+    expect(loadDraft('u1', 'fnew')).toBeNull()
     expect(screen.getByText('LIST')).toBeInTheDocument()
   })
 
   it('offline shows Save on this phone and still submits', async () => {
     online = false
-    saveDraft(fullDraft())
+    saveDraft('u1', fullDraft())
     renderAt('/survey/new?step=review')
     expect(screen.getByText(en.survey.review.offlineBanner)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: en.survey.review.saveOnPhone }))
@@ -143,7 +143,7 @@ describe('FactoryStepper', () => {
   })
 
   it('review warns when the pin was not moved or GPS was weak', () => {
-    saveDraft(fullDraft({ location: { lat: 30, lng: 31, accuracyM: 80, pinMoved: false } }))
+    saveDraft('u1', fullDraft({ location: { lat: 30, lng: 31, accuracyM: 80, pinMoved: false } }))
     renderAt('/survey/new?step=review')
     expect(screen.getByText(en.survey.review.pinNotMoved)).toBeInTheDocument()
     expect(screen.getByText(en.survey.review.weakGps)).toBeInTheDocument()
@@ -198,22 +198,22 @@ describe('FactoryStepper', () => {
 
   it('a permission-denied commit marks the outbox entry accessOff', async () => {
     vi.mocked(repo.submitFactory).mockImplementation(() => Promise.reject({ code: 'permission-denied' }))
-    saveDraft(fullDraft())
+    saveDraft('u1', fullDraft())
     renderAt('/survey/new?step=review')
     await user.click(screen.getByRole('button', { name: en.survey.review.submit }))
-    await waitFor(() => expect(outbox.list()).toMatchObject([{ fid: 'fnew', state: 'failed', error: 'accessOff' }]))
+    await waitFor(() => expect(outbox.list('u1')).toMatchObject([{ fid: 'fnew', state: 'failed', error: 'accessOff' }]))
   })
 
   it('a synchronous throw while online keeps the form and shows the error', async () => {
     vi.mocked(repo.submitFactory).mockImplementation(() => {
       throw { code: 'permission-denied' }
     })
-    saveDraft(fullDraft())
+    saveDraft('u1', fullDraft())
     renderAt('/survey/new?step=review')
     await user.click(screen.getByRole('button', { name: en.survey.review.submit }))
     expect(screen.getByText(en.errors.accessOff)).toBeInTheDocument()
-    expect(outbox.list()).toEqual([])
-    expect(loadDraft('fnew')).not.toBeNull()
+    expect(outbox.list('u1')).toEqual([])
+    expect(loadDraft('u1', 'fnew')).not.toBeNull()
   })
 
   it('restores the entered name from the saved draft after a remount', async () => {
@@ -225,11 +225,11 @@ describe('FactoryStepper', () => {
   })
 
   it('new mode: an unmoved stored pin is not passed as a fixed value, a moved one is', () => {
-    saveDraft(fullDraft({ location: { lat: 30, lng: 31, accuracyM: 10, pinMoved: false } }))
+    saveDraft('u1', fullDraft({ location: { lat: 30, lng: 31, accuracyM: 10, pinMoved: false } }))
     const a = renderAt('/survey/new')
     expect(pickerProps.current.value).toBeUndefined()
     a.unmount()
-    saveDraft(fullDraft())
+    saveDraft('u1', fullDraft())
     renderAt('/survey/new')
     expect(pickerProps.current.value).toMatchObject({ pinMoved: true })
   })
@@ -263,7 +263,7 @@ describe('FactoryStepper', () => {
   })
 
   it('two fast submit clicks call submitFactory once', async () => {
-    saveDraft(fullDraft())
+    saveDraft('u1', fullDraft())
     renderAt('/survey/new?step=review')
     await user.dblClick(screen.getByRole('button', { name: en.survey.review.submit }))
     expect(repo.submitFactory).toHaveBeenCalledTimes(1)
