@@ -1,0 +1,1 @@
+import{t as e}from"./Placeholder-CXk6HSaS.js";import{t}from"./index-DJcsGjZw.js";var n=t();function r(){return(0,n.jsx)(e,{titleKey:`nav.surveyors`,role:`surveyor`})}export{r as Component};

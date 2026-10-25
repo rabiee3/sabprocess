@@ -3,7 +3,23 @@
     "name": "HSCode",
     "tagline": "من يصنع ماذا؟ ومن يحتاج ماذا؟"
   },
-  "lang": { "en": "EN", "ar": "ع" },
-  "nav": { "browse": "استعرض", "surveyors": "المعاينون", "signIn": "تسجيل الدخول" },
-  "common": { "comingSoon": "قريبًا" }
+  "lang": {
+    "en": "EN",
+    "ar": "ع"
+  },
+  "nav": {
+    "browse": "استعرض",
+    "surveyors": "المعاينون",
+    "signIn": "تسجيل الدخول",
+    "signOut": "تسجيل الخروج",
+    "admin": "الإدارة"
+  },
+  "common": {
+    "comingSoon": "قريبًا"
+  },
+  "role": {
+    "client": "عميل",
+    "surveyor": "معاين",
+    "admin": "مدير"
+  }
 }

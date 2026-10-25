@@ -3,7 +3,23 @@
     "name": "HSCode",
     "tagline": "Who makes what. Who needs what."
   },
-  "lang": { "en": "EN", "ar": "ع" },
-  "nav": { "browse": "Browse", "surveyors": "Surveyors", "signIn": "Sign in" },
-  "common": { "comingSoon": "Coming soon" }
+  "lang": {
+    "en": "EN",
+    "ar": "ع"
+  },
+  "nav": {
+    "browse": "Browse",
+    "surveyors": "Surveyors",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "admin": "Admin"
+  },
+  "common": {
+    "comingSoon": "Coming soon"
+  },
+  "role": {
+    "client": "Client",
+    "surveyor": "Surveyor",
+    "admin": "Admin"
+  }
 }
