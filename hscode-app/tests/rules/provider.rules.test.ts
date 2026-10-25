@@ -1,6 +1,6 @@
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, getDoc, serverTimestamp, setDoc, writeBatch, type Firestore } from 'firebase/firestore'
-import { asAdmin, asUser, asUserWithProvider, emailOf, seed, type SignInProvider } from './helpers'
+import { ADMIN_UID, asAdmin, asUser, asUserWithProvider, emailOf, seed, type SignInProvider } from './helpers'
 import { seedFactory, seedUsersAndInvites, validContact, validFactory } from './fixtures'
 
 // Spec §2: every non-admin user signs in with Google. The admin signs in with email/password and is
@@ -107,7 +107,7 @@ describe('admin is recognised by UID alone (password provider)', () => {
     await assertSucceeds(
       setDoc(
         doc(asAdmin(), 'factories/fAdmin'),
-        validFactory('k0a0b8HhATfZuFcC0clBqGmtGmF3', { status: 'approved', approvedAt: serverTimestamp() }),
+        validFactory(ADMIN_UID, { status: 'approved', approvedAt: serverTimestamp() }),
       ),
     )
   })

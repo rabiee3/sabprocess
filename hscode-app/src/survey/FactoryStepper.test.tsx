@@ -60,7 +60,7 @@ function ListStub() {
   return <div>LIST{state?.storageFull ? ' storageFull' : ''}</div>
 }
 
-const user = userEvent.setup()
+const user = userEvent.setup({ delay: null }) // no per-action timer: the long flows stay fast under load
 function renderAt(path: string, mode: 'new' | 'edit' = 'new') {
   return render(
     <MemoryRouter initialEntries={[path]}>

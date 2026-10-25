@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Circle, Marker, useMap } from 'react-leaflet'
+import { Circle, Marker, useMap, useMapEvents } from 'react-leaflet'
 import { Banner } from '../ui/Banner'
 import type { FactoryLocation } from '../lib/types'
 import arrowIcon from '../assets/icons/arrow-back.svg?raw'
@@ -15,6 +15,8 @@ type Props = {
   value?: FactoryLocation
   areaCenter: LatLng
   onChange: (loc: FactoryLocation, gpsStatus: GpsStatus) => void
+  /** False for a reviewer looking at someone else's pin: no geolocation, no "My location", no GPS banners. */
+  gps?: boolean
 }
 
 const NUDGE_DEG = 0.000045 // ~5 m
@@ -50,9 +52,34 @@ function Recenter({ pos }: { pos: LatLng }) {
   return null
 }
 
-export function LocationPicker({ value, areaCenter, onChange }: Props) {
+/** Leaflet fires `click` only for a real tap, never after a pan, drag or pinch-zoom. */
+const DOUBLE_TAP_MS = 250
+
+/** A double-tap zoom fires `click` per tap before `dblclick`, so placing waits briefly and a dblclick cancels it. */
+function TapToPlace({ onPlace }: { onPlace: (p: LatLng) => void }) {
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const cancel = () => {
+    clearTimeout(timer.current)
+    timer.current = undefined
+  }
+  useEffect(() => cancel, [])
+  useMapEvents({
+    click: (e) => {
+      cancel()
+      const p = { lat: e.latlng.lat, lng: e.latlng.lng }
+      timer.current = setTimeout(() => {
+        timer.current = undefined
+        onPlace(p)
+      }, DOUBLE_TAP_MS)
+    },
+    dblclick: cancel,
+  })
+  return null
+}
+
+export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = true }: Props) {
   const { t } = useTranslation()
-  const gps = useGeolocation()
+  const gps = useGeolocation({ enabled: gpsEnabled })
   const [userPin, setPin] = useState<LatLng>(() => value ?? areaCenter)
   // A stored value is a fixed starting pin: GPS fixes never replace it.
   const [fixed] = useState(!!value)
@@ -65,16 +92,20 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
     onChangeRef.current = onChange
   })
 
-  const hasFix = gps.status === 'ok' && !!gps.coords
+  const storedPin = fixed && accSrc === 'stored'
+  const storedAcc = storedPin ? (value?.accuracyM ?? null) : null
+  const manual = accSrc === 'manual'
+  const hasFix = gpsEnabled && !manual && !storedPin && gps.status === 'ok' && !!gps.coords
   const liveAccuracyM = gps.status === 'ok' && gps.accuracyM !== undefined ? gps.accuracyM : (value?.accuracyM ?? null)
   const accuracyM = liveAccuracyM // display only: banner, circle, label
-  const emitAccuracyM = !fixed
-    ? liveAccuracyM
-    : accSrc === 'stored'
-      ? (value?.accuracyM ?? null)
-      : accSrc === 'fix'
-        ? fixAcc
-        : null
+  const emitAccuracyM =
+    accSrc === 'manual'
+      ? null // placed by hand: no GPS accuracy describes this point
+      : !fixed
+        ? liveAccuracyM
+        : accSrc === 'stored'
+          ? (value?.accuracyM ?? null)
+          : fixAcc
 
   // The pin follows the GPS fix until the surveyor moves it (or the saved value was moved).
   const pin: LatLng = !fixed && !moved && hasFix && gps.coords ? gps.coords : userPin
@@ -84,22 +115,15 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
   }, [pin.lat, pin.lng, emitAccuracyM, moved, gps.status])
 
   const icon = useMemo(() => pinIcon('selected'), [])
-  const handlers = useMemo(
-    () => ({
-      dragend: (e: { target: { getLatLng(): LatLng } }) => {
-        const ll = e.target.getLatLng()
-        setPin({ lat: ll.lat, lng: ll.lng })
-        setMoved(true)
-        setAccSrc('manual')
-      },
-    }),
-    [],
-  )
 
-  function move(dir: Dir) {
-    setPin(nudge(pin, dir))
+  function place(p: LatLng) {
+    setPin(p)
     setMoved(true)
     setAccSrc('manual')
+  }
+
+  function move(dir: Dir) {
+    place(nudge(pin, dir))
   }
 
   function myLocation() {
@@ -112,40 +136,45 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
     gps.retry()
   }
 
-  const gpsOff = gps.status === 'denied' || gps.status === 'unavailable' || gps.status === 'timeout'
+  const gpsOff = gpsEnabled && (gps.status === 'denied' || gps.status === 'unavailable' || gps.status === 'timeout')
   const weak = hasFix && accuracyM !== null && accuracyM > WEAK_M
 
   return (
     <section className="flex flex-col gap-3">
-      {gpsOff && <Banner tone="warning">{t('survey.location.gpsOff')}</Banner>}
+      {gpsOff && !manual && <Banner tone="warning">{t('survey.location.gpsOff')}</Banner>}
       {weak && <Banner tone="warning">{t('survey.location.weak')}</Banner>}
 
       <div className="relative">
         <MapView center={pin} zoom={16} className="h-72 w-full overflow-hidden rounded">
           <Recenter pos={pin} />
+          <TapToPlace onPlace={place} />
+          {storedAcc !== null && <Circle center={[pin.lat, pin.lng]} radius={storedAcc} />}
           {hasFix && accuracyM !== null && gps.coords && (
             <Circle center={[gps.coords.lat, gps.coords.lng]} radius={accuracyM} />
           )}
-          <Marker position={[pin.lat, pin.lng]} icon={icon} title={t('survey.location.hint')} draggable eventHandlers={handlers} />
+          <Marker position={[pin.lat, pin.lng]} icon={icon} title={t('survey.location.hint')} />
         </MapView>
-        <button
-          type="button"
-          onClick={myLocation}
-          aria-label={t('survey.location.myLocation')}
-          className="absolute end-2 top-2 z-[1000] flex min-h-touch items-center gap-2 rounded bg-white px-3 text-sm font-medium text-ink-strong shadow"
-        >
-          <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: locateIcon }} />
-          {t('survey.location.myLocation')}
-        </button>
+        {gpsEnabled && (
+          <button
+            type="button"
+            onClick={myLocation}
+            aria-label={t('survey.location.myLocation')}
+            className="absolute end-2 top-2 z-[1000] flex min-h-touch items-center gap-2 rounded bg-white px-3 text-sm font-medium text-ink-strong shadow"
+          >
+            <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: locateIcon }} />
+            {t('survey.location.myLocation')}
+          </button>
+        )}
       </div>
 
       <div className="flex items-center justify-between gap-3">
         <div dir="ltr" className="font-mono text-sm text-ink-strong">
           {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
         </div>
-        {accuracyM !== null && hasFix && (
+        {manual && <div className="text-sm text-ink">{t('survey.location.manual')}</div>}
+        {(storedAcc ?? (hasFix ? accuracyM : null)) !== null && (
           <div dir="ltr" className="text-sm text-ink">
-            {t('survey.location.accuracy', { m: Math.round(accuracyM) })}
+            {t('survey.location.accuracy', { m: Math.round((storedAcc ?? accuracyM)!) })}
           </div>
         )}
       </div>

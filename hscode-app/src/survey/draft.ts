@@ -1,5 +1,5 @@
 import { insideEgypt } from '../lib/geo'
-import { validateHs } from '../lib/hs'
+import { basicsErrors, contactErrors, dedupe, LIMITS, MAX_PRODUCTS, productsErrors, tooLong, type LimitField } from '../lib/factoryValidation'
 import { safeStorage } from '../lib/safeStorage'
 import { outbox } from './outbox'
 import type { Factory, FactoryLocation, HsCode, Product } from '../lib/types'
@@ -125,69 +125,28 @@ export function draftReducer(d: Draft, a: DraftAction): Draft {
   }
 }
 
-const blank = (s: string | undefined): boolean => !s || s.trim() === ''
-
-/** Max lengths, matching firestore.rules (product names aren't capped there; 120 keeps them in line with names). */
-export const LIMITS = {
-  'name.en': 120,
-  'name.ar': 120,
-  areaOther: 120,
-  address: 300,
-  phone: 40,
-  whatsapp: 40,
-  website: 300,
-  facebook: 300,
-  contactPerson: 120,
-  productName: 120,
-} as const
-export type LimitField = keyof typeof LIMITS
-/** Max products per list (rules: list size <= 30). */
-export const MAX_PRODUCTS = 30
-
-/** The stepErrors entry for a too-long field (not an i18n key: render it with errors.tooLong + LIMITS[field]). */
-export const tooLong = (field: LimitField): string => `tooLong:${field}`
-const over = (field: LimitField, s: string | undefined): boolean => (s?.trim().length ?? 0) > LIMITS[field]
+export { LIMITS, MAX_PRODUCTS, tooLong, type LimitField }
 
 export function stepErrors(d: Draft, step: StepId): string[] {
   const out: string[] = []
-  const check = (field: LimitField, s: string | undefined) => {
-    if (over(field, s)) out.push(tooLong(field))
-  }
   switch (step) {
     case 'location':
       if (!d.location || !insideEgypt(d.location.lat, d.location.lng)) out.push('survey.location.required')
       else if (d.mode === 'new' && d.gpsStatus !== 'ok' && !d.location.pinMoved) out.push('survey.location.mustMove')
       break
     case 'basics':
-      if (blank(d.name.en) && blank(d.name.ar)) out.push('survey.basics.nameRequired')
-      check('name.en', d.name.en)
-      check('name.ar', d.name.ar)
-      if (blank(d.area)) out.push('survey.basics.areaRequired')
-      else if (d.area === 'other' && blank(d.areaOther)) out.push('survey.basics.areaOtherRequired')
-      check('areaOther', d.areaOther) // sent whenever non-blank (toFactoryInput)
-      check('address', d.address)
+      out.push(...basicsErrors(d)) // areaOther is checked whenever non-blank (toFactoryInput sends it)
       break
     case 'products':
-      if (d.productsMade.length > MAX_PRODUCTS || d.productsNeeded.length > MAX_PRODUCTS) out.push('survey.products.max')
-      for (const p of [...d.productsMade, ...d.productsNeeded]) {
-        if (blank(p.name.en) && blank(p.name.ar)) out.push('survey.products.nameRequired')
-        if (over('productName', p.name.en) || over('productName', p.name.ar)) out.push(tooLong('productName'))
-        if (p.hs && !validateHs(p.hs).ok) out.push('hs.tariffInvalid')
-      }
+      out.push(...productsErrors(d))
       break
-    case 'contacts': {
-      const c = d.contact
-      check('phone', c.phone)
-      if (!c.whatsappSameAsPhone) check('whatsapp', c.whatsapp)
-      check('website', c.website)
-      check('facebook', c.facebook)
-      check('contactPerson', c.contactPerson)
+    case 'contacts':
+      out.push(...contactErrors(d.contact))
       break
-    }
     default:
       break
   }
-  return [...new Set(out)]
+  return dedupe(out)
 }
 
 const DIGITS: Record<string, string> = {}
@@ -199,7 +158,7 @@ export function normalizeDigits(s: string): string {
   return s.replace(/[٠-٩۰-۹]/g, (c) => DIGITS[c] ?? c)
 }
 
-function toProducts(list: ProductDraft[]): Product[] {
+export function toProducts(list: ProductDraft[]): Product[] {
   const out: Product[] = []
   for (const p of list) {
     const en = p.name.en.trim()

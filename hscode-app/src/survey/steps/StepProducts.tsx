@@ -15,7 +15,8 @@ const SECTIONS: { list: ProductList; title: string; variant: 'made' | 'needed' }
 const blank = (s: string) => s.trim() === ''
 const tooLongName = (s: string) => s.trim().length > LIMITS.productName
 
-export function StepProducts({ draft, dispatch, errors }: StepProps) {
+export function StepProducts({ draft, dispatch, errors, headingLevel = 2 }: StepProps & { headingLevel?: 2 | 3 }) {
+  const H = `h${headingLevel}` as const
   const { t } = useTranslation()
   const longMsg = t('errors.tooLong', { max: LIMITS.productName })
   const maxMsg = t('survey.products.max', { max: MAX_PRODUCTS })
@@ -26,7 +27,7 @@ export function StepProducts({ draft, dispatch, errors }: StepProps) {
     <section>
       {SECTIONS.map(({ list, title, variant }) => (
         <div key={list} className="mb-6">
-          <h2 className="text-title font-semibold text-ink-strong">{t(title)}</h2>
+          <H className="text-title font-semibold text-ink-strong">{t(title)}</H>
           <ul>
             {draft[list].map((p) => {
               const code = hsString(p.hs)

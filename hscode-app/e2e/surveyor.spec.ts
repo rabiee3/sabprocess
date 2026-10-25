@@ -55,6 +55,11 @@ const onStep = (page: Page, step: string) => expect(page).toHaveURL(new RegExp(`
 
 async function fillLocation(page: Page) {
   await expect(page.getByText(/GPS .*15 m/)).toBeVisible() // the context's fixed geolocation was applied
+  const coords = page.locator('[dir="ltr"].font-mono')
+  const before = await coords.textContent()
+  await page.locator('.leaflet-container').click({ position: { x: 40, y: 40 } }) // tap-to-place
+  await expect(coords).not.toHaveText(before!)
+  await expect(page.getByText(en.survey.location.manual)).toBeVisible()
   await next(page)
   await onStep(page, 'basics')
 }

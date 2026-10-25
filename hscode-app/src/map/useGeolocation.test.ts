@@ -95,4 +95,10 @@ describe('useGeolocation', () => {
     expect(watchPosition).toHaveBeenCalledTimes(2)
     expect(result.current.status).toBe('pending')
   })
+
+  it('disabled: never starts a watch', () => {
+    const { result } = renderHook(() => useGeolocation({ enabled: false }))
+    expect(watchPosition).not.toHaveBeenCalled()
+    expect(result.current.status).toBe('unavailable')
+  })
 })

@@ -68,14 +68,14 @@ export async function factoryDocExists(fid: string, fs: Firestore = db): Promise
 
 export const newFactoryId = (fs: Firestore = db): string => doc(collection(fs, 'factories')).id
 
-const clean = (s: string | undefined): string | undefined => {
+export const clean = (s: string | undefined): string | undefined => {
   const t = s?.trim()
   return t ? t : undefined
 }
 
 const CONTACT_KEYS = ['phone', 'whatsapp', 'website', 'facebook', 'contactPerson'] as const
 
-function contactPayload(c: ContactDraft): Record<string, string | boolean> {
+export function contactPayload(c: ContactDraft): Record<string, string | boolean> {
   const out: Record<string, string | boolean> = {}
   for (const k of CONTACT_KEYS) {
     const v = clean(c[k])

@@ -3,7 +3,7 @@ import { createBrowserRouter } from 'react-router'
 export const routes = [
   { path: '/', HydrateFallback: () => null, lazy: () => import('./HomePlaceholder') },
   { path: '/survey/*', HydrateFallback: () => null, lazy: () => import('../survey/SurveyRoute') },
-  { path: '/admin/*', HydrateFallback: () => null, lazy: () => import('./AdminPlaceholder') },
+  { path: '/admin/*', HydrateFallback: () => null, lazy: () => import('../admin/AdminRoute') },
   { path: '*', HydrateFallback: () => null, lazy: () => import('./HomePlaceholder') },
 ]
 

@@ -16,5 +16,5 @@ export const firebaseConfig = {
   measurementId: 'G-SF70L271BF',
 }
 
-export const ADMIN_UID = 'k0a0b8HhATfZuFcC0clBqGmtGmF3'
+export const ADMIN_UID = 'CYQ2CC3DXMTne79XA79vqsYxB8R2'
 export const EMULATOR_PROJECT_ID = 'demo-hscode'
