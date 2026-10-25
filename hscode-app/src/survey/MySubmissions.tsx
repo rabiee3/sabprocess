@@ -83,8 +83,8 @@ export function MySubmissions() {
         )}
         {empty && !error && <p className="text-body text-ink-subtle">{t('survey.list.empty')}</p>}
         <ul className="space-y-3">
-          {standalone.map((e) => (
-            <li key={e.fid} className="rounded border border-line bg-surface p-3">
+          {standalone.map((e) => {
+            const body = (
               <div className="flex items-start gap-3">
                 <img src={placeholderFor(e.fid)} alt="" className="size-16 shrink-0 rounded object-cover" />
                 <div className="min-w-0 flex-1">
@@ -93,9 +93,21 @@ export function MySubmissions() {
                 </div>
                 <StatusChip status={e.state === 'failed' ? 'uploadFailed' : 'savedOnPhone'} />
               </div>
-              {e.state === 'failed' && <p className="mt-2 text-sm text-red-700">{t(`errors.${e.error ?? 'generic'}`)}</p>}
-            </li>
-          ))}
+            )
+            return (
+              <li key={e.fid} className="rounded border border-line bg-surface p-3">
+                {e.state === 'failed' ? (
+                  // Never reached the server: reopen the draft kept on this phone.
+                  <Link to={`new?resume=${encodeURIComponent(e.fid)}`} className="block min-h-touch">
+                    {body}
+                  </Link>
+                ) : (
+                  body
+                )}
+                {e.state === 'failed' && <p className="mt-2 text-sm text-red-700">{t(`errors.${e.error ?? 'generic'}`)}</p>}
+              </li>
+            )
+          })}
           {snap.items.map(({ factory: f, pendingWrite }) => {
             const entry = entryOf(f.id)
             const failed = entry?.state === 'failed'

@@ -4,8 +4,8 @@ import { HsBadge } from '../../hs/HsBadge'
 import { HsPicker } from '../../hs/HsPicker'
 import { hsString, validateHs } from '../../lib/hs'
 import trashIcon from '../../assets/icons/trash.svg?raw'
-import type { ProductList } from '../draft'
-import { Field, FieldError, INPUT, type StepProps } from './shared'
+import { LIMITS, MAX_PRODUCTS, tooLong, type ProductList } from '../draft'
+import { Field, FieldError, TextInput, type StepProps } from './shared'
 
 const SECTIONS: { list: ProductList; title: string; variant: 'made' | 'needed' }[] = [
   { list: 'productsMade', title: 'survey.products.made', variant: 'made' },
@@ -13,9 +13,13 @@ const SECTIONS: { list: ProductList; title: string; variant: 'made' | 'needed' }
 ]
 
 const blank = (s: string) => s.trim() === ''
+const tooLongName = (s: string) => s.trim().length > LIMITS.productName
 
 export function StepProducts({ draft, dispatch, errors }: StepProps) {
   const { t } = useTranslation()
+  const longMsg = t('errors.tooLong', { max: LIMITS.productName })
+  const maxMsg = t('survey.products.max', { max: MAX_PRODUCTS })
+  const flagLong = errors.includes(tooLong('productName'))
   const [picking, setPicking] = useState<{ list: ProductList; key: string } | null>(null)
   const picked = picking ? draft[picking.list].find((p) => p.key === picking.key) : undefined
   return (
@@ -33,26 +37,24 @@ export function StepProducts({ draft, dispatch, errors }: StepProps) {
                     error={
                       errors.includes('survey.products.nameRequired') && blank(p.name.en) && blank(p.name.ar)
                         ? t('survey.products.nameRequired')
-                        : undefined
+                        : flagLong && tooLongName(p.name.en)
+                          ? longMsg
+                          : undefined
                     }
                   >
-                    <input
-                      className={INPUT}
+                    <TextInput
+                      limit="productName"
                       dir="ltr"
                       value={p.name.en}
-                      onChange={(e) =>
-                        dispatch({ type: 'updateProduct', list, key: p.key, patch: { name: { ...p.name, en: e.target.value } } })
-                      }
+                      onValue={(en) => dispatch({ type: 'updateProduct', list, key: p.key, patch: { name: { ...p.name, en } } })}
                     />
                   </Field>
-                  <Field label={t('survey.products.nameAr')}>
-                    <input
-                      className={INPUT}
+                  <Field label={t('survey.products.nameAr')} error={flagLong && tooLongName(p.name.ar) ? longMsg : undefined}>
+                    <TextInput
+                      limit="productName"
                       dir="rtl"
                       value={p.name.ar}
-                      onChange={(e) =>
-                        dispatch({ type: 'updateProduct', list, key: p.key, patch: { name: { ...p.name, ar: e.target.value } } })
-                      }
+                      onValue={(ar) => dispatch({ type: 'updateProduct', list, key: p.key, patch: { name: { ...p.name, ar } } })}
                     />
                   </Field>
                   <div className="mt-3 flex items-center gap-2">
@@ -80,10 +82,16 @@ export function StepProducts({ draft, dispatch, errors }: StepProps) {
               )
             })}
           </ul>
+          {draft[list].length > MAX_PRODUCTS && errors.includes('survey.products.max') ? (
+            <FieldError>{maxMsg}</FieldError>
+          ) : (
+            draft[list].length >= MAX_PRODUCTS && <p className="mt-3 text-body-sm text-ink-subtle">{maxMsg}</p>
+          )}
           <button
             type="button"
+            disabled={draft[list].length >= MAX_PRODUCTS}
             onClick={() => dispatch({ type: 'addProduct', list })}
-            className="mt-3 min-h-control w-full rounded border border-dashed border-line-strong text-body font-semibold text-ink-strong"
+            className="mt-3 min-h-control w-full rounded border border-dashed border-line-strong text-body font-semibold text-ink-strong disabled:opacity-50"
           >
             {t('survey.products.add')}
           </button>

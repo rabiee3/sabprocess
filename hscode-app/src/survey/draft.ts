@@ -127,8 +127,32 @@ export function draftReducer(d: Draft, a: DraftAction): Draft {
 
 const blank = (s: string | undefined): boolean => !s || s.trim() === ''
 
+/** Max lengths, matching firestore.rules (product names aren't capped there; 120 keeps them in line with names). */
+export const LIMITS = {
+  'name.en': 120,
+  'name.ar': 120,
+  areaOther: 120,
+  address: 300,
+  phone: 40,
+  whatsapp: 40,
+  website: 300,
+  facebook: 300,
+  contactPerson: 120,
+  productName: 120,
+} as const
+export type LimitField = keyof typeof LIMITS
+/** Max products per list (rules: list size <= 30). */
+export const MAX_PRODUCTS = 30
+
+/** The stepErrors entry for a too-long field (not an i18n key: render it with errors.tooLong + LIMITS[field]). */
+export const tooLong = (field: LimitField): string => `tooLong:${field}`
+const over = (field: LimitField, s: string | undefined): boolean => (s?.trim().length ?? 0) > LIMITS[field]
+
 export function stepErrors(d: Draft, step: StepId): string[] {
   const out: string[] = []
+  const check = (field: LimitField, s: string | undefined) => {
+    if (over(field, s)) out.push(tooLong(field))
+  }
   switch (step) {
     case 'location':
       if (!d.location || !insideEgypt(d.location.lat, d.location.lng)) out.push('survey.location.required')
@@ -136,15 +160,30 @@ export function stepErrors(d: Draft, step: StepId): string[] {
       break
     case 'basics':
       if (blank(d.name.en) && blank(d.name.ar)) out.push('survey.basics.nameRequired')
+      check('name.en', d.name.en)
+      check('name.ar', d.name.ar)
       if (blank(d.area)) out.push('survey.basics.areaRequired')
       else if (d.area === 'other' && blank(d.areaOther)) out.push('survey.basics.areaOtherRequired')
+      check('areaOther', d.areaOther) // sent whenever non-blank (toFactoryInput)
+      check('address', d.address)
       break
     case 'products':
+      if (d.productsMade.length > MAX_PRODUCTS || d.productsNeeded.length > MAX_PRODUCTS) out.push('survey.products.max')
       for (const p of [...d.productsMade, ...d.productsNeeded]) {
         if (blank(p.name.en) && blank(p.name.ar)) out.push('survey.products.nameRequired')
+        if (over('productName', p.name.en) || over('productName', p.name.ar)) out.push(tooLong('productName'))
         if (p.hs && !validateHs(p.hs).ok) out.push('hs.tariffInvalid')
       }
       break
+    case 'contacts': {
+      const c = d.contact
+      check('phone', c.phone)
+      if (!c.whatsappSameAsPhone) check('whatsapp', c.whatsapp)
+      check('website', c.website)
+      check('facebook', c.facebook)
+      check('contactPerson', c.contactPerson)
+      break
+    }
     default:
       break
   }

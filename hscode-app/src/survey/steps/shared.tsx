@@ -1,10 +1,11 @@
-import type { Dispatch, ReactNode } from 'react'
-import type { Draft, DraftAction } from '../draft'
+import type { ClipboardEvent, Dispatch, InputHTMLAttributes, ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import { LIMITS, tooLong, type Draft, type DraftAction, type LimitField } from '../draft'
 
 export type StepProps = {
   draft: Draft
   dispatch: Dispatch<DraftAction>
-  /** i18n keys of the current step's errors, or [] until the user has tried Next. */
+  /** stepErrors entries of the current step (i18n keys or tooLong(field)), or [] until the user has tried Next. */
   errors: string[]
 }
 
@@ -25,5 +26,44 @@ export function Field({ label, children, error }: { label: string; children: Rea
       {children}
       {error ? <FieldError>{error}</FieldError> : null}
     </label>
+  )
+}
+
+/** The "too long" message for `field` when stepErrors flagged it. */
+export function useTooLong(errors: string[]): (field: LimitField) => string | undefined {
+  const { t } = useTranslation()
+  return (field) => (errors.includes(tooLong(field)) ? t('errors.tooLong', { max: LIMITS[field] }) : undefined)
+}
+
+type TextInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'maxLength'> & {
+  limit: LimitField
+  value: string
+  onValue: (v: string) => void
+}
+
+function selection(el: HTMLInputElement, fallback: number): [number, number] {
+  try {
+    return [el.selectionStart ?? fallback, el.selectionEnd ?? fallback]
+  } catch {
+    return [fallback, fallback] // type=url/email have no selection API in some browsers
+  }
+}
+
+/**
+ * A text input capped at LIMITS[limit]: maxLength stops typing. A paste that would overflow is kept whole
+ * (the browser would cut it silently) so stepErrors can flag it and the surveyor sees what was cut.
+ */
+export function TextInput({ limit, value, onValue, className = INPUT, ...rest }: TextInputProps) {
+  const max = LIMITS[limit]
+  function onPaste(e: ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData('text')
+    const [start, end] = selection(e.currentTarget, value.length)
+    const next = value.slice(0, start) + text + value.slice(end)
+    if (next.length <= max) return
+    e.preventDefault()
+    onValue(next)
+  }
+  return (
+    <input {...rest} className={className} maxLength={max} value={value} onChange={(e) => onValue(e.target.value)} onPaste={onPaste} />
   )
 }

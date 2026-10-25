@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Factory } from '../lib/types'
 import {
+  LIMITS,
+  MAX_PRODUCTS,
   STEPS,
   clearDraft,
   draftFromFactory,
@@ -13,6 +15,7 @@ import {
   saveDraft,
   stepErrors,
   toFactoryInput,
+  tooLong,
   type Draft,
 } from './draft'
 import { outbox } from './outbox'
@@ -92,7 +95,38 @@ describe('stepErrors', () => {
     expect(stepErrors({ ...d, productsNeeded: [row('a', { heading: '7208' })] }, 'products')).toEqual([])
     expect(stepErrors({ ...d, productsNeeded: [row('a', { heading: '12' })] }, 'products')).toEqual(['hs.tariffInvalid'])
   })
-  it('contacts and photos have none', () => {
+  it('length limits match the rules (trimmed values)', () => {
+    const x = (n: number) => 'x'.repeat(n)
+    const d = { ...emptyDraft('f'), name: { en: x(120), ar: x(120) }, area: 'other', areaOther: x(120), address: x(300) }
+    expect(stepErrors(d, 'basics')).toEqual([])
+    expect(stepErrors({ ...d, name: { en: x(121), ar: '' } }, 'basics')).toEqual([tooLong('name.en')])
+    expect(stepErrors({ ...d, name: { en: '', ar: x(121) } }, 'basics')).toEqual([tooLong('name.ar')])
+    expect(stepErrors({ ...d, areaOther: x(121) }, 'basics')).toEqual([tooLong('areaOther')])
+    expect(stepErrors({ ...d, area: 'zone', areaOther: x(121) }, 'basics')).toEqual([tooLong('areaOther')])
+    expect(stepErrors({ ...d, address: x(301) }, 'basics')).toEqual([tooLong('address')])
+    expect(stepErrors({ ...d, address: ` ${x(300)} ` }, 'basics')).toEqual([])
+  })
+  it('contact limits', () => {
+    const x = (n: number) => 'x'.repeat(n)
+    const ok = { phone: x(40), whatsapp: x(40), website: x(300), facebook: x(300), contactPerson: x(120) }
+    expect(stepErrors({ ...emptyDraft('f'), contact: ok }, 'contacts')).toEqual([])
+    for (const [k, max] of [['phone', 40], ['whatsapp', 40], ['website', 300], ['facebook', 300], ['contactPerson', 120]] as const) {
+      expect(stepErrors({ ...emptyDraft('f'), contact: { ...ok, [k]: x(max + 1) } }, 'contacts')).toEqual([tooLong(k)])
+    }
+    // whatsapp mirrors the phone: its own stale value is not sent, so not checked
+    expect(stepErrors({ ...emptyDraft('f'), contact: { whatsapp: x(41), whatsappSameAsPhone: true } }, 'contacts')).toEqual([])
+    expect(LIMITS.facebook).toBe(300)
+  })
+  it('product name and count limits', () => {
+    const d = emptyDraft('f')
+    const row = (en: string) => ({ key: productKey(), name: { en, ar: '' } })
+    expect(stepErrors({ ...d, productsMade: [row('x'.repeat(120))] }, 'products')).toEqual([])
+    expect(stepErrors({ ...d, productsNeeded: [row('x'.repeat(121))] }, 'products')).toEqual([tooLong('productName')])
+    expect(stepErrors({ ...d, productsMade: Array.from({ length: 30 }, () => row('a')) }, 'products')).toEqual([])
+    expect(stepErrors({ ...d, productsMade: Array.from({ length: 31 }, () => row('a')) }, 'products')).toEqual(['survey.products.max'])
+    expect(MAX_PRODUCTS).toBe(30)
+  })
+  it('photos have no errors; contacts none when empty', () => {
     expect(stepErrors(emptyDraft('f'), 'contacts')).toEqual([])
     expect(stepErrors(emptyDraft('f'), 'photos')).toEqual([])
   })

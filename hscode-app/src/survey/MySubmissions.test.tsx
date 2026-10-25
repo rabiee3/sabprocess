@@ -157,4 +157,15 @@ describe('MySubmissions', () => {
     act(() => emit([], { fromCache: true }))
     expect(screen.queryByText(en.survey.list.uploadFailed)).toBeNull()
   })
+
+  it('a failed row opens its draft: new?resume when the doc never reached the server, edit when it did', () => {
+    seedOutbox([
+      { fid: 'z', savedAt: 1, state: 'failed', error: 'rejected', submittedAt: 1 },
+      { fid: 'a', savedAt: 1, state: 'failed', error: 'rejected', submittedAt: 1 },
+    ])
+    setup()
+    act(() => emit([item(fac('a', 'pending'), true)], { fromCache: true }))
+    expect(screen.getByRole('link', { name: new RegExp(en.survey.list.untitled) })).toHaveAttribute('href', '/new?resume=z')
+    expect(screen.getByRole('link', { name: /Factory a/ })).toHaveAttribute('href', '/edit/a')
+  })
 })

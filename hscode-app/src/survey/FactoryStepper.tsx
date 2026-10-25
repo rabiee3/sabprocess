@@ -84,9 +84,12 @@ function Form({ uid, initial, mode }: { uid: string; initial: Draft; mode: 'new'
     }
     submitted.current = true
     outbox.add(uid, draft.fid)
-    clearDraft(uid, draft.fid)
+    // The draft stays until the outcome is known: a failed upload reopens it from My submissions.
     const fid = draft.fid
-    commit.catch((e: unknown) => classifySubmitError(e, uid).then((code) => outbox.markFailed(uid, fid, code)))
+    commit.then(
+      () => clearDraft(uid, fid),
+      (e: unknown) => classifySubmitError(e, uid).then((code) => outbox.markFailed(uid, fid, code)),
+    )
     navigate(LIST)
   }
 
@@ -166,7 +169,13 @@ function EditLoader({ uid }: { uid: string }) {
 }
 
 function NewLoader({ uid }: { uid: string }) {
-  const [initial] = useState(() => latestNewDraft(uid) ?? emptyDraft(newFactoryId()))
+  const [params] = useSearchParams()
+  const [initial] = useState(() => {
+    // ?resume=<fid>: reopen that draft (a failed upload from My submissions).
+    const resume = params.get('resume')
+    const saved = resume ? loadDraft(uid, resume) : null
+    return (saved?.mode === 'new' ? saved : null) ?? latestNewDraft(uid) ?? emptyDraft(newFactoryId())
+  })
   return <Form uid={uid} initial={initial} mode="new" />
 }
 

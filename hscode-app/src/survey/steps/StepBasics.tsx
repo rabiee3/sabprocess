@@ -1,27 +1,28 @@
 import { useTranslation } from 'react-i18next'
 import { areas, sectors } from '../../data'
-import { Field, INPUT, type StepProps } from './shared'
+import { Field, INPUT, TextInput, useTooLong, type StepProps } from './shared'
 
 export function StepBasics({ draft, dispatch, errors }: StepProps) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language.startsWith('ar') ? 'ar' : 'en'
   const err = (k: string) => (errors.includes(k) ? t(k) : undefined)
+  const long = useTooLong(errors)
   return (
     <section>
-      <Field label={t('survey.basics.nameEn')} error={err('survey.basics.nameRequired')}>
-        <input
-          className={INPUT}
+      <Field label={t('survey.basics.nameEn')} error={err('survey.basics.nameRequired') ?? long('name.en')}>
+        <TextInput
+          limit="name.en"
           dir="ltr"
           value={draft.name.en}
-          onChange={(e) => dispatch({ type: 'setName', lang: 'en', value: e.target.value })}
+          onValue={(value) => dispatch({ type: 'setName', lang: 'en', value })}
         />
       </Field>
-      <Field label={t('survey.basics.nameAr')}>
-        <input
-          className={INPUT}
+      <Field label={t('survey.basics.nameAr')} error={long('name.ar')}>
+        <TextInput
+          limit="name.ar"
           dir="rtl"
           value={draft.name.ar}
-          onChange={(e) => dispatch({ type: 'setName', lang: 'ar', value: e.target.value })}
+          onValue={(value) => dispatch({ type: 'setName', lang: 'ar', value })}
         />
       </Field>
       <Field label={t('survey.basics.area')} error={err('survey.basics.areaRequired')}>
@@ -39,11 +40,11 @@ export function StepBasics({ draft, dispatch, errors }: StepProps) {
         </select>
       </Field>
       {draft.area === 'other' && (
-        <Field label={t('survey.basics.areaOther')} error={err('survey.basics.areaOtherRequired')}>
-          <input
-            className={INPUT}
+        <Field label={t('survey.basics.areaOther')} error={err('survey.basics.areaOtherRequired') ?? long('areaOther')}>
+          <TextInput
+            limit="areaOther"
             value={draft.areaOther}
-            onChange={(e) => dispatch({ type: 'setField', field: 'areaOther', value: e.target.value })}
+            onValue={(value) => dispatch({ type: 'setField', field: 'areaOther', value })}
           />
         </Field>
       )}
@@ -61,11 +62,11 @@ export function StepBasics({ draft, dispatch, errors }: StepProps) {
           ))}
         </select>
       </Field>
-      <Field label={t('survey.basics.address')}>
-        <input
-          className={INPUT}
+      <Field label={t('survey.basics.address')} error={long('address')}>
+        <TextInput
+          limit="address"
           value={draft.address}
-          onChange={(e) => dispatch({ type: 'setField', field: 'address', value: e.target.value })}
+          onValue={(value) => dispatch({ type: 'setField', field: 'address', value })}
         />
       </Field>
     </section>

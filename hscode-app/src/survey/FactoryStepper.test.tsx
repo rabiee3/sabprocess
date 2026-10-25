@@ -100,7 +100,7 @@ describe('FactoryStepper', () => {
     expect(screen.getByText('Step 1 of 6')).toBeInTheDocument()
   })
 
-  it('happy path submits without awaiting, queues the outbox, clears the draft and goes to the list', async () => {
+  it('happy path submits without awaiting, queues the outbox, clears the draft once the commit lands', async () => {
     renderAt('/survey/new')
     await user.click(screen.getByText('set-pin'))
     await next()
@@ -129,8 +129,8 @@ describe('FactoryStepper', () => {
       thumb: 'thumb',
     })
     expect(outbox.list('u1').map((e) => e.fid)).toEqual(['fnew'])
-    expect(loadDraft('u1', 'fnew')).toBeNull()
     expect(screen.getByText('LIST')).toBeInTheDocument()
+    await waitFor(() => expect(loadDraft('u1', 'fnew')).toBeNull())
   })
 
   it('offline shows Save on this phone and still submits', async () => {
@@ -276,5 +276,97 @@ describe('FactoryStepper', () => {
   it('an invalid step param falls back to location', () => {
     renderAt('/survey/new?step=bogus')
     expect(screen.getByText('Step 1 of 6')).toBeInTheDocument()
+  })
+
+  describe('limits (F1)', () => {
+    it('inputs carry maxLength matching the rules', () => {
+      saveDraft('u1', fullDraft({ area: 'other' }))
+      renderAt('/survey/new?step=basics')
+      expect(screen.getByLabelText(en.survey.basics.nameEn)).toHaveAttribute('maxLength', '120')
+      expect(screen.getByLabelText(en.survey.basics.nameAr)).toHaveAttribute('maxLength', '120')
+      expect(screen.getByLabelText(en.survey.basics.areaOther)).toHaveAttribute('maxLength', '120')
+      expect(screen.getByLabelText(en.survey.basics.address)).toHaveAttribute('maxLength', '300')
+    })
+
+    it('contact inputs carry maxLength; website and facebook are LTR url inputs', () => {
+      saveDraft('u1', fullDraft())
+      renderAt('/survey/new?step=contacts')
+      expect(screen.getByLabelText(en.survey.contacts.phone)).toHaveAttribute('maxLength', '40')
+      expect(screen.getByLabelText(en.survey.contacts.whatsapp)).toHaveAttribute('maxLength', '40')
+      expect(screen.getByLabelText(en.survey.contacts.person)).toHaveAttribute('maxLength', '120')
+      for (const label of [en.survey.contacts.website, en.survey.contacts.facebook]) {
+        const el = screen.getByLabelText(label)
+        expect(el).toHaveAttribute('maxLength', '300')
+        expect(el).toHaveAttribute('type', 'url')
+        expect(el).toHaveAttribute('inputMode', 'url')
+        expect(el).toHaveAttribute('dir', 'ltr')
+      }
+    })
+
+    it('an overlong pasted Facebook URL is kept whole and blocks Next with an error', async () => {
+      saveDraft('u1', fullDraft())
+      renderAt('/survey/new?step=contacts')
+      const fb = screen.getByLabelText(en.survey.contacts.facebook)
+      await user.click(fb)
+      await user.paste('https://facebook.com/' + 'x'.repeat(300))
+      expect((fb as HTMLInputElement).value).toHaveLength(321)
+      await next()
+      expect(screen.getByText(en.errors.tooLong.replace('{{max}}', '300'))).toBeInTheDocument()
+      expect(screen.getByText('Step 4 of 6')).toBeInTheDocument()
+    })
+
+    it('submit from review with a stored overlong field goes back to that step instead of submitting', async () => {
+      saveDraft('u1', fullDraft({ contact: { facebook: 'x'.repeat(301) } }))
+      renderAt('/survey/new?step=review')
+      await user.click(screen.getByRole('button', { name: en.survey.review.submit }))
+      expect(repo.submitFactory).not.toHaveBeenCalled()
+      expect(screen.getByText('Step 4 of 6')).toBeInTheDocument()
+      expect(screen.getByText(en.errors.tooLong.replace('{{max}}', '300'))).toBeInTheDocument()
+    })
+
+    it('Add product is disabled at 30 per list, with a hint', () => {
+      const rows = Array.from({ length: 30 }, (_, i) => ({ key: `k${i}`, name: { en: `P${i}`, ar: '' } }))
+      saveDraft('u1', fullDraft({ productsMade: rows }))
+      renderAt('/survey/new?step=products')
+      const [made, needed] = screen.getAllByRole('button', { name: en.survey.products.add })
+      expect(made).toBeDisabled()
+      expect(needed).toBeEnabled()
+      expect(screen.getByText(en.survey.products.max.replace('{{max}}', '30'))).toBeInTheDocument()
+    })
+  })
+
+  describe('draft lifecycle (F1c)', () => {
+    it('a commit that has not settled keeps the draft, and a new factory does not reuse it', async () => {
+      vi.mocked(repo.submitFactory).mockImplementation(() => new Promise(() => {}))
+      saveDraft('u1', fullDraft())
+      const a = renderAt('/survey/new?step=review')
+      await user.click(screen.getByRole('button', { name: en.survey.review.submit }))
+      expect(screen.getByText('LIST')).toBeInTheDocument()
+      expect(loadDraft('u1', 'fnew')?.name.en).toBe('Acme')
+      a.unmount()
+      vi.mocked(repo.newFactoryId).mockReturnValue('fnext')
+      renderAt('/survey/new?step=basics')
+      expect(screen.getByLabelText(en.survey.basics.nameEn)).toHaveValue('')
+    })
+
+    it('a failed commit keeps the draft', async () => {
+      vi.mocked(repo.submitFactory).mockImplementation(() => Promise.reject({ code: 'permission-denied' }))
+      saveDraft('u1', fullDraft())
+      renderAt('/survey/new?step=review')
+      await user.click(screen.getByRole('button', { name: en.survey.review.submit }))
+      await waitFor(() => expect(outbox.list('u1')[0]?.state).toBe('failed'))
+      expect(loadDraft('u1', 'fnew')).not.toBeNull()
+    })
+
+    it('new?resume=<fid> opens that saved draft', () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(1000)
+      saveDraft('u1', fullDraft({ fid: 'fold', name: { en: 'Resumed', ar: '' } }))
+      vi.setSystemTime(2000)
+      saveDraft('u1', fullDraft({ fid: 'fnewer', name: { en: 'Newer', ar: '' } }))
+      vi.useRealTimers()
+      renderAt('/survey/new?resume=fold&step=basics')
+      expect(screen.getByLabelText(en.survey.basics.nameEn)).toHaveValue('Resumed')
+    })
   })
 })

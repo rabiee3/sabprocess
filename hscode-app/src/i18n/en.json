@@ -103,7 +103,8 @@
       "remove": "Remove product",
       "nameRequired": "Enter a product name.",
       "nameEn": "Product name (English)",
-      "nameAr": "Product name (Arabic)"
+      "nameAr": "Product name (Arabic)",
+      "max": "Up to {{max}} products in each list."
     },
     "contacts": {
       "intro": "Optional — skip anything the factory prefers not to share.",
@@ -159,6 +160,7 @@
     "accessOff": "Your surveyor access was turned off",
     "rejected": "This factory couldn't be saved — open it and check the details.",
     "quota": "HSCode is busy right now — please try again later",
-    "generic": "Something went wrong. Please try again."
+    "generic": "Something went wrong. Please try again.",
+    "tooLong": "Too long — use at most {{max}} characters."
   }
 }

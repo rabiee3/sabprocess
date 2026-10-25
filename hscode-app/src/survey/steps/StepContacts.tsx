@@ -1,38 +1,32 @@
 import { useTranslation } from 'react-i18next'
 import type { ContactDraft } from '../types'
-import { Field, INPUT, type StepProps } from './shared'
+import { Field, TextInput, useTooLong, type StepProps } from './shared'
 
-export function StepContacts({ draft, dispatch }: StepProps) {
+export function StepContacts({ draft, dispatch, errors }: StepProps) {
   const { t } = useTranslation()
+  const long = useTooLong(errors)
   const c = draft.contact
   const set = (patch: Partial<ContactDraft>) => dispatch({ type: 'setContact', contact: { ...c, ...patch } })
-  const text = (k: 'website' | 'facebook' | 'contactPerson', label: string) => (
-    <Field label={label}>
-      <input className={INPUT} value={c[k] ?? ''} onChange={(e) => set({ [k]: e.target.value })} />
+  const url = (k: 'website' | 'facebook', label: string) => (
+    <Field label={label} error={long(k)}>
+      <TextInput limit={k} type="url" inputMode="url" dir="ltr" value={c[k] ?? ''} onValue={(v) => set({ [k]: v })} />
     </Field>
   )
   return (
     <section>
       <p className="mb-4 text-body-sm text-ink-subtle">{t('survey.contacts.intro')}</p>
-      <Field label={t('survey.contacts.phone')}>
-        <input
-          className={INPUT}
-          type="tel"
-          inputMode="tel"
-          dir="ltr"
-          value={c.phone ?? ''}
-          onChange={(e) => set({ phone: e.target.value })}
-        />
+      <Field label={t('survey.contacts.phone')} error={long('phone')}>
+        <TextInput limit="phone" type="tel" inputMode="tel" dir="ltr" value={c.phone ?? ''} onValue={(v) => set({ phone: v })} />
       </Field>
-      <Field label={t('survey.contacts.whatsapp')}>
-        <input
-          className={INPUT}
+      <Field label={t('survey.contacts.whatsapp')} error={c.whatsappSameAsPhone ? undefined : long('whatsapp')}>
+        <TextInput
+          limit="whatsapp"
           type="tel"
           inputMode="tel"
           dir="ltr"
           disabled={!!c.whatsappSameAsPhone}
           value={c.whatsappSameAsPhone ? (c.phone ?? '') : (c.whatsapp ?? '')}
-          onChange={(e) => set({ whatsapp: e.target.value })}
+          onValue={(v) => set({ whatsapp: v })}
         />
       </Field>
       <label className="mt-2 flex min-h-touch items-center gap-2 text-body-sm text-ink">
@@ -44,9 +38,11 @@ export function StepContacts({ draft, dispatch }: StepProps) {
         />
         {t('survey.contacts.sameAsPhone')}
       </label>
-      {text('website', t('survey.contacts.website'))}
-      {text('facebook', t('survey.contacts.facebook'))}
-      {text('contactPerson', t('survey.contacts.person'))}
+      {url('website', t('survey.contacts.website'))}
+      {url('facebook', t('survey.contacts.facebook'))}
+      <Field label={t('survey.contacts.person')} error={long('contactPerson')}>
+        <TextInput limit="contactPerson" value={c.contactPerson ?? ''} onValue={(v) => set({ contactPerson: v })} />
+      </Field>
     </section>
   )
 }
