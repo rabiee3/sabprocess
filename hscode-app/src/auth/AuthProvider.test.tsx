@@ -6,12 +6,13 @@ import { useAuth } from './useAuth'
 import { ensureUserDoc } from './api'
 
 type AuthCb = (u: unknown) => void
-type SnapCb = (s: { data: () => unknown }) => void
+type SnapCb = (s: { data: () => unknown; metadata?: { hasPendingWrites: boolean } }) => void
 
 const h = vi.hoisted(() => ({
   authCb: null as null | ((u: unknown) => void),
   authUnsub: vi.fn(),
-  snaps: [] as { uid: string; ok: (s: { data: () => unknown }) => void; unsub: ReturnType<typeof vi.fn> }[],
+  opts: [] as unknown[],
+  snaps: [] as { uid: string; ok: SnapCb; unsub: ReturnType<typeof vi.fn> }[],
 }))
 
 vi.mock('../firebase', () => ({ auth: {}, db: {} }))
@@ -24,7 +25,8 @@ vi.mock('firebase/auth', () => ({
 }))
 vi.mock('firebase/firestore', () => ({
   doc: (_d: unknown, _c: string, uid: string) => ({ uid }),
-  onSnapshot: (ref: { uid: string }, ok: SnapCb) => {
+  onSnapshot: (ref: { uid: string }, opts: unknown, ok: SnapCb) => {
+    h.opts.push(opts)
     const unsub = vi.fn()
     h.snaps.push({ uid: ref.uid, ok, unsub })
     return unsub
@@ -42,11 +44,12 @@ function Probe() {
 const mount = () => render(<AuthProvider><Probe /></AuthProvider>)
 const fire = (u: unknown) => act(async () => { h.authCb!(u) })
 const flush = () => act(async () => { await Promise.resolve() })
-const snap = (data: unknown) => ({ data: () => data })
+const snap = (data: unknown, hasPendingWrites = false) => ({ data: () => data, metadata: { hasPendingWrites } })
 
 beforeEach(() => {
   h.authCb = null
   h.snaps.length = 0
+  h.opts.length = 0
   h.authUnsub.mockClear()
   vi.mocked(ensureUserDoc).mockReset().mockResolvedValue(undefined)
 })
@@ -69,6 +72,28 @@ describe('AuthProvider', () => {
     expect(latest.loading).toBe(true)
     act(() => h.snaps[0].ok(snap({ role: 'surveyor', active: true })))
     expect(latest).toMatchObject({ role: 'surveyor', active: true, loading: false })
+  })
+
+  it('ignores an optimistic local surveyor promotion until the server confirms it', async () => {
+    mount()
+    await fire({ uid: 'u1' })
+    await flush()
+    expect(h.opts[0]).toEqual({ includeMetadataChanges: true })
+    act(() => h.snaps[0].ok(snap({ role: 'client', active: true })))
+    act(() => h.snaps[0].ok(snap({ role: 'surveyor', active: true }, true)))
+    expect(latest).toMatchObject({ role: 'client' })
+    act(() => h.snaps[0].ok(snap({ role: 'surveyor', active: true })))
+    expect(latest).toMatchObject({ role: 'surveyor' })
+  })
+
+  it('a pending surveyor claim as the very first snapshot resolves to the client view, not a spinner', async () => {
+    mount()
+    await fire({ uid: 'u1' })
+    await flush()
+    act(() => h.snaps[0].ok(snap({ role: 'surveyor', active: true }, true)))
+    expect(latest).toMatchObject({ role: 'client', loading: false })
+    act(() => h.snaps[0].ok(snap({ role: 'surveyor', active: true })))
+    expect(latest).toMatchObject({ role: 'surveyor', loading: false })
   })
 
   it('(b) re-fire before ensureUserDoc resolves does not attach the stale listener', async () => {

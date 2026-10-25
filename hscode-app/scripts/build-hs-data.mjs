@@ -44,12 +44,14 @@ for (const k of ['hscode', 'description', 'level']) {
 }
 
 const ar = JSON.parse(await readFile(join(root, 'hs-chapters-ar.json'), 'utf8'));
+// Corrections for upstream English labels that mislead (code -> label).
+const overrides = JSON.parse(await readFile(join(root, 'hs-en-overrides.json'), 'utf8'));
 const chapters = [];
 const headings = [];
 const subs = {};
 for (const r of rows) {
   const code = r[col.hscode].trim();
-  const en = r[col.description].trim();
+  const en = overrides[code] ?? r[col.description].trim();
   const level = r[col.level].trim();
   if (!keepChapter(code.slice(0, 2))) continue;
   if (level === '2') {

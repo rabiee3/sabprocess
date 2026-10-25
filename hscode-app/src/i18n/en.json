@@ -4,6 +4,7 @@
     "tagline": "Who makes what. Who needs what."
   },
   "lang": {
+    "label": "Language",
     "en": "EN",
     "ar": "ع"
   },
@@ -15,11 +16,153 @@
     "admin": "Admin"
   },
   "common": {
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "close": "Close",
+    "loading": "Loading…",
+    "reload": "Reload"
   },
   "role": {
     "client": "Client",
     "surveyor": "Surveyor",
     "admin": "Admin"
+  },
+  "survey": {
+    "gate": {
+      "signInTitle": "Map the factories of Egypt",
+      "signInBody": "Add what each factory makes and needs, right from the field. Sign in with Google to start.",
+      "continueGoogle": "Continue with Google",
+      "offTitle": "Surveyor access is off",
+      "offBody": "Your account can't submit factories right now. Ask your supervisor to turn surveyor access back on.",
+      "adminNote": "Admins review submissions from the admin area."
+    },
+    "invite": {
+      "title": "Enter your invitation code",
+      "body": "Your supervisor gave you a 6-digit code. You only need it once.",
+      "unlock": "Unlock surveying",
+      "invalid": "This code isn't valid or was already used. Check the 6 digits with your supervisor.",
+      "offline": "You're offline — connect to unlock surveying",
+      "signedInAs": "Signed in as {{email}}",
+      "unlocking": "Unlocking…",
+      "unlockSlow": "Your code was accepted, but your account hasn't updated yet. Reload the page to continue."
+    },
+    "list": {
+      "title": "My submissions",
+      "add": "Add factory",
+      "empty": "No factories yet. Tap Add factory to submit your first one.",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "savedOnPhone": "Saved on this phone",
+      "uploadFailed": "Couldn't upload",
+      "adminReason": "Admin's reason",
+      "fixResubmit": "Fix and resubmit",
+      "untitled": "Untitled factory"
+    },
+    "step": {
+      "counter": "Step {{n}} of {{total}}",
+      "back": "Back",
+      "next": "Next",
+      "location": "Location",
+      "basics": "Basics",
+      "products": "Products",
+      "contacts": "Contacts",
+      "photos": "Photos",
+      "review": "Review"
+    },
+    "location": {
+      "title": "Where is the factory?",
+      "hint": "Drag the pin onto the factory gate.",
+      "gpsOff": "Location is off. The pin starts at the centre of the selected area. Move it onto the factory before saving.",
+      "weak": "GPS signal is weak. Move the pin onto the gate by hand.",
+      "myLocation": "My location",
+      "accuracy": "GPS ±{{m}} m",
+      "required": "Place the pin on the factory inside Egypt.",
+      "mustMove": "Move the pin onto the factory before continuing.",
+      "nudgeUp": "Move pin north",
+      "nudgeDown": "Move pin south",
+      "nudgeLeft": "Move pin west",
+      "nudgeRight": "Move pin east"
+    },
+    "basics": {
+      "nameEn": "Factory name (English)",
+      "nameAr": "Factory name (Arabic)",
+      "nameRequired": "At least one name is required.",
+      "area": "Industrial area",
+      "areaOther": "Other area",
+      "sector": "Sector",
+      "address": "Address or landmark",
+      "areaRequired": "Choose an industrial area.",
+      "areaOtherRequired": "Enter the name of the area."
+    },
+    "products": {
+      "made": "Products made",
+      "needed": "Products needed",
+      "name": "Product name",
+      "hsOptional": "HS code (optional)",
+      "add": "Add product",
+      "remove": "Remove product",
+      "nameRequired": "Enter a product name.",
+      "nameEn": "Product name (English)",
+      "nameAr": "Product name (Arabic)",
+      "max": "Up to {{max}} products in each list."
+    },
+    "contacts": {
+      "intro": "Optional — skip anything the factory prefers not to share.",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "sameAsPhone": "Same as phone",
+      "website": "Website",
+      "facebook": "Facebook page",
+      "person": "Contact person"
+    },
+    "photos": {
+      "intro": "Up to 3 photos. The gate and signboard help the admin approve faster.",
+      "camera": "Camera",
+      "gallery": "Gallery",
+      "failed": "This photo couldn't be added — try the Camera button, or pick a JPEG photo",
+      "remove": "Remove photo"
+    },
+    "review": {
+      "title": "Check before you send",
+      "offlineBanner": "You're offline. Saved on this phone, will upload when you're back online.",
+      "pinNotMoved": "The pin wasn't moved from your GPS position — the admin will double-check.",
+      "weakGps": "GPS was weak. The admin may double-check the location.",
+      "submit": "Submit factory",
+      "saveOnPhone": "Save on this phone",
+      "edit": "Edit"
+    },
+    "edit": {
+      "notFound": "This factory could not be found.",
+      "back": "Back to my submissions"
+    }
+  },
+  "hs": {
+    "title": "HS code",
+    "for": "For: {{name}}",
+    "heading": "Heading (4 digits)",
+    "moreDetail": "More detail — subheading (optional)",
+    "tariff": "Full tariff code (optional)",
+    "tariffHint": "Enter the full 10-digit code only if you know it.",
+    "use": "Use {{code}}",
+    "skip": "Skip, the admin will fill it",
+    "searchPlaceholder": "Search by product name or code",
+    "browseChapters": "Browse chapters",
+    "enoughHint": "That's enough — tap Use. The full tariff code is optional.",
+    "tariffInvalid": "Enter digits only, starting with the 6-digit code you picked.",
+    "change": "Change",
+    "knowTariff": "Optional — I know the full 10-digit code",
+    "noResults": "No matching heading. Try another word or a code.",
+    "back": "Back",
+    "chapter": "Chapter {{code}}",
+    "needsConnection": "More detail needs a connection"
+  },
+  "errors": {
+    "offline": "You're offline — connect to continue",
+    "accessOff": "Your surveyor access was turned off",
+    "rejected": "This factory couldn't be saved — open it and check the details.",
+    "quota": "HSCode is busy right now — please try again later",
+    "generic": "Something went wrong. Please try again.",
+    "tooLong": "Too long — use at most {{max}} characters.",
+    "storageFull": "This phone is out of storage for drafts — submit or delete old drafts."
   }
 }

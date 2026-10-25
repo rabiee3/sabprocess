@@ -5,7 +5,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: [['list'], ['html', { open: 'never' }]],
-  use: { baseURL: 'http://localhost:5174/hscode/' },
+  use: {
+    baseURL: 'http://localhost:5174/hscode/',
+    // The location step needs a GPS fix: a fixed position near 6th of October City, accuracy 15 m.
+    permissions: ['geolocation'],
+    geolocation: { latitude: 29.968, longitude: 30.94, accuracy: 15 },
+  },
   projects: [
     {
       name: 'mobile',

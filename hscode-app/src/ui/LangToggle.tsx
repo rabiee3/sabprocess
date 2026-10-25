@@ -10,13 +10,14 @@ export function LangToggle() {
   const { t, i18n } = useTranslation()
   const current = i18n.resolvedLanguage ?? i18n.language
   return (
-    <div className="inline-flex overflow-hidden rounded border border-line">
+    <div role="group" aria-label={t('lang.label')} className="inline-flex overflow-hidden rounded border border-line">
       {LANGS.map(({ code, labelKey, font }) => {
         const active = current === code
         return (
           <button
             key={code}
             type="button"
+            lang={code}
             aria-pressed={active}
             onClick={() => setLanguage(code)}
             className={`${font} min-h-touch min-w-11 px-3 text-sm font-semibold ${

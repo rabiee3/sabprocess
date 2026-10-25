@@ -1,6 +1,14 @@
+const FIREBASE_AUTH_DOMAIN = 'hscode-egypt.firebaseapp.com'
+const OWN_HOSTS = ['sabprocess.com', 'www.sabprocess.com', 'sabprocess.vercel.app']
+
+/** On our own hosts the auth handler is proxied same-origin (vercel.json), so redirect sign-in survives iOS storage partitioning. */
+export function authDomainFor(host: string): string {
+  return OWN_HOSTS.includes(host) ? host : FIREBASE_AUTH_DOMAIN
+}
+
 export const firebaseConfig = {
   apiKey: 'AIzaSyATF__L9igB1mo58WvQQvgYc8faw4Zgoj8',
-  authDomain: 'hscode-egypt.firebaseapp.com',
+  authDomain: typeof location === 'undefined' ? FIREBASE_AUTH_DOMAIN : authDomainFor(location.host),
   projectId: 'hscode-egypt',
   storageBucket: 'hscode-egypt.firebasestorage.app',
   messagingSenderId: '877272421301',

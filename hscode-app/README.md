@@ -1,32 +1,37 @@
-# React + TypeScript + Vite
+# HSCode app
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Mobile-first React PWA behind sabprocess.com/hscode: who makes what, who needs what, mapped factory by factory.
+Stack: Vite, React 19, Tailwind 4, react-router, Firebase (Auth, Firestore), i18next (EN and AR, RTL).
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Vite dev server against production Firebase (`hscode-egypt`). |
+| `npm run emu` | Starts the Firestore and Auth emulators (project `demo-hscode`). |
+| `npm run emu:dev` | Dev server in emulator mode on port 5174 (run `npm run emu` and `npm run seed:emu` first). |
+| `npm run seed:emu` | Seeds the running emulators: sample factories, invites `482913` (unused) and `012345`, users `s1` and `c1`, a rejected factory. |
+| `npm test` | Unit tests (Vitest, jsdom). |
+| `npm run test:rules` | Firestore rules tests, run inside the emulator. |
+| `npm run e2e` | Playwright (mobile and desktop) against the emulators; starts and stops them itself. |
+| `npm run lint`, `npm run typecheck` | Oxlint, and `tsc -b` over `src`, `tests`, `e2e` and `seed`. |
+| `npm run build` | Type-checks and builds into `../hscode` (served by Vercel). |
+| `npm run check:build` | Verifies the build output. |
+| `npm run verify` | Everything above in order: the gate before every commit. |
+| `npm run deploy:rules` | Deploys `firestore.rules` to `hscode-egypt`. |
 
-## React Compiler
+## Emulators
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Anything in emulator mode (`--mode emulator`, `VITE_USE_EMULATOR=true`) talks only to `demo-hscode` on `127.0.0.1:8080` (Firestore)
+and `127.0.0.1:9099` (Auth), and sets `data-emulator="true"` on `<html>`. The e2e suite asserts that marker, so it can never
+run against production. Google sign-in in the emulator is a fake account chooser popup ("Add new account").
+Never kill emulator processes by hand: `scripts/with-emulators.mjs` stops leftovers itself.
 
-## Expanding the Oxlint configuration
+## Deploy
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+1. `npm run verify` (it rebuilds `../hscode`).
+2. Commit the rebuilt `../hscode` together with the source. Vercel serves it, with `/hscode/*` rewritten to the SPA.
+3. Rules changes: `npm run deploy:rules`.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`/__/auth/*` is proxied by `vercel.json` to the Firebase auth handler so redirect sign-in works on iPhone home-screen installs
+(`authDomainFor` in `src/firebase/config.ts` picks the site's own host on sabprocess.com).
