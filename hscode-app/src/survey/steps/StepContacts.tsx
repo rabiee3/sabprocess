@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { ContactDraft } from '../types'
-import { Field, TextInput, useTooLong, type StepProps } from './shared'
+import { Field, TextInput, type StepProps } from './shared'
+import { useTooLong } from './useTooLong'
 
 export function StepContacts({ draft, dispatch, errors }: StepProps) {
   const { t } = useTranslation()

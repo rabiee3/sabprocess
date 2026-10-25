@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { areas, sectors } from '../../data'
-import { Field, INPUT, TextInput, useTooLong, type StepProps } from './shared'
+import { Field, INPUT, TextInput, type StepProps } from './shared'
+import { useTooLong } from './useTooLong'
 
 export function StepBasics({ draft, dispatch, errors }: StepProps) {
   const { t, i18n } = useTranslation()

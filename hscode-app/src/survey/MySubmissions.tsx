@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { areas } from '../data'
 import type { Factory } from '../lib/types'
@@ -24,6 +24,8 @@ export function MySubmissions() {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const uid = user?.uid
+  // The stepper could not keep a draft or the outbox entry on this phone.
+  const storageFull = (useLocation().state as { storageFull?: boolean } | null)?.storageFull === true
   const [state, setState] = useState<Snapshot & { error?: SurveyErrorCode }>({ items: [], entries: [], loaded: false })
   // Snapshot state belongs to one uid; a different uid starts again from scratch.
   const snap: Snapshot = state.uid === uid ? state : { items: [], entries: uid ? outbox.list(uid) : [], loaded: false }
@@ -67,6 +69,7 @@ export function MySubmissions() {
       <main className="mx-auto max-w-md space-y-3 p-4 pb-28">
         <h1 className="text-title font-semibold text-ink-strong">{t('survey.list.title')}</h1>
         {error && <Banner tone="danger">{t(`errors.${error}`)}</Banner>}
+        {storageFull && <Banner tone="warning">{t('errors.storageFull')}</Banner>}
         <div className="flex flex-wrap gap-2">
           {counts.map((c) => (
             <span key={c.key} className={`rounded px-2 py-1 text-xs font-semibold ${c.box}`}>

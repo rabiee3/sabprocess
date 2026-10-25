@@ -13,13 +13,13 @@ import {
   emptyDraft,
   latestNewDraft,
   loadDraft,
-  saveDraft,
   stepErrors,
   toFactoryInput,
   type Draft,
   type StepId,
 } from './draft'
 import { outbox } from './outbox'
+import { useDraftAutosave } from './useDraftAutosave'
 import {
   classifySubmitError,
   loadFactoryForEdit,
@@ -48,12 +48,9 @@ function Form({ uid, initial, mode }: { uid: string; initial: Draft; mode: 'new'
   const [submitError, setSubmitError] = useState<SurveyErrorCode | null>(null)
   const submitted = useRef(false)
 
-  useEffect(() => {
-    if (draft !== initial && !submitted.current) saveDraft(uid, draft)
-  }, [uid, draft, initial])
-
   const param = params.get('step')
   const step: StepId = STEPS.find((s) => s === param) ?? 'location'
+  const autosave = useDraftAutosave(uid, draft, initial, step)
   const index = STEPS.indexOf(step)
   const goTo = (s: StepId) => setParams({ step: s })
   const markTried = (s: StepId) => setTried((prev) => new Set(prev).add(s))
@@ -83,14 +80,16 @@ function Form({ uid, initial, mode }: { uid: string; initial: Draft; mode: 'new'
       return
     }
     submitted.current = true
-    outbox.add(uid, draft.fid)
+    // Keep the final draft and queue the fid; the Firestore write is queued either way.
+    const draftSaved = autosave.finish(draft)
+    const queued = outbox.add(uid, draft.fid)
     // The draft stays until the outcome is known: a failed upload reopens it from My submissions.
     const fid = draft.fid
     commit.then(
       () => clearDraft(uid, fid),
       (e: unknown) => classifySubmitError(e, uid).then((code) => outbox.markFailed(uid, fid, code)),
     )
-    navigate(LIST)
+    navigate(LIST, draftSaved && queued ? undefined : { state: { storageFull: true } })
   }
 
   const props = { draft, dispatch, errors }
@@ -114,6 +113,13 @@ function Form({ uid, initial, mode }: { uid: string; initial: Draft; mode: 'new'
       onNext={last ? submit : next}
       nextLabel={last ? t(online ? 'survey.review.submit' : 'survey.review.saveOnPhone') : t('survey.step.next')}
     >
+      {autosave.storageFull && (
+        <div className="mb-3">
+          <Banner tone="warning" onClose={autosave.dismissStorageFull}>
+            {t('errors.storageFull')}
+          </Banner>
+        </div>
+      )}
       {submitError && (
         <div className="mb-3">
           <Banner tone="danger" onClose={() => setSubmitError(null)}>

@@ -1,6 +1,5 @@
 import type { ClipboardEvent, Dispatch, InputHTMLAttributes, ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
-import { LIMITS, tooLong, type Draft, type DraftAction, type LimitField } from '../draft'
+import { LIMITS, type Draft, type DraftAction, type LimitField } from '../draft'
 
 export type StepProps = {
   draft: Draft
@@ -27,12 +26,6 @@ export function Field({ label, children, error }: { label: string; children: Rea
       {error ? <FieldError>{error}</FieldError> : null}
     </label>
   )
-}
-
-/** The "too long" message for `field` when stepErrors flagged it. */
-export function useTooLong(errors: string[]): (field: LimitField) => string | undefined {
-  const { t } = useTranslation()
-  return (field) => (errors.includes(tooLong(field)) ? t('errors.tooLong', { max: LIMITS[field] }) : undefined)
 }
 
 type TextInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'maxLength'> & {

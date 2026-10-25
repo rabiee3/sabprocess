@@ -161,6 +161,7 @@
     "rejected": "This factory couldn't be saved — open it and check the details.",
     "quota": "HSCode is busy right now — please try again later",
     "generic": "Something went wrong. Please try again.",
-    "tooLong": "Too long — use at most {{max}} characters."
+    "tooLong": "Too long — use at most {{max}} characters.",
+    "storageFull": "This phone is out of storage for drafts — submit or delete old drafts."
   }
 }

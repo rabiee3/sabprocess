@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { initI18n } from '../i18n'
 import en from '../i18n/en.json'
 import type { Factory } from '../lib/types'
@@ -54,12 +54,17 @@ vi.mock('../hs/HsPicker', () => ({
 import * as repo from './repo'
 import { FactoryStepper } from './FactoryStepper'
 
+function ListStub() {
+  const state = useLocation().state as { storageFull?: boolean } | null
+  return <div>LIST{state?.storageFull ? ' storageFull' : ''}</div>
+}
+
 const user = userEvent.setup()
 function renderAt(path: string, mode: 'new' | 'edit' = 'new') {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/survey" element={<div>LIST</div>} />
+        <Route path="/survey" element={<ListStub />} />
         <Route path="/survey/new" element={<FactoryStepper mode="new" />} />
         <Route path="/survey/edit/:fid" element={<FactoryStepper mode={mode} />} />
       </Routes>
@@ -89,6 +94,7 @@ describe('FactoryStepper', () => {
     pickerProps.current = {}
     vi.clearAllMocks()
     vi.mocked(repo.submitFactory).mockImplementation(() => Promise.resolve())
+    vi.mocked(repo.newFactoryId).mockReturnValue('fnew')
   })
 
   it('Next on location without a pin shows the error and stays on step 1', async () => {
@@ -129,7 +135,7 @@ describe('FactoryStepper', () => {
       thumb: 'thumb',
     })
     expect(outbox.list('u1').map((e) => e.fid)).toEqual(['fnew'])
-    expect(screen.getByText('LIST')).toBeInTheDocument()
+    expect(screen.getByText(/^LIST/)).toBeInTheDocument()
     await waitFor(() => expect(loadDraft('u1', 'fnew')).toBeNull())
   })
 
@@ -140,7 +146,7 @@ describe('FactoryStepper', () => {
     expect(screen.getByText(en.survey.review.offlineBanner)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: en.survey.review.saveOnPhone }))
     expect(repo.submitFactory).toHaveBeenCalledTimes(1)
-    expect(screen.getByText('LIST')).toBeInTheDocument()
+    expect(screen.getByText(/^LIST/)).toBeInTheDocument()
   })
 
   it('review warns when the pin was not moved or GPS was weak', () => {
@@ -181,7 +187,7 @@ describe('FactoryStepper', () => {
     expect(call[1]).toBe('f9')
     expect(call[3]).toEqual(['p1', 'p2'])
     expect(repo.submitFactory).not.toHaveBeenCalled()
-    expect(screen.getByText('LIST')).toBeInTheDocument()
+    expect(screen.getByText(/^LIST/)).toBeInTheDocument()
   })
 
   it('edit of a missing factory shows not-found with a link back', async () => {
@@ -341,7 +347,7 @@ describe('FactoryStepper', () => {
       saveDraft('u1', fullDraft())
       const a = renderAt('/survey/new?step=review')
       await user.click(screen.getByRole('button', { name: en.survey.review.submit }))
-      expect(screen.getByText('LIST')).toBeInTheDocument()
+      expect(screen.getByText(/^LIST/)).toBeInTheDocument()
       expect(loadDraft('u1', 'fnew')?.name.en).toBe('Acme')
       a.unmount()
       vi.mocked(repo.newFactoryId).mockReturnValue('fnext')
@@ -367,6 +373,56 @@ describe('FactoryStepper', () => {
       vi.useRealTimers()
       renderAt('/survey/new?resume=fold&step=basics')
       expect(screen.getByLabelText(en.survey.basics.nameEn)).toHaveValue('Resumed')
+    })
+  })
+
+  describe('storage (F5)', () => {
+    const draftWrites = (spy: { mock: { calls: unknown[][] } }) =>
+      spy.mock.calls.filter(([k]) => typeof k === 'string' && k.startsWith('hscode.draft.')).length
+
+    afterEach(() => vi.restoreAllMocks())
+
+    it('typing saves the draft once, about 500 ms after the last change', async () => {
+      const spy = vi.spyOn(Storage.prototype, 'setItem')
+      renderAt('/survey/new?step=basics')
+      await user.type(screen.getByLabelText(en.survey.basics.nameEn), 'Zed')
+      expect(draftWrites(spy)).toBe(0)
+      await waitFor(() => expect(draftWrites(spy)).toBe(1), { timeout: 2000 })
+      expect(loadDraft('u1', 'fnew')?.name.en).toBe('Zed')
+    })
+
+    it('a step change flushes the pending save at once', async () => {
+      saveDraft('u1', fullDraft())
+      renderAt('/survey/new?step=basics')
+      await user.clear(screen.getByLabelText(en.survey.basics.nameEn))
+      await user.type(screen.getByLabelText(en.survey.basics.nameEn), 'Quick')
+      await next()
+      expect(loadDraft('u1', 'fnew')?.name.en).toBe('Quick')
+    })
+
+    it('a full storage shows the storage warning on the form', async () => {
+      const real = Storage.prototype.setItem
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, k: string, v: string) {
+        if (k.startsWith('hscode.draft.')) throw new DOMException('full', 'QuotaExceededError')
+        real.call(this, k, v)
+      })
+      renderAt('/survey/new?step=basics')
+      await user.type(screen.getByLabelText(en.survey.basics.nameEn), 'Zed')
+      await user.selectOptions(screen.getByLabelText(en.survey.basics.area), 'oct6-zone-1')
+      expect(screen.queryByText(en.errors.storageFull)).toBeNull()
+      await next()
+      expect(await screen.findByText(en.errors.storageFull)).toBeInTheDocument()
+    })
+
+    it('an outbox that cannot be saved still submits and tells My submissions to warn', async () => {
+      saveDraft('u1', fullDraft())
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('full', 'QuotaExceededError')
+      })
+      renderAt('/survey/new?step=review')
+      await user.click(screen.getByRole('button', { name: en.survey.review.submit }))
+      expect(repo.submitFactory).toHaveBeenCalledTimes(1)
+      expect(screen.getByText('LIST storageFull')).toBeInTheDocument()
     })
   })
 })

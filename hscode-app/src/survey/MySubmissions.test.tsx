@@ -168,4 +168,14 @@ describe('MySubmissions', () => {
     expect(screen.getByRole('link', { name: new RegExp(en.survey.list.untitled) })).toHaveAttribute('href', '/new?resume=z')
     expect(screen.getByRole('link', { name: /Factory a/ })).toHaveAttribute('href', '/edit/a')
   })
+
+  it('shows the storage warning when the stepper says the outbox could not be saved', () => {
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/', state: { storageFull: true } }]}>
+        <MySubmissions />
+      </MemoryRouter>,
+    )
+    expect(screen.getByText(en.errors.storageFull)).toBeInTheDocument()
+  })
 })
+
