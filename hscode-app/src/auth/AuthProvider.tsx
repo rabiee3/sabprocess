@@ -20,12 +20,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user) return setState(VISITOR)
       if (user.uid === ADMIN_UID) return setState({ user, role: 'admin', active: true, loading: false })
 
+      // Fresh loading state for the new user so guards don't see a stale or visitor role.
+      setState({ user, role: 'visitor', active: false, loading: true })
       let cancelled = false
-      const stop = () => {
+      let unsubSnap: (() => void) | undefined
+      unsubDoc = () => {
         cancelled = true
-        unsubDoc?.()
+        unsubSnap?.()
       }
-      unsubDoc = stop
       void (async () => {
         try {
           await ensureUserDoc(user)
@@ -33,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Offline or denied: fall through to the snapshot, which resolves from cache if it can.
         }
         if (cancelled) return
-        const unsub = onSnapshot(
+        unsubSnap = onSnapshot(
           doc(db, 'users', user.uid),
           (snap) => {
             const data = snap.data()
@@ -42,10 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           },
           () => setState({ user, role: 'client', active: false, loading: false }),
         )
-        unsubDoc = () => {
-          cancelled = true
-          unsub()
-        }
       })()
     })
     return () => {
