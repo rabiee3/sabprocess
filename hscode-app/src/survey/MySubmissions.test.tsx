@@ -11,7 +11,7 @@ type Cb = (items: SubmissionItem[], meta: { fromCache: boolean }) => void
 let emit: Cb
 let fail: (c: SurveyErrorCode) => void
 /** Seeds u1's real outbox. */
-const seedOutbox = (list: OutboxEntry[]) => localStorage.setItem('hscode.outbox.u1', JSON.stringify(list))
+const seedOutbox = (list: (Omit<OutboxEntry, 'kind'> & { kind?: OutboxEntry['kind'] })[]) => localStorage.setItem('hscode.outbox.u1', JSON.stringify(list))
 const state = () => outbox.list('u1').map(({ fid, state, error }) => ({ fid, state, error }))
 
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { uid: 'u1' } }) }))
@@ -70,16 +70,16 @@ describe('MySubmissions', () => {
     expect(state()).toEqual([{ fid: 'a', state: 'saved', error: undefined }])
   })
 
-  it('a rejected item shows the reason and a Fix link; pending links to edit; approved has no link', () => {
+  it('with editing off, a rejected item shows the reason but no edit or Fix link; pending and approved have none either', () => {
     setup()
     act(() =>
       emit([item(fac('r', 'rejected', { rejectReason: 'Wrong pin' })), item(fac('p', 'pending')), item(fac('ok', 'approved'))], { fromCache: false }),
     )
     expect(screen.getByText('Wrong pin')).toBeInTheDocument()
     expect(screen.getByText(en.survey.list.adminReason)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: en.survey.list.fixResubmit })).toHaveAttribute('href', '/edit/r')
-    expect(screen.getByRole('link', { name: /Factory p/ })).toHaveAttribute('href', '/edit/p')
-    expect(screen.queryByRole('link', { name: /Factory ok/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: en.survey.list.fixResubmit })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Factory/ })).toBeNull()
+    expect(document.querySelector('a[href*="edit/"]')).toBeNull()
   })
 
   it('a failed outbox entry shows upload failed with the access-off text', () => {
@@ -133,17 +133,17 @@ describe('MySubmissions', () => {
     expect(screen.getByText(en.survey.list.empty)).toBeInTheDocument()
   })
 
-  it('a failed entry whose doc arrives on a server snapshot is removed', () => {
+  it('a failed entry whose doc arrives on a server snapshot is kept for the user to resume', () => {
     seedOutbox([{ fid: 'a', savedAt: 1, state: 'failed', error: 'generic', submittedAt: 1 }])
     setup()
     act(() => emit([item(fac('a', 'pending'), false)], { fromCache: false }))
-    expect(state()).toEqual([])
-    expect(screen.queryByText(en.survey.list.uploadFailed)).toBeNull()
+    expect(state()).toEqual([{ fid: 'a', state: 'failed', error: 'generic' }])
+    expect(screen.getByText(en.survey.list.uploadFailed, { selector: '[data-chip]' })).toBeInTheDocument()
   })
 
   it('a resubmit whose server doc is still the old version shows upload failed, not Pending', () => {
     const submitted = new Date(2026, 9, 21).getTime() + 60 * 60_000 // an hour after the doc's updatedAt
-    seedOutbox([{ fid: 'a', savedAt: submitted, state: 'saved', submittedAt: submitted }])
+    seedOutbox([{ fid: 'a', savedAt: submitted, state: 'saved', submittedAt: submitted, kind: 'edit' }])
     setup()
     act(() => emit([item(fac('a', 'rejected', { rejectReason: 'x' }), false)], { fromCache: false }))
     expect(state()).toEqual([{ fid: 'a', state: 'failed', error: 'rejected' }])
@@ -158,15 +158,15 @@ describe('MySubmissions', () => {
     expect(screen.queryByText(en.survey.list.uploadFailed)).toBeNull()
   })
 
-  it('a failed row opens its draft: new?resume when the doc never reached the server, edit when it did', () => {
+  it('a failed row opens its draft as new?resume, never edit, whether or not the doc is on the server', () => {
     seedOutbox([
       { fid: 'z', savedAt: 1, state: 'failed', error: 'rejected', submittedAt: 1 },
-      { fid: 'a', savedAt: 1, state: 'failed', error: 'rejected', submittedAt: 1 },
+      { fid: 'a', savedAt: 1, state: 'failed', error: 'rejected', submittedAt: 1, kind: 'edit' },
     ])
     setup()
     act(() => emit([item(fac('a', 'pending'), true)], { fromCache: true }))
     expect(screen.getByRole('link', { name: new RegExp(en.survey.list.untitled) })).toHaveAttribute('href', '/new?resume=z')
-    expect(screen.getByRole('link', { name: /Factory a/ })).toHaveAttribute('href', '/edit/a')
+    expect(screen.getByRole('link', { name: /Factory a/ })).toHaveAttribute('href', '/new?resume=a')
   })
 
   it('shows the storage warning when the stepper says the outbox could not be saved', () => {

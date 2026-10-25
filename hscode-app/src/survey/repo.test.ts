@@ -11,7 +11,7 @@ vi.mock('firebase/firestore', async (orig) => ({
 }))
 vi.mock('../firebase', () => ({ db: {} }))
 
-import { classifySubmitError } from './repo'
+import { classifySubmitError, factoryDocExists } from './repo'
 
 const fs = {} as Firestore
 const denied = { code: 'permission-denied' }
@@ -48,5 +48,25 @@ describe('classifySubmitError', () => {
   it('an unreadable user doc falls back to rejected', async () => {
     getDocFails = true
     expect(await classifySubmitError(denied, 'u1', fs)).toBe('rejected')
+  })
+})
+
+describe('factoryDocExists', () => {
+  beforeEach(() => {
+    getDoc.mockReset()
+    getDocFails = false
+  })
+
+  it('is false only when the read succeeds and finds nothing', async () => {
+    getDoc.mockResolvedValue({ exists: () => false })
+    expect(await factoryDocExists('f1', fs)).toBe(false)
+    expect(getDoc).toHaveBeenCalledWith({ path: 'factories/f1' })
+    getDoc.mockResolvedValue({ exists: () => true })
+    expect(await factoryDocExists('f1', fs)).toBe(true)
+  })
+
+  it('any read error (offline, no cache) counts as existing', async () => {
+    getDocFails = true
+    expect(await factoryDocExists('f1', fs)).toBe(true)
   })
 })

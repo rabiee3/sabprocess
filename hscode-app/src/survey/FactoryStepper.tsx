@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { Banner } from '../ui/Banner'
 import { Stepper } from '../ui/Stepper'
@@ -13,6 +13,7 @@ import {
   emptyDraft,
   latestNewDraft,
   loadDraft,
+  saveDraft,
   stepErrors,
   toFactoryInput,
   type Draft,
@@ -22,6 +23,7 @@ import { outbox } from './outbox'
 import { useDraftAutosave } from './useDraftAutosave'
 import {
   classifySubmitError,
+  factoryDocExists,
   loadFactoryForEdit,
   newFactoryId,
   resubmitFactory,
@@ -82,7 +84,7 @@ function Form({ uid, initial, mode }: { uid: string; initial: Draft; mode: 'new'
     submitted.current = true
     // Keep the final draft and queue the fid; the Firestore write is queued either way.
     const draftSaved = autosave.finish(draft)
-    const queued = outbox.add(uid, draft.fid)
+    const queued = outbox.add(uid, draft.fid, mode)
     // The draft stays until the outcome is known: a failed upload reopens it from My submissions.
     const fid = draft.fid
     commit.then(
@@ -174,14 +176,52 @@ function EditLoader({ uid }: { uid: string }) {
   )
 }
 
+/** The same content under a brand-new fid, as a 'new' draft; the old draft and its outbox row are dropped. */
+function reissueDraft(uid: string, old: Draft): Draft {
+  const fresh: Draft = { ...old, fid: newFactoryId(), mode: 'new', previousPhotoIds: [] }
+  saveDraft(uid, fresh)
+  clearDraft(uid, old.fid)
+  outbox.remove(uid, old.fid)
+  return fresh
+}
+
 function NewLoader({ uid }: { uid: string }) {
+  const { t } = useTranslation()
   const [params] = useSearchParams()
-  const [initial] = useState(() => {
-    // ?resume=<fid>: reopen that draft (a failed upload from My submissions).
-    const resume = params.get('resume')
-    const saved = resume ? loadDraft(uid, resume) : null
-    return (saved?.mode === 'new' ? saved : null) ?? latestNewDraft(uid) ?? emptyDraft(newFactoryId())
+  const hint = (useLocation().state as { docExists?: boolean } | null)?.docExists === true
+  const resume = params.get('resume')
+  const [initial, setInitial] = useState<Draft | null>(() => {
+    // No resume: the newest unfinished draft, or a blank one.
+    if (resume) return null
+    return latestNewDraft(uid) ?? emptyDraft(newFactoryId())
   })
+
+  useEffect(() => {
+    if (!resume) return
+    let live = true
+    const saved = loadDraft(uid, resume)
+    const open = (exists: boolean) => {
+      if (!live) return
+      // The doc already exists: submitting under its fid is an update the rules reject. Keep the content
+      // under a fresh fid and drop the old draft and outbox row.
+      if (saved && exists) return setInitial(reissueDraft(uid, saved))
+      setInitial((saved?.mode === 'new' ? saved : null) ?? latestNewDraft(uid) ?? emptyDraft(newFactoryId()))
+    }
+    if (!saved) open(false)
+    else if (hint) open(true)
+    else void factoryDocExists(resume).then(open, () => open(true))
+    return () => {
+      live = false
+    }
+  }, [uid, resume, hint])
+
+  if (!initial) {
+    return (
+      <main className="mx-auto flex max-w-md justify-center p-4">
+        <div role="status" aria-label={t('common.loading')} className="size-8 animate-spin rounded-full border-4 border-line border-t-brand-600" />
+      </main>
+    )
+  }
   return <Form uid={uid} initial={initial} mode="new" />
 }
 

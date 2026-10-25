@@ -54,6 +54,18 @@ export async function classifySubmitError(e: unknown, uid: string, fs: Firestore
   }
 }
 
+/**
+ * Whether factories/<fid> may already exist. Only a read that succeeds and finds nothing is false; any error
+ * (offline with no cache, permission-denied, anything else) is true. A duplicate factory is acceptable, a lost draft is not.
+ */
+export async function factoryDocExists(fid: string, fs: Firestore = db): Promise<boolean> {
+  try {
+    return (await getDoc(doc(fs, `factories/${fid}`))).exists()
+  } catch {
+    return true
+  }
+}
+
 export const newFactoryId = (fs: Firestore = db): string => doc(collection(fs, 'factories')).id
 
 const clean = (s: string | undefined): string | undefined => {

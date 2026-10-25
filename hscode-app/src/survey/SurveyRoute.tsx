@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, Route, Routes } from 'react-router'
+import { Link, Navigate, Route, Routes } from 'react-router'
 import { signInWithGoogle } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import splashPattern from '../assets/patterns/splash-pattern.svg'
@@ -9,6 +9,7 @@ import { AppHeader } from '../ui/AppHeader'
 import { Logo } from '../ui/Logo'
 import { InviteCodeScreen } from './InviteCodeScreen'
 import { FactoryStepper } from './FactoryStepper'
+import { ALLOW_EDIT } from './features'
 import { MySubmissions } from './MySubmissions'
 
 function Shell({ children }: { children: ReactNode }) {
@@ -103,7 +104,7 @@ export function Component() {
     <Routes>
       <Route index element={<MySubmissions />} />
       <Route path="new" element={<FactoryStepper mode="new" />} />
-      <Route path="edit/:fid" element={<FactoryStepper mode="edit" />} />
+      <Route path="edit/:fid" element={ALLOW_EDIT ? <FactoryStepper mode="edit" /> : <Navigate to="/survey" replace />} />
       <Route path="*" element={area} />
     </Routes>
   )

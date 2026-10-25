@@ -47,6 +47,13 @@ describe('SurveyRoute', () => {
     renderAt()
     expect(screen.getByRole('heading', { level: 1, name: en.nav.surveyors })).toBeInTheDocument()
   })
+  it('the edit route redirects to the list while editing is off', () => {
+    auth = { user, role: 'surveyor', active: true, loading: false }
+    // This router has no /survey parent, so the redirect lands on the catch-all area.
+    renderAt('/edit/f1')
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: en.nav.surveyors })).toBeInTheDocument()
+  })
   it('admin sees a link to /admin', () => {
     auth = { user, role: 'admin', active: true, loading: false }
     renderAt()

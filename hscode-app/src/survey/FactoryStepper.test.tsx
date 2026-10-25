@@ -14,6 +14,7 @@ vi.mock('../ui/useOnline', () => ({ useOnline: () => online }))
 vi.mock('./repo', async (orig) => ({
   ...(await orig<typeof import('./repo')>()),
   newFactoryId: vi.fn(() => 'fnew'),
+  factoryDocExists: vi.fn(() => Promise.resolve(false)),
   submitFactory: vi.fn(() => Promise.resolve()),
   resubmitFactory: vi.fn(() => Promise.resolve()),
   loadFactoryForEdit: vi.fn(),
@@ -95,6 +96,7 @@ describe('FactoryStepper', () => {
     vi.clearAllMocks()
     vi.mocked(repo.submitFactory).mockImplementation(() => Promise.resolve())
     vi.mocked(repo.newFactoryId).mockReturnValue('fnew')
+    vi.mocked(repo.factoryDocExists).mockResolvedValue(false)
   })
 
   it('Next on location without a pin shows the error and stays on step 1', async () => {
@@ -364,7 +366,7 @@ describe('FactoryStepper', () => {
       expect(loadDraft('u1', 'fnew')).not.toBeNull()
     })
 
-    it('new?resume=<fid> opens that saved draft', () => {
+    it('new?resume=<fid> opens that saved draft', async () => {
       vi.useFakeTimers({ toFake: ['Date'] })
       vi.setSystemTime(1000)
       saveDraft('u1', fullDraft({ fid: 'fold', name: { en: 'Resumed', ar: '' } }))
@@ -372,7 +374,48 @@ describe('FactoryStepper', () => {
       saveDraft('u1', fullDraft({ fid: 'fnewer', name: { en: 'Newer', ar: '' } }))
       vi.useRealTimers()
       renderAt('/survey/new?resume=fold&step=basics')
-      expect(screen.getByLabelText(en.survey.basics.nameEn)).toHaveValue('Resumed')
+      expect(await screen.findByLabelText(en.survey.basics.nameEn)).toHaveValue('Resumed')
+      expect(loadDraft('u1', 'fold')).not.toBeNull()
+    })
+
+    it('a resume whose existence check cannot be answered (offline) is reissued too, content kept', async () => {
+      vi.mocked(repo.factoryDocExists).mockRejectedValue({ code: 'unavailable' })
+      saveDraft('u1', fullDraft({ fid: 'fold', name: { en: 'Resumed', ar: '' } }))
+      renderAt('/survey/new?resume=fold&step=review')
+      await user.click(await screen.findByRole('button', { name: en.survey.review.submit }))
+      expect(repo.submitFactory).toHaveBeenCalledWith('u1', 'fnew', expect.objectContaining({ name: { en: 'Resumed' } }))
+      expect(loadDraft('u1', 'fold')).toBeNull()
+    })
+
+    it('a typed resume URL (no router state) for a doc-existing fid gets a new fid, content kept', async () => {
+      vi.mocked(repo.factoryDocExists).mockResolvedValue(true)
+      saveDraft('u1', fullDraft({ fid: 'fold', name: { en: 'Resumed', ar: '' } }))
+      outbox.add('u1', 'fold')
+      outbox.markFailed('u1', 'fold', 'rejected')
+      renderAt('/survey/new?resume=fold&step=review')
+      await user.click(await screen.findByRole('button', { name: en.survey.review.submit }))
+      expect(repo.factoryDocExists).toHaveBeenCalledWith('fold')
+      expect(repo.submitFactory).toHaveBeenCalledWith('u1', 'fnew', expect.objectContaining({ name: { en: 'Resumed' } }))
+      expect(loadDraft('u1', 'fold')).toBeNull()
+    })
+
+    it('resuming a failed draft whose doc already exists on the server gets a new fid and clears the old draft', async () => {
+      saveDraft('u1', fullDraft({ fid: 'fold', name: { en: 'Resumed', ar: '' } }))
+      outbox.add('u1', 'fold')
+      outbox.markFailed('u1', 'fold', 'rejected')
+      render(
+        <MemoryRouter initialEntries={[{ pathname: '/survey/new', search: '?resume=fold&step=review', state: { docExists: true } }]}>
+          <Routes>
+            <Route path="/survey" element={<ListStub />} />
+            <Route path="/survey/new" element={<FactoryStepper mode="new" />} />
+          </Routes>
+        </MemoryRouter>,
+      )
+      await user.click(await screen.findByRole('button', { name: en.survey.review.submit }))
+      expect(repo.submitFactory).toHaveBeenCalledWith('u1', 'fnew', expect.objectContaining({ name: { en: 'Resumed' } }))
+      expect(loadDraft('u1', 'fold')).toBeNull()
+      expect(outbox.list('u1').map((e) => e.fid)).toEqual(['fnew'])
+      expect(outbox.list('u1')[0]).toMatchObject({ kind: 'new' })
     })
   })
 
