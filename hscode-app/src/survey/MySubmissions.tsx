@@ -12,23 +12,13 @@ import plantImg from '../assets/placeholders/photo-plant.svg'
 import warehouseImg from '../assets/placeholders/photo-warehouse.svg'
 import plusIcon from '../assets/icons/plus.svg?raw'
 import { outbox, type OutboxEntry } from './outbox'
+import { reconcile } from './reconcile'
 import { subscribeMySubmissions, type SubmissionItem, type SurveyErrorCode } from './repo'
 
 const PLACEHOLDERS = [siloImg, plantImg, warehouseImg]
 const placeholderFor = (fid: string) => PLACEHOLDERS[[...fid].reduce((n, c) => n + c.charCodeAt(0), 0) % PLACEHOLDERS.length]
 
 type Snapshot = { uid?: string; items: SubmissionItem[]; entries: OutboxEntry[]; loaded: boolean }
-
-/** Confirms outbox entries the server has seen; flags ones a server snapshot lacks. Cache-only snapshots change nothing. */
-function reconcile(uid: string, items: SubmissionItem[], fromCache: boolean): OutboxEntry[] {
-  const byId = new Map(items.map((i) => [i.factory.id, i]))
-  for (const e of outbox.list(uid)) {
-    const hit = byId.get(e.fid)
-    if (hit && !hit.pendingWrite) outbox.remove(uid, e.fid)
-    else if (!hit && !fromCache && e.state === 'saved') outbox.markFailed(uid, e.fid, 'generic')
-  }
-  return outbox.list(uid)
-}
 
 export function MySubmissions() {
   const { t, i18n } = useTranslation()

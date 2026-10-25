@@ -4,19 +4,15 @@ import { MemoryRouter } from 'react-router'
 import { initI18n } from '../i18n'
 import en from '../i18n/en.json'
 import type { Factory } from '../lib/types'
-import type { OutboxEntry } from './outbox'
+import { outbox, type OutboxEntry } from './outbox'
 import type { SubmissionItem, SurveyErrorCode } from './repo'
 
 type Cb = (items: SubmissionItem[], meta: { fromCache: boolean }) => void
 let emit: Cb
 let fail: (c: SurveyErrorCode) => void
-let entries: OutboxEntry[] = []
-const remove = vi.fn((fid: string) => {
-  entries = entries.filter((e) => e.fid !== fid)
-})
-const markFailed = vi.fn((fid: string, error: SurveyErrorCode) => {
-  entries = entries.map((e) => (e.fid === fid ? { ...e, state: 'failed', error } : e))
-})
+/** Seeds u1's real outbox. */
+const seedOutbox = (list: OutboxEntry[]) => localStorage.setItem('hscode.outbox.u1', JSON.stringify(list))
+const state = () => outbox.list('u1').map(({ fid, state, error }) => ({ fid, state, error }))
 
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { uid: 'u1' } }) }))
 vi.mock('./repo', () => ({
@@ -24,13 +20,6 @@ vi.mock('./repo', () => ({
     emit = cb
     fail = onError
     return () => {}
-  },
-}))
-vi.mock('./outbox', () => ({
-  outbox: {
-    list: (uid: string) => (uid === 'u1' ? entries : []),
-    remove: (_u: string, f: string) => remove(f),
-    markFailed: (_u: string, f: string, e: SurveyErrorCode) => markFailed(f, e),
   },
 }))
 
@@ -51,9 +40,7 @@ function setup() {
 describe('MySubmissions', () => {
   beforeEach(() => {
     initI18n()
-    entries = []
-    remove.mockClear()
-    markFailed.mockClear()
+    localStorage.clear()
   })
 
   it('counts reflect the items', () => {
@@ -76,11 +63,11 @@ describe('MySubmissions', () => {
   })
 
   it('a pendingWrite item shows the saved-on-phone chip and keeps its outbox entry', () => {
-    entries = [{ fid: 'a', savedAt: 1, state: 'saved', submittedAt: 1 }]
+    seedOutbox([{ fid: 'a', savedAt: 1, state: 'saved', submittedAt: 1 }])
     setup()
     act(() => emit([item(fac('a', 'pending'), true)], { fromCache: true }))
     expect(screen.getAllByText(en.survey.list.savedOnPhone).length).toBeGreaterThan(0)
-    expect(remove).not.toHaveBeenCalled()
+    expect(state()).toEqual([{ fid: 'a', state: 'saved', error: undefined }])
   })
 
   it('a rejected item shows the reason and a Fix link; pending links to edit; approved has no link', () => {
@@ -96,7 +83,7 @@ describe('MySubmissions', () => {
   })
 
   it('a failed outbox entry shows upload failed with the access-off text', () => {
-    entries = [{ fid: 'z', savedAt: 1, state: 'failed', error: 'accessOff', submittedAt: 1 }]
+    seedOutbox([{ fid: 'z', savedAt: 1, state: 'failed', error: 'accessOff', submittedAt: 1 }])
     setup()
     act(() => emit([], { fromCache: true }))
     expect(screen.getByText(en.survey.list.uploadFailed)).toBeInTheDocument()
@@ -105,22 +92,21 @@ describe('MySubmissions', () => {
   })
 
   it('a server snapshot without an outbox fid marks it failed; a cache snapshot does not', () => {
-    entries = [{ fid: 'z', savedAt: 1, state: 'saved', submittedAt: 1 }]
+    seedOutbox([{ fid: 'z', savedAt: 1, state: 'saved', submittedAt: 1 }])
     setup()
     act(() => emit([], { fromCache: true }))
-    expect(markFailed).not.toHaveBeenCalled()
+    expect(state()[0].state).toBe('saved')
     expect(screen.getByText(en.survey.list.savedOnPhone, { selector: '[data-chip]' })).toBeInTheDocument()
     act(() => emit([], { fromCache: false }))
-    expect(markFailed).toHaveBeenCalledWith('z', 'generic')
+    expect(state()).toEqual([{ fid: 'z', state: 'failed', error: 'generic' }])
     expect(screen.getByText(en.survey.list.uploadFailed)).toBeInTheDocument()
   })
 
   it('confirmed docs are removed from the outbox', () => {
-    entries = [{ fid: 'a', savedAt: 1, state: 'saved', submittedAt: 1 }]
+    seedOutbox([{ fid: 'a', savedAt: 1, state: 'saved', submittedAt: 1 }])
     setup()
     act(() => emit([item(fac('a', 'pending'), false)], { fromCache: false }))
-    expect(remove).toHaveBeenCalledWith('a')
-    expect(markFailed).not.toHaveBeenCalled()
+    expect(state()).toEqual([])
   })
 
   it('subscription errors show a banner', () => {
@@ -130,7 +116,7 @@ describe('MySubmissions', () => {
   })
 
   it('failed chip text is not a retry promise', () => {
-    entries = [{ fid: 'z', savedAt: 1, state: 'failed', error: 'accessOff', submittedAt: 1 }]
+    seedOutbox([{ fid: 'z', savedAt: 1, state: 'failed', error: 'accessOff', submittedAt: 1 }])
     setup()
     act(() => emit([], { fromCache: true }))
     const chip = screen.getByText(en.survey.list.uploadFailed, { selector: '[data-chip]' })
@@ -148,10 +134,27 @@ describe('MySubmissions', () => {
   })
 
   it('a failed entry whose doc arrives on a server snapshot is removed', () => {
-    entries = [{ fid: 'a', savedAt: 1, state: 'failed', error: 'generic', submittedAt: 1 }]
+    seedOutbox([{ fid: 'a', savedAt: 1, state: 'failed', error: 'generic', submittedAt: 1 }])
     setup()
     act(() => emit([item(fac('a', 'pending'), false)], { fromCache: false }))
-    expect(remove).toHaveBeenCalledWith('a')
+    expect(state()).toEqual([])
+    expect(screen.queryByText(en.survey.list.uploadFailed)).toBeNull()
+  })
+
+  it('a resubmit whose server doc is still the old version shows upload failed, not Pending', () => {
+    const submitted = new Date(2026, 9, 21).getTime() + 60 * 60_000 // an hour after the doc's updatedAt
+    seedOutbox([{ fid: 'a', savedAt: submitted, state: 'saved', submittedAt: submitted }])
+    setup()
+    act(() => emit([item(fac('a', 'rejected', { rejectReason: 'x' }), false)], { fromCache: false }))
+    expect(state()).toEqual([{ fid: 'a', state: 'failed', error: 'rejected' }])
+    expect(screen.getByText(en.survey.list.uploadFailed, { selector: '[data-chip]' })).toBeInTheDocument()
+    expect(screen.getByText(en.errors.rejected)).toBeInTheDocument()
+  })
+
+  it('another user on the same phone never sees u1 entries', () => {
+    localStorage.setItem('hscode.outbox.u2', JSON.stringify([{ fid: 'theirs', savedAt: 1, submittedAt: 1, state: 'failed', error: 'generic' }]))
+    setup()
+    act(() => emit([], { fromCache: true }))
     expect(screen.queryByText(en.survey.list.uploadFailed)).toBeNull()
   })
 })
