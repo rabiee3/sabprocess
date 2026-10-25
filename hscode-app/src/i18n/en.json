@@ -287,6 +287,14 @@
       "keep": "Keep active",
       "empty": "No surveyors yet."
     },
+    "create": {
+      "contact": "Contact",
+      "sample": "Sample (demo) factory",
+      "sampleHint": "Marks this factory as demo data. It is published to the map right away.",
+      "save": "Add factory",
+      "saving": "Adding…",
+      "done": "{{name}} was added and is now on the public map."
+    },
     "factories": {
       "tabsLabel": "Factory status",
       "tab": {

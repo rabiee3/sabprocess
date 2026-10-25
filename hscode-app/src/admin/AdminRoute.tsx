@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, Navigate, Route, Routes } from 'react-router'
 import { signOutUser } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
+import { AdminCreateFactory } from './AdminCreateFactory'
 import { AdminLayout } from './AdminLayout'
 import { AdminSignIn } from './AdminSignIn'
 import { Dashboard } from './Dashboard'
@@ -10,12 +11,6 @@ import { FactoryAdminPage } from './FactoryAdminDetail'
 import { InvitesPage } from './InvitesPage'
 import { ReviewQueue } from './ReviewQueue'
 import { SurveyorsPage } from './SurveyorsPage'
-
-/** Stands in until the page's own task lands. The layout supplies the h1. */
-function PagePlaceholder() {
-  const { t } = useTranslation()
-  return <p className="text-ink-subtle">{t('common.comingSoon')}</p>
-}
 
 function NotAdmin() {
   const { t } = useTranslation()
@@ -67,7 +62,7 @@ export function Component() {
         <Route index element={<Navigate to="review" replace />} />
         <Route path="review/:fid?" element={<ReviewQueue />} />
         <Route path="factories" element={<FactoriesPage />} />
-        <Route path="factories/new" element={<PagePlaceholder />} />
+        <Route path="factories/new" element={<AdminCreateFactory />} />
         <Route path="factories/:fid" element={<FactoryAdminPage />} />
         <Route path="invites" element={<InvitesPage />} />
         <Route path="surveyors" element={<SurveyorsPage />} />

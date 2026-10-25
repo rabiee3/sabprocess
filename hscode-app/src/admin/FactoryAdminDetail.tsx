@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Banner } from '../ui/Banner'
 import { StatusChip } from '../ui/StatusChip'
 import { useAdmin } from './AdminContext'
@@ -39,7 +39,8 @@ export function FactoryAdminDetail({ fid }: { fid: string }) {
   const { state, reload: load, setDraft } = useFactoryLoad(fid)
   const [showErrors, setShowErrors] = useState(false)
   const [error, setError] = useState<ActionError | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const created = (useLocation().state as { created?: string } | null)?.created
+  const [notice, setNotice] = useState<string | null>(created ? t('admin.create.done', { name: created }) : null)
   const [busy, setBusy] = useState<Busy | null>(null)
   const [deleting, setDeleting] = useState(false)
 
