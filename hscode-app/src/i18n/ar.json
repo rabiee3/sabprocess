@@ -286,6 +286,71 @@
       "deactivate": "إيقاف",
       "keep": "إبقاؤه نشطًا",
       "empty": "لا يوجد معاينون بعد."
+    },
+    "factories": {
+      "tabsLabel": "حالة المصنع",
+      "tab": {
+        "approved": "معتمد",
+        "pending": "قيد المراجعة",
+        "rejected": "مرفوض",
+        "hidden": "مخفي"
+      },
+      "add": "+ إضافة مصنع",
+      "refresh": "تحديث",
+      "loadMore": "عرض المزيد",
+      "loading": "جارٍ تحميل المصانع…",
+      "empty": "لا توجد مصانع بهذه الحالة.",
+      "emptyFiltered": "لا توجد مصانع محمّلة تطابق هذه التصفية.",
+      "tableLabel": "المصانع",
+      "filterArea": "المنطقة",
+      "filterSector": "القطاع",
+      "allAreas": "كل المناطق",
+      "allSectors": "كل القطاعات",
+      "search": "بحث بالاسم",
+      "searchPlaceholder": "بحث بالاسم",
+      "col": {
+        "thumb": "صورة",
+        "name": "الاسم",
+        "area": "المنطقة",
+        "sector": "القطاع",
+        "products": "المنتجات",
+        "status": "الحالة",
+        "updated": "آخر تحديث",
+        "actions": "إجراءات"
+      },
+      "statusHidden": "مخفي",
+      "open": "فتح",
+      "reviewNamed": "مراجعة {{name}}", "openNamed": "فتح {{name}}",
+      "review": "مراجعة",
+      "hide": "إخفاء",
+      "hideNamed": "إخفاء {{name}}",
+      "unhide": "إظهار",
+      "unhideNamed": "إظهار {{name}}",
+      "delete": "حذف",
+      "deleteNamed": "حذف {{name}}",
+      "deleteTitle": "حذف هذا المصنع؟",
+      "deleteBody": "سيتم حذف {{name}} نهائيًا مع صوره وبيانات التواصل. لا يمكن التراجع عن ذلك.",
+      "deleteType": "اكتب اسم المصنع للتأكيد: {{name}}",
+      "deleteConfirm": "حذف نهائي",
+      "deleteBusy": "جارٍ الحذف…",
+      "cancel": "إلغاء",
+      "done": {
+        "hidden": "تم إخفاء {{name}} من الخريطة العامة.",
+        "unhidden": "عاد {{name}} إلى الخريطة العامة.",
+        "deleted": "تم حذف {{name}}.",
+        "saved": "تم حفظ تعديلات {{name}}."
+      },
+      "detail": {
+        "back": "العودة إلى كل المصانع",
+        "pendingLink": "هذا المصنع بانتظار المراجعة.",
+        "pendingOpen": "فتح في قائمة المراجعة",
+        "hiddenBanner": "مخفي عن الخريطة العامة",
+        "rejectedReason": "سبب الرفض",
+        "save": "حفظ التعديلات",
+        "saving": "جارٍ الحفظ…",
+        "fixErrors": "صحّح الحقول المميزة قبل الحفظ.",
+        "createdBy": "أُضيف في {{date}}"
+      }
     }
   }
 }

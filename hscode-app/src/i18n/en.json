@@ -286,6 +286,71 @@
       "deactivate": "Deactivate",
       "keep": "Keep active",
       "empty": "No surveyors yet."
+    },
+    "factories": {
+      "tabsLabel": "Factory status",
+      "tab": {
+        "approved": "Approved",
+        "pending": "Pending",
+        "rejected": "Rejected",
+        "hidden": "Hidden"
+      },
+      "add": "+ Add factory",
+      "refresh": "Refresh",
+      "loadMore": "Load more",
+      "loading": "Loading factories…",
+      "empty": "No factories with this status.",
+      "emptyFiltered": "No loaded factories match these filters.",
+      "tableLabel": "Factories",
+      "filterArea": "Area",
+      "filterSector": "Sector",
+      "allAreas": "All areas",
+      "allSectors": "All sectors",
+      "search": "Search by name",
+      "searchPlaceholder": "Search by name",
+      "col": {
+        "thumb": "Photo",
+        "name": "Name",
+        "area": "Area",
+        "sector": "Sector",
+        "products": "Products",
+        "status": "Status",
+        "updated": "Updated",
+        "actions": "Actions"
+      },
+      "statusHidden": "Hidden",
+      "open": "Open",
+      "reviewNamed": "Review {{name}}", "openNamed": "Open {{name}}",
+      "review": "Review",
+      "hide": "Hide",
+      "hideNamed": "Hide {{name}}",
+      "unhide": "Unhide",
+      "unhideNamed": "Unhide {{name}}",
+      "delete": "Delete",
+      "deleteNamed": "Delete {{name}}",
+      "deleteTitle": "Delete this factory?",
+      "deleteBody": "{{name}} will be permanently deleted with its photos and contact details. This can't be undone.",
+      "deleteType": "Type the factory name to confirm: {{name}}",
+      "deleteConfirm": "Delete permanently",
+      "deleteBusy": "Deleting…",
+      "cancel": "Cancel",
+      "done": {
+        "hidden": "{{name}} is now hidden from the public map.",
+        "unhidden": "{{name}} is visible on the public map again.",
+        "deleted": "{{name}} was deleted.",
+        "saved": "Changes to {{name}} were saved."
+      },
+      "detail": {
+        "back": "Back to all factories",
+        "pendingLink": "This factory is waiting for review.",
+        "pendingOpen": "Open in the review queue",
+        "hiddenBanner": "Hidden from the public map",
+        "rejectedReason": "Rejection reason",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "fixErrors": "Fix the highlighted fields before saving.",
+        "createdBy": "Added {{date}}"
+      }
     }
   }
 }

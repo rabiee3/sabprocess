@@ -4,6 +4,8 @@ import { signOutUser } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { AdminLayout } from './AdminLayout'
 import { AdminSignIn } from './AdminSignIn'
+import { FactoriesPage } from './FactoriesPage'
+import { FactoryAdminPage } from './FactoryAdminDetail'
 import { InvitesPage } from './InvitesPage'
 import { ReviewQueue } from './ReviewQueue'
 import { SurveyorsPage } from './SurveyorsPage'
@@ -63,9 +65,9 @@ export function Component() {
       <Route element={<AdminLayout />}>
         <Route index element={<Navigate to="review" replace />} />
         <Route path="review/:fid?" element={<ReviewQueue />} />
-        <Route path="factories" element={<PagePlaceholder />} />
+        <Route path="factories" element={<FactoriesPage />} />
         <Route path="factories/new" element={<PagePlaceholder />} />
-        <Route path="factories/:fid" element={<PagePlaceholder />} />
+        <Route path="factories/:fid" element={<FactoryAdminPage />} />
         <Route path="invites" element={<InvitesPage />} />
         <Route path="surveyors" element={<SurveyorsPage />} />
         <Route path="dashboard" element={<PagePlaceholder />} />
