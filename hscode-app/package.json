@@ -1,0 +1,53 @@
+{
+  "name": "hscode-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run --project unit",
+    "check:build": "node scripts/check-build.mjs",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "data:hs": "node scripts/build-hs-data.mjs",
+    "emu": "firebase emulators:start --only firestore,auth --project demo-hscode",
+    "test:rules": "node scripts/check-ports.mjs && firebase emulators:exec --only firestore --project demo-hscode \"vitest run --project rules\"",
+    "deploy:rules": "firebase deploy --only firestore:rules --project hscode-egypt",
+    "emu:dev": "vite --mode emulator --port 5174 --strictPort",
+    "seed:emu": "tsx seed/seed-emulator.ts",
+    "e2e": "node scripts/check-ports.mjs && firebase emulators:exec --only firestore,auth --project demo-hscode \"npm run seed:emu && playwright test\"",
+    "verify": "npm run lint && npm run typecheck && npm test && npm run test:rules && npm run e2e && npm run build && npm run check:build"
+  },
+  "dependencies": {
+    "firebase": "^13.1.0",
+    "i18next": "^26.5.10",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-i18next": "^17.1.8",
+    "react-router": "^8.5.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "firebase-admin": "^14.5.0",
+    "firebase-tools": "^15.34.1",
+    "jsdom": "^30.1.3",
+    "oxlint": "^1.88.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}

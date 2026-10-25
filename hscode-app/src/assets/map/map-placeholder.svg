@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+<rect width="1000" height="1000" fill="#f2efe9"/>
+<g fill="#ece1e8">
+<rect x="60" y="60" width="250" height="230"/>
+<rect x="350" y="60" width="270" height="230"/>
+<rect x="660" y="60" width="290" height="230"/>
+<rect x="60" y="330" width="250" height="250"/>
+<rect x="350" y="330" width="270" height="250"/>
+<rect x="660" y="330" width="290" height="250"/>
+<rect x="60" y="620" width="250" height="320"/>
+<rect x="660" y="620" width="290" height="320"/>
+</g>
+<rect x="350" y="620" width="270" height="140" fill="#d6ebc4"/>
+<rect x="350" y="790" width="270" height="150" fill="#ece1e8"/>
+<g fill="#ddd2c8">
+<rect x="80" y="80" width="90" height="60"/><rect x="190" y="80" width="100" height="90"/><rect x="80" y="170" width="70" height="100"/><rect x="180" y="200" width="110" height="70"/>
+<rect x="370" y="80" width="120" height="70"/><rect x="510" y="80" width="90" height="110"/><rect x="370" y="180" width="80" height="90"/><rect x="470" y="210" width="130" height="60"/>
+<rect x="680" y="80" width="110" height="90"/><rect x="810" y="80" width="120" height="60"/><rect x="680" y="200" width="70" height="70"/><rect x="780" y="170" width="150" height="100"/>
+<rect x="80" y="350" width="100" height="110"/><rect x="200" y="350" width="90" height="70"/><rect x="200" y="440" width="90" height="120"/><rect x="80" y="480" width="100" height="80"/>
+<rect x="370" y="350" width="140" height="80"/><rect x="530" y="350" width="70" height="120"/><rect x="370" y="450" width="90" height="110"/><rect x="480" y="490" width="120" height="70"/>
+<rect x="680" y="350" width="90" height="100"/><rect x="790" y="350" width="140" height="70"/><rect x="680" y="470" width="130" height="90"/><rect x="830" y="440" width="100" height="120"/>
+<rect x="80" y="640" width="110" height="90"/><rect x="210" y="640" width="80" height="140"/><rect x="80" y="750" width="110" height="70"/><rect x="80" y="840" width="210" height="80"/>
+<rect x="370" y="810" width="100" height="110"/><rect x="490" y="810" width="110" height="60"/>
+<rect x="680" y="640" width="120" height="80"/><rect x="820" y="640" width="110" height="120"/><rect x="680" y="740" width="120" height="100"/><rect x="820" y="780" width="110" height="140"/>
+</g>
+<g fill="none" stroke="#d7d1c6" stroke-width="22">
+<path d="M0 310H1000M0 600H1000M330 0V1000M640 0V1000"/>
+</g>
+<g fill="none" stroke="#ffffff" stroke-width="18">
+<path d="M0 310H1000M0 600H1000M330 0V1000M640 0V1000"/>
+</g>
+<g fill="none" stroke="#ffffff" stroke-width="8">
+<path d="M60 170H310M350 165H620M660 180H950M60 460H310M350 440H620M660 455H950M60 770H310M660 770H950M180 330V580M500 330V580M790 330V580M200 620V940M800 620V940M480 790V940"/>
+</g>
+<path d="M-20 980C200 900 420 780 600 640S900 380 1020 300" fill="none" stroke="#e0a85a" stroke-width="34"/>
+<path d="M-20 980C200 900 420 780 600 640S900 380 1020 300" fill="none" stroke="#f9cf8a" stroke-width="26"/>
+<path d="M370 690c40-20 80 10 120-10s60 10 100 0" fill="none" stroke="#a9d39a" stroke-width="6"/>
+</svg>

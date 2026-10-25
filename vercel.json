@@ -1,0 +1,1 @@
+{ "rewrites": [{ "source": "/hscode/:path*", "destination": "/hscode/index.html" }] }

@@ -1,0 +1,13 @@
+[
+  { "id": "animal-feed", "en": "Animal feed", "ar": "الأعلاف الحيوانية" },
+  { "id": "food", "en": "Food and beverages", "ar": "الأغذية والمشروبات" },
+  { "id": "plastics-packaging", "en": "Plastics and packaging", "ar": "البلاستيك والتعبئة والتغليف" },
+  { "id": "metals", "en": "Metals", "ar": "المعادن" },
+  { "id": "chemicals", "en": "Chemicals", "ar": "الكيماويات" },
+  { "id": "textiles", "en": "Textiles and garments", "ar": "الغزل والنسيج والملابس" },
+  { "id": "building-materials", "en": "Building materials", "ar": "مواد البناء" },
+  { "id": "electrical-cables", "en": "Electrical and cables", "ar": "الكهربائيات والكابلات" },
+  { "id": "paper-printing", "en": "Paper and printing", "ar": "الورق والطباعة" },
+  { "id": "machinery", "en": "Machinery", "ar": "الآلات والمعدات" },
+  { "id": "other", "en": "Other", "ar": "أخرى" }
+]

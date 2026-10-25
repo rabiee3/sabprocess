@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #fdf1e2;
+  --color-brand-100: #f6dcb8;
+  --color-brand-500: #ffc53d;
+  --color-brand-600: #ffb03b;
+  --color-brand-700: #a65e10;
+  --color-brand-900: #7a4206;
+
+  --color-ink: #363839;
+  --color-ink-strong: #1f2224;
+  --color-ink-subtle: #4a4f51;
+  --color-ink-muted: #5f6466;
+
+  --color-blue-50: #eaf3fa;
+  --color-blue-100: #d4e6f4;
+  --color-blue-500: #2f7dbf;
+  --color-blue-800: #1f5a8c;
+
+  --color-green-50: #e5f4ea;
+  --color-green-700: #187a39;
+  --color-green-800: #146a31;
+
+  --color-amber-50: #fff4cc;
+  --color-amber-200: #ecd58a;
+  --color-amber-900: #5c4500;
+
+  --color-red-50: #fdecea;
+  --color-red-600: #b42318;
+  --color-red-700: #a32020;
+
+  --color-line: #e3e6e8;
+  --color-line-strong: #b9c0c4;
+
+  --color-surface: #ffffff;
+  --color-surface-alt: #f5f7f8;
+  --color-surface-map: #f2efe9;
+  --color-map-bg: #f2efe9;
+
+  --font-sans: "IBM Plex Sans", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-ar: "IBM Plex Sans Arabic", "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --text-caption: 13px;
+  --text-caption--line-height: 1.4;
+  --text-label: 14px;
+  --text-label--line-height: 1.4;
+  --text-body-sm: 15px;
+  --text-body-sm--line-height: 1.45;
+  --text-body: 16px;
+  --text-body--line-height: 1.45;
+  --text-section: 17px;
+  --text-section--line-height: 1.3;
+  --text-title: 22px;
+  --text-title--line-height: 1.3;
+  --text-display: 26px;
+  --text-display--line-height: 1.25;
+
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-sheet: 20px;
+
+  --shadow-sm: 0 1px 3px rgba(30, 40, 50, 0.15);
+  --shadow-md: 0 2px 10px rgba(30, 40, 50, 0.18);
+  --shadow-sheet: 0 -2px 12px rgba(30, 40, 50, 0.18);
+
+  --min-height-touch: 44px;
+  --min-height-control: 48px;
+  --min-height-cta: 56px;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background: var(--color-surface);
+  }
+}
