@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router'
 import { initI18n } from '../i18n'
 import type { IndexEntry } from '../lib/types'
 
 vi.mock('../firebase', () => ({ db: {}, auth: {} }))
-vi.mock('../auth/api', () => ({ signInWithGoogle: vi.fn(), signOutUser: vi.fn() }))
+const signInWithGoogle = vi.fn()
+vi.mock('../auth/api', () => ({ signInWithGoogle: (...a: unknown[]) => signInWithGoogle(...a), signOutUser: vi.fn() }))
 vi.mock('firebase/firestore', () => ({ doc: () => ({}), getDoc: vi.fn().mockResolvedValue({ exists: () => false }) }))
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
 
@@ -46,6 +47,7 @@ function setup(url = '/map') {
     { initialEntries: [url] },
   )
   render(<RouterProvider router={router} />)
+  return router
 }
 const names = () => screen.getAllByRole('article').map((a) => within(a).getByRole('heading', { level: 3 }).textContent)
 
@@ -159,5 +161,54 @@ describe('MapHome', () => {
     await screen.findAllByRole('article')
     await userEvent.type(screen.getByRole('combobox'), 'ab')
     expect(loadIndex).toHaveBeenCalledTimes(1)
+  })
+
+  it('arriving with near=1 does not ask for location and drops the param', async () => {
+    setup('/map?near=1')
+    await screen.findAllByRole('article')
+    expect(near.request).not.toHaveBeenCalled()
+    expect(screen.getByTestId('loc').textContent).not.toContain('near')
+  })
+
+  it('Back steps through committed searches', async () => {
+    const router = setup()
+    await screen.findAllByRole('article')
+    const box = screen.getByRole('combobox')
+    await userEvent.type(box, 'maize{Enter}')
+    await userEvent.clear(box)
+    await userEvent.type(box, 'fodder{Enter}')
+    expect(screen.getByTestId('loc').textContent).toContain('q=fodder')
+    await act(() => router.navigate(-1))
+    expect(screen.getByTestId('loc').textContent).toContain('q=maize')
+  })
+
+  it('selecting two cards then Back returns to the search without a selection', async () => {
+    const router = setup()
+    await screen.findAllByRole('article')
+    await userEvent.type(screen.getByRole('combobox'), 'maize{Enter}')
+    await userEvent.click(screen.getByTestId('pin-f2'))
+    await userEvent.click(screen.getByTestId('pin-f2'))
+    await act(() => router.navigate(-1))
+    expect(screen.getByTestId('loc').textContent).toContain('q=maize')
+    expect(screen.getByTestId('loc').textContent).not.toContain('sel')
+  })
+
+  it('an index error shows no count or empty state', async () => {
+    loadIndex.mockRejectedValue(Object.assign(new Error('x'), { code: 'offline' }))
+    setup()
+    await screen.findByRole('button', { name: 'Retry' })
+    expect(screen.queryByText('0 factories')).toBeNull()
+    expect(screen.queryByText('No factories found')).toBeNull()
+  })
+
+  it('a failed sign-in shows an error, a closed popup does not', async () => {
+    signInWithGoogle.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'auth/popup-closed-by-user' }))
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    await vi.waitFor(() => expect(signInWithGoogle).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText(/went wrong/)).toBeNull()
+    signInWithGoogle.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'auth/network-request-failed' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    expect(await screen.findByText(/went wrong/)).toBeInTheDocument()
   })
 })

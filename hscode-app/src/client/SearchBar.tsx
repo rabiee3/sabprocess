@@ -49,8 +49,8 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
     const o: Option[] = [{ key: 'q', group: '', label: t('map.searchFor', { q }), patch: { q, hs: '' } }]
     for (const p of sug.products) o.push({ key: `p-${p.q}`, group: t('map.sugProducts'), label: p.label, patch: { q: p.q, hs: '' } })
     for (const h of sug.hs) o.push({ key: `h-${h.code}`, group: t('map.sugHs'), label: h.label, hint: formatHs(h.code), patch: { hs: h.code, q: '' } })
-    for (const s of sug.sectors) o.push({ key: `s-${s.id}`, group: t('map.sugSectors'), label: s.label, patch: { sector: s.id, q: '' } })
-    for (const a of sug.areas) o.push({ key: `a-${a.id}`, group: t('map.sugAreas'), label: a.label, patch: { area: a.id, q: '' } })
+    for (const s of sug.sectors) o.push({ key: `s-${s.id}`, group: t('map.sugSectors'), label: s.label, patch: { sector: s.id, q: '', hs: '' } })
+    for (const a of sug.areas) o.push({ key: `a-${a.id}`, group: t('map.sugAreas'), label: a.label, patch: { area: a.id, q: '', hs: '' } })
     return o
   }, [sug, text, value, t])
 
@@ -70,6 +70,7 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
       e.preventDefault()
       setActive((i) => (i <= 0 ? options.length - 1 : i - 1))
     } else if (e.key === 'Escape') {
+      e.preventDefault()
       setOpen(false)
       setActive(-1)
     } else if (e.key === 'Enter') {

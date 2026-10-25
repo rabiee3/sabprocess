@@ -42,10 +42,10 @@ export function ClusterLayer({ points, selectedId, onSelect }: Props) {
 
   // Cluster icons are plain divs Leaflet makes focusable buttons: give each its count as a name.
   useEffect(() => {
-    const el = map.getContainer?.()
+    const el = map.getPane?.('markerPane')
     if (!el || typeof MutationObserver === 'undefined') return
     const label = () =>
-      el.querySelectorAll<HTMLElement>('.hs-cluster:not([aria-label])').forEach((c) =>
+      el.querySelectorAll<HTMLElement>('.hs-cluster').forEach((c) =>
         c.setAttribute('aria-label', t('map.cluster', { count: Number(c.textContent) || 0 })),
       )
     const mo = new MutationObserver(label)

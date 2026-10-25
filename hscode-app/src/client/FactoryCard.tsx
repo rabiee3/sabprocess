@@ -36,38 +36,40 @@ export function FactoryCard({ entry: e, lang, selected, distanceKm, showNeeds, o
     <article
       id={`card-${e.id}`}
       aria-current={selected ? 'true' : undefined}
-      className={`rounded-lg border-2 bg-surface p-3 ${selected ? 'border-brand-500' : 'border-line'}`}
+      className={`relative rounded-lg border-2 bg-surface p-3 ${selected ? 'border-brand-500' : 'border-line'}`}
     >
-      <button
-        type="button"
-        onClick={() => onSelect(e.id)}
-        className="flex min-h-touch w-full items-start gap-3 text-start"
-      >
+      <div className="flex min-h-touch items-start gap-3">
         <div ref={ref} className="size-16 shrink-0 overflow-hidden rounded bg-surface-alt">
           <img src={src ?? placeholder(e.id)} alt="" className="size-full object-cover" loading="lazy" />
         </div>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
             <h3 className="text-body-sm font-semibold text-ink-strong">
-              <bdi>{name}</bdi>
+              <button
+                type="button"
+                onClick={() => onSelect(e.id)}
+                className="text-start after:absolute after:inset-0 after:content-['']"
+              >
+                <bdi>{name}</bdi>
+              </button>
             </h3>
             {dist && <span className="shrink-0 text-caption text-ink-muted">{dist}</span>}
-          </span>
+          </div>
           {e.x && (
             <span className="me-2 inline-block rounded-sm bg-amber-50 px-2 py-0.5 text-caption font-semibold text-amber-900">
               {t('map.demo')}
             </span>
           )}
-          {meta && <span className="block text-caption text-ink-muted">{meta}</span>}
+          {meta && <p className="text-caption text-ink-muted">{meta}</p>}
           {made.length > 0 && (
-            <span className="block text-caption text-ink">
+            <p className="text-caption text-ink">
               {t('map.makes')}: {made.join(' · ')}
-            </span>
+            </p>
           )}
-        </span>
-      </button>
+        </div>
+      </div>
       {showNeeds && needed.length > 0 && (
-        <ul className="mt-2 flex flex-wrap gap-1 text-caption text-ink">
+        <ul className="relative z-10 mt-2 flex flex-wrap gap-1 text-caption text-ink">
           <li className="me-1 font-semibold">{t('map.needs')}:</li>
           {needed.map((p, i) => (
             <li key={i} className="flex items-center gap-1">
@@ -79,7 +81,7 @@ export function FactoryCard({ entry: e, lang, selected, distanceKm, showNeeds, o
       )}
       <Link
         to={`/f/${e.id}`}
-        className="mt-2 inline-flex min-h-touch w-full items-center justify-center rounded bg-brand-500 px-4 text-sm font-semibold text-ink-strong"
+        className="relative z-10 mt-2 inline-flex min-h-touch w-full items-center justify-center rounded bg-brand-500 px-4 text-sm font-semibold text-ink-strong"
       >
         {t('map.viewFactory')}
       </Link>

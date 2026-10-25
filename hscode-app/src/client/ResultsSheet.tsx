@@ -10,6 +10,7 @@ const PAGE = 50
 type Props = {
   entries: IndexEntry[]
   loading: boolean
+  error?: boolean
   lang: Lang
   desktop: boolean
   selectedId?: string
@@ -51,18 +52,19 @@ export function ResultsSheet(p: Props) {
   const selIdx = selectedId ? entries.findIndex((e) => e.id === selectedId) : -1
   const shown = entries.slice(0, Math.max(limit, selIdx + 1))
 
+  const ok = !p.loading && !p.error
   const body = (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
       <div aria-live="polite" className="px-1 py-2">
-        <h2 className="text-section font-semibold text-ink-strong">
-          {p.loading ? t('map.loading') : t('map.results', { count: entries.length })}
-        </h2>
-        {!p.loading && p.hsFilter && <p className="text-caption text-ink-muted">{t('map.suppliers', { code: p.hsFilter })}</p>}
-        {!p.loading && p.distances && entries.length > 0 && <p className="text-caption text-ink-muted">{t('map.sortDistance')}</p>}
-        {!p.loading && p.fromCache && <p className="text-caption text-ink-muted">{t('map.saved')}</p>}
+        {!p.error && (
+          <h2 className="text-section font-semibold text-ink-strong">{p.loading ? t('map.loading') : t('map.results', { count: entries.length })}</h2>
+        )}
+        {ok && p.hsFilter && <p className="text-caption text-ink-muted">{t('map.suppliers', { code: p.hsFilter })}</p>}
+        {ok && p.distances && entries.length > 0 && <p className="text-caption text-ink-muted">{t('map.sortDistance')}</p>}
+        {ok && p.fromCache && <p className="text-caption text-ink-muted">{t('map.saved')}</p>}
       </div>
-      {p.loading && <Skeletons />}
-      {!p.loading && entries.length === 0 && (
+      {p.loading && !p.error && <Skeletons />}
+      {ok && entries.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-6 text-center">
           <span aria-hidden="true" className="size-12 text-ink-muted" dangerouslySetInnerHTML={{ __html: emptyIcon }} />
           <p className="font-semibold text-ink-strong">{t('map.emptyTitle')}</p>
@@ -82,7 +84,7 @@ export function ResultsSheet(p: Props) {
           </div>
         </div>
       )}
-      {!p.loading && entries.length > 0 && (
+      {ok && entries.length > 0 && (
         <ul className="flex flex-col gap-3">
           {shown.map((e) => (
             <li key={e.id}>

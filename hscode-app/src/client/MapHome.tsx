@@ -71,21 +71,21 @@ export function Component() {
     }
   }, [wantNear, nearMe.status, set, t])
 
-  // A link with near=1 asks for the location once on arrival.
-  const asked = useRef(false)
+  // A link with near=1 never prompts for location: drop it on arrival; only the chip asks.
+  const arrived = useRef(false)
   useEffect(() => {
-    if (asked.current) return
-    asked.current = true
-    if (wantNear && nearMe.status === 'idle') nearMe.request()
+    if (arrived.current) return
+    arrived.current = true
+    if (wantNear && !nearMe.pos) set({ near: false })
   })
 
   const toggleNear = () => {
-    if (wantNear) return set({ near: false })
+    if (wantNear) return set({ near: false }, { push: true })
     setToast(null)
-    set({ near: true })
+    set({ near: true }, { push: true })
     nearMe.request()
   }
-  const select = useCallback((id: string) => set({ sel: id }, { push: true }), [set])
+  const select = useCallback((id: string) => set({ sel: id }, { push: !sel }), [set, sel])
 
   return (
     <div className="flex h-dvh flex-col bg-surface text-ink">
@@ -107,8 +107,8 @@ export function Component() {
               engine={engine}
               lang={lang}
               value={q || (hs ? formatHs(hs) : '')}
-              onApply={(p) => set(p)}
-              onClear={() => set({ q: '', hs: '' })}
+              onApply={(p) => set(p, { push: true })}
+              onClear={() => set({ q: '', hs: '' }, { push: true })}
             />
             <FilterChips
               lang={lang}
@@ -116,8 +116,8 @@ export function Component() {
               sector={sector}
               near={wantNear}
               locating={wantNear && nearMe.status === 'locating'}
-              onArea={(id) => set({ area: id })}
-              onSector={(id) => set({ sector: id })}
+              onArea={(id) => set({ area: id }, { push: true })}
+              onSector={(id) => set({ sector: id }, { push: true })}
               onNear={toggleNear}
             />
             {toast && <Banner tone="warning" onClose={() => setToast(null)}>{toast}</Banner>}
@@ -138,6 +138,7 @@ export function Component() {
             <ResultsSheet
               entries={results}
               loading={load.status === 'loading'}
+              error={load.status === 'error'}
               lang={lang}
               desktop={false}
               selectedId={sel}
@@ -145,7 +146,7 @@ export function Component() {
               hsFilter={hs ? formatHs(hs) : undefined}
               fromCache={load.status === 'ready' && load.fromCache}
               onSelect={select}
-              onTry={(w) => set({ q: w, hs: '' })}
+              onTry={(w) => set({ q: w, hs: '' }, { push: true })}
             />
           )}
         </div>
@@ -153,6 +154,7 @@ export function Component() {
           <ResultsSheet
             entries={results}
             loading={load.status === 'loading'}
+              error={load.status === 'error'}
             lang={lang}
             desktop
             selectedId={sel}
@@ -160,7 +162,7 @@ export function Component() {
             hsFilter={hs ? formatHs(hs) : undefined}
             fromCache={load.status === 'ready' && load.fromCache}
             onSelect={select}
-            onTry={(w) => set({ q: w, hs: '' })}
+            onTry={(w) => set({ q: w, hs: '' }, { push: true })}
           />
         )}
       </main>
