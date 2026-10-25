@@ -139,7 +139,12 @@
     "searchPlaceholder": "Search by product name or code",
     "browseChapters": "Browse chapters",
     "enoughHint": "That's enough — tap Use. The full tariff code is optional.",
-    "tariffInvalid": "Enter digits only, starting with the 6-digit code you picked."
+    "tariffInvalid": "Enter digits only, starting with the 6-digit code you picked.",
+    "change": "Change",
+    "knowTariff": "Optional — I know the full 10-digit code",
+    "noResults": "No matching heading. Try another word or a code.",
+    "back": "Back",
+    "chapter": "Chapter {{code}}"
   },
   "errors": {
     "offline": "You're offline — connect to continue",
