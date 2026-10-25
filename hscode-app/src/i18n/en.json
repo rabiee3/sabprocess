@@ -70,7 +70,11 @@
       "myLocation": "My location",
       "accuracy": "GPS ±{{m}} m",
       "required": "Place the pin on the factory inside Egypt.",
-      "mustMove": "Move the pin onto the factory before continuing."
+      "mustMove": "Move the pin onto the factory before continuing.",
+      "nudgeUp": "Move pin north",
+      "nudgeDown": "Move pin south",
+      "nudgeLeft": "Move pin west",
+      "nudgeRight": "Move pin east"
     },
     "basics": {
       "nameEn": "Factory name (English)",
