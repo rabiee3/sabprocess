@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { useEffect } from 'react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { initI18n } from '../i18n'
@@ -19,6 +20,17 @@ vi.mock('firebase/firestore', () => ({
 }))
 
 import { Component as AdminRoute } from './AdminRoute'
+import { useAdmin } from './AdminContext'
+import { AdminLayout } from './AdminLayout'
+
+let refresh2: () => void
+function Spy() {
+  const { refreshPending } = useAdmin()
+  useEffect(() => {
+    refresh2 = refreshPending
+  })
+  return null
+}
 
 const user = { uid: 'u1', email: 'admin@sab.example', displayName: 'A' }
 function renderAt(path = '/admin') {
@@ -82,5 +94,51 @@ describe('AdminRoute', () => {
     expect(btn).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(btn)
     expect(btn).toHaveAttribute('aria-expanded', 'true')
+  })
+  it('the closed drawer is inert; open focuses into it; Esc closes and refocuses the toggle', async () => {
+    auth = { user, role: 'admin', active: true, loading: false }
+    const { container } = renderAt()
+    const aside = container.querySelector('aside')!
+    expect(aside).toHaveAttribute('inert')
+    const btn = screen.getByRole('button', { name: en.admin.menu })
+    await userEvent.click(btn)
+    expect(aside).not.toHaveAttribute('inert')
+    expect(aside.contains(document.activeElement)).toBe(true)
+    await userEvent.keyboard('{Escape}')
+    expect(btn).toHaveAttribute('aria-expanded', 'false')
+    expect(btn).toHaveFocus()
+    expect(aside).toHaveAttribute('inert')
+  })
+  it('a route change closes the drawer', async () => {
+    auth = { user, role: 'admin', active: true, loading: false }
+    renderAt()
+    const btn = screen.getByRole('button', { name: en.admin.menu })
+    await userEvent.click(btn)
+    expect(btn).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(screen.getByRole('link', { name: en.admin.nav.surveyors }))
+    expect(btn).toHaveAttribute('aria-expanded', 'false')
+  })
+  it('the badge has accessible text in the link name', async () => {
+    auth = { user, role: 'admin', active: true, loading: false }
+    renderAt()
+    expect(await screen.findByRole('link', { name: `${en.admin.nav.review} 4 pending` })).toBeInTheDocument()
+  })
+  it('refreshPending re-queries the count', async () => {
+    auth = { user, role: 'admin', active: true, loading: false }
+    render(
+      <MemoryRouter initialEntries={['/admin/review']}>
+        <Routes>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/review" element={<Spy />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('4')).toBeInTheDocument()
+    expect(getCount).toHaveBeenCalledTimes(1)
+    getCount.mockResolvedValue({ data: () => ({ count: 7 }) })
+    act(() => refresh2())
+    expect(await screen.findByText('7')).toBeInTheDocument()
+    expect(getCount).toHaveBeenCalledTimes(2)
   })
 })

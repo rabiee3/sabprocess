@@ -40,7 +40,7 @@ describe('AdminSignIn', () => {
     async (code) => {
       signInAdmin.mockRejectedValue({ code })
       await submit()
-      expect(await screen.findByText(en.admin.signIn.invalid)).toBeInTheDocument()
+      expect(await screen.findByRole('alert')).toHaveTextContent(en.admin.signIn.invalid)
     },
   )
   it('too many attempts', async () => {
