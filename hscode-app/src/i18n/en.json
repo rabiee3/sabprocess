@@ -16,7 +16,8 @@
   },
   "common": {
     "comingSoon": "Coming soon",
-    "close": "Close"
+    "close": "Close",
+    "loading": "Loading…"
   },
   "role": {
     "client": "Client",
@@ -29,7 +30,8 @@
       "signInBody": "Add what each factory makes and needs, right from the field. Sign in with Google to start.",
       "continueGoogle": "Continue with Google",
       "offTitle": "Surveyor access is off",
-      "offBody": "Your account can't submit factories right now. Ask your supervisor to turn surveyor access back on."
+      "offBody": "Your account can't submit factories right now. Ask your supervisor to turn surveyor access back on.",
+      "adminNote": "Admins review submissions from the admin area."
     },
     "invite": {
       "title": "Enter your invitation code",
@@ -37,7 +39,8 @@
       "unlock": "Unlock surveying",
       "invalid": "This code isn't valid or was already used. Check the 6 digits with your supervisor.",
       "offline": "You're offline — connect to unlock surveying",
-      "signedInAs": "Signed in as {{email}}"
+      "signedInAs": "Signed in as {{email}}",
+      "unlocking": "Unlocking…"
     },
     "list": {
       "title": "My submissions",
