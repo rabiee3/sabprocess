@@ -76,3 +76,15 @@ describe('AdminSignIn layout', () => {
     expect(container.querySelector('form')!.contains(group)).toBe(false)
   })
 })
+
+describe('AdminSignIn layout', () => {
+  it('puts the logo above the card, outside the form', () => {
+    initI18n()
+    render(<AdminSignIn />)
+    const logo = screen.getByRole('img', { name: 'HSCode' })
+    const form = document.querySelector('form')!
+    expect(form.contains(logo)).toBe(false)
+    expect(logo.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+  })
+})
