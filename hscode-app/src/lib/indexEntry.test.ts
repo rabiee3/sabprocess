@@ -24,7 +24,7 @@ describe('toIndexEntry', () => {
     expect(toIndexEntry(f)).toEqual({
       id: 'f1', n: f.name, lat: f.location.lat, lng: f.location.lng, a: f.area, s: f.sector,
       m: [{ n: f.productsMade[0].name, h: '230990' }],
-      d: [{ n: f.productsNeeded[0].name, h: undefined }],
+      d: [{ n: f.productsNeeded[0].name }],
       at: f.approvedAt!.getTime(),
     });
   });
@@ -32,5 +32,21 @@ describe('toIndexEntry', () => {
     const e = toIndexEntry({ ...base, sector: undefined, approvedAt: undefined });
     expect('s' in e).toBe(false);
     expect('at' in e).toBe(false);
+  });
+  it('omits h for a product without an HS code', () => {
+    const e = toIndexEntry(base);
+    expect('h' in e.d[0]).toBe(false);
+    expect(e.m[0].h).toBe('230990');
+  });
+  it('drops undefined keys inside LocalizedName copies', () => {
+    const e = toIndexEntry({
+      ...base,
+      name: { en: 'Delta Feed', ar: undefined },
+      productsMade: [{ name: { en: undefined, ar: 'علف' } }],
+    });
+    expect(e.n).toEqual({ en: 'Delta Feed' });
+    expect('ar' in e.n).toBe(false);
+    expect('en' in e.m[0].n).toBe(false);
+    expect(e.n).not.toBe(base.name);
   });
 });

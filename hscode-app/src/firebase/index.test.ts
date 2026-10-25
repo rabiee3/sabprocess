@@ -13,4 +13,11 @@ describe('firebase/index', () => {
     expect(mod.useEmulator).toBe(true)
     expect(mod.db.app.options.projectId).toBe('demo-hscode')
   })
+
+  // Firestore rejects `undefined` field values unless this is on (e.g. an optional field left unset).
+  it('ignores undefined properties on write', async () => {
+    const { db } = await import('./index')
+    const settings = (db as unknown as { _getSettings(): { ignoreUndefinedProperties: boolean } })._getSettings()
+    expect(settings.ignoreUndefinedProperties).toBe(true)
+  })
 })

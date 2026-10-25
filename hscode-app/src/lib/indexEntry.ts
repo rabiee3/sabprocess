@@ -1,12 +1,25 @@
 import { hsString } from './hs';
-import type { Factory, IndexEntry, Product } from './types';
+import type { Factory, IndexEntry, LocalizedName, Product } from './types';
 
-const mapProducts = (ps: Product[]) => ps.map((p) => ({ n: p.name, h: hsString(p.hs) }));
+/** A copy of `n` with only the keys that hold a value (Firestore rejects `undefined`). */
+const copyName = (n: LocalizedName): LocalizedName => {
+  const out: LocalizedName = {};
+  if (n.en !== undefined) out.en = n.en;
+  if (n.ar !== undefined) out.ar = n.ar;
+  return out;
+};
+
+const mapProducts = (ps: Product[]): IndexEntry['m'] =>
+  ps.map((p) => {
+    const item: IndexEntry['m'][number] = { n: copyName(p.name) };
+    if (p.hs) item.h = hsString(p.hs);
+    return item;
+  });
 
 export function toIndexEntry(f: Factory): IndexEntry {
   const entry: IndexEntry = {
     id: f.id,
-    n: f.name,
+    n: copyName(f.name),
     lat: f.location.lat,
     lng: f.location.lng,
     a: f.area,

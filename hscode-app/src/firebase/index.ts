@@ -16,6 +16,8 @@ export const app = initializeApp(
 )
 
 export const db = initializeFirestore(app, {
+  // Optional fields left `undefined` are dropped instead of failing the whole write.
+  ignoreUndefinedProperties: true,
   // No IndexedDB (jsdom unit tests, Node): fall back to the in-memory cache.
   localCache:
     typeof indexedDB === 'undefined'
