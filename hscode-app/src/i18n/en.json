@@ -351,6 +351,7 @@
         "saved": "Changes to {{name}} were saved."
       },
       "detail": {
+        "unsavedHint": "Save or discard your changes first",
         "back": "Back to all factories",
         "pendingLink": "This factory is waiting for review.",
         "pendingOpen": "Open in the review queue",

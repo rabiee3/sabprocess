@@ -105,7 +105,7 @@ describe('approveFactory', () => {
     const big = Array.from({ length: 10 }, (_, i) => ({
       id: `big${i}`, n: { en: 'x'.repeat(100_000) }, lat: 30, lng: 31, a: 'a', m: [], d: [],
     }))
-    const base = JSON.stringify(big).length
+    const base = new TextEncoder().encode(JSON.stringify(big)).length // bytes, as indexFill counts
     big[9].n.en += 'x'.repeat(Math.max(0, targetBytes - base))
     await seed(async (db) => {
       await setDoc(doc(db, 'searchIndex/shard-0'), { version: 5, updatedAt: serverTimestamp(), entries: big })
@@ -165,7 +165,7 @@ describe('saveEdits / hide / unhide', () => {
     await seedPending()
     await approveFactory(FID, await opened(), {}, asAdmin())
     const entries = (await shard())!.entries
-    entries.push({ id: 'huge', n: { en: 'x'.repeat(1_020_000 - JSON.stringify(entries).length) }, lat: 30, lng: 31, a: 'a', m: [], d: [] })
+    entries.push({ id: 'huge', n: { en: 'x'.repeat(1_020_000 - new TextEncoder().encode(JSON.stringify(entries)).length) }, lat: 30, lng: 31, a: 'a', m: [], d: [] })
     await seed(async (db) => {
       await setDoc(doc(db, 'searchIndex/shard-0'), { version: 9, updatedAt: serverTimestamp(), entries })
     })

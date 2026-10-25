@@ -1,19 +1,31 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { initI18n, setLanguage } from '../i18n'
 
 let mapClick: ((e: { latlng: { lat: number; lng: number } }) => void) | undefined
-const fireClick = (lat: number, lng: number) => act(() => mapClick?.({ latlng: { lat, lng } }))
+let mapDbl: (() => void) | undefined
+const ui = () => userEvent.setup({ delay: null })
+const PLACE_DELAY = 250
+// A tap places the pin after a short delay (so a double-tap zoom can cancel it).
+const fireClick = (lat: number, lng: number) => {
+  vi.useFakeTimers()
+  act(() => {
+    mapClick?.({ latlng: { lat, lng } })
+    vi.advanceTimersByTime(PLACE_DELAY)
+  })
+  vi.useRealTimers()
+}
 
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: ReactNode }) => <div data-testid="map">{children}</div>,
   TileLayer: () => null,
   Circle: ({ radius }: { radius: number }) => <div data-testid="circle" data-radius={radius} />,
   useMap: () => ({ setView: vi.fn(), getZoom: () => 16 }),
-  useMapEvents: (h: { click: typeof mapClick }) => {
+  useMapEvents: (h: { click: typeof mapClick; dblclick?: () => void }) => {
     mapClick = h.click
+    mapDbl = h.dblclick
     return {}
   },
   Marker: ({ position, draggable }: { position: [number, number]; draggable?: boolean }) => (
@@ -41,6 +53,8 @@ describe('LocationPicker', () => {
     geo.mockReturnValue({ status: 'pending', retry })
   })
 
+  afterEach(() => vi.useRealTimers())
+
   it('denied: starts at area centre with gpsOff banner', () => {
     geo.mockReturnValue({ status: 'denied', retry })
     render(<LocationPicker areaCenter={area} onChange={onChange} />)
@@ -55,12 +69,12 @@ describe('LocationPicker', () => {
   it('nudge north sets pinMoved', async () => {
     geo.mockReturnValue({ status: 'denied', retry })
     render(<LocationPicker areaCenter={area} onChange={onChange} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Move pin north' }))
+    await ui().click(screen.getByRole('button', { name: 'Move pin north' }))
     const [loc] = last()
     expect(loc.pinMoved).toBe(true)
     expect(loc.lat).toBeCloseTo(30.000045, 6)
     expect(loc.lng).toBe(31)
-    await userEvent.click(screen.getByRole('button', { name: 'Move pin east' }))
+    await ui().click(screen.getByRole('button', { name: 'Move pin east' }))
     expect(last()[0].lng).toBeCloseTo(31 + 0.000045 / Math.cos((30.000045 * Math.PI) / 180), 7)
   })
 
@@ -82,6 +96,46 @@ describe('LocationPicker', () => {
     expect(screen.queryByText(/GPS ±/)).toBeNull()
     expect(screen.queryByText(/signal is weak/)).toBeNull()
     expect(screen.getByText('Placed by hand')).toBeInTheDocument()
+  })
+
+  it('a single tap moves the pin only after the delay', () => {
+    vi.useFakeTimers()
+    render(<LocationPicker areaCenter={area} onChange={onChange} />)
+    act(() => mapClick?.({ latlng: { lat: 30.5, lng: 31.5 } }))
+    expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '30')
+    act(() => void vi.advanceTimersByTime(PLACE_DELAY))
+    expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '30.5')
+  })
+
+  it('a double-tap (click, click, dblclick) zooms without moving the pin', () => {
+    vi.useFakeTimers()
+    render(<LocationPicker areaCenter={area} onChange={onChange} />)
+    act(() => {
+      mapClick?.({ latlng: { lat: 30.5, lng: 31.5 } })
+      mapClick?.({ latlng: { lat: 30.6, lng: 31.6 } })
+      mapDbl?.()
+    })
+    act(() => void vi.advanceTimersByTime(PLACE_DELAY * 2))
+    expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '30')
+    expect(last()[0].pinMoved).toBe(false)
+  })
+
+  it('unmounting mid-delay places nothing', () => {
+    vi.useFakeTimers()
+    const { unmount } = render(<LocationPicker areaCenter={area} onChange={onChange} />)
+    act(() => mapClick?.({ latlng: { lat: 30.5, lng: 31.5 } }))
+    const calls = onChange.mock.calls.length
+    unmount()
+    act(() => void vi.advanceTimersByTime(PLACE_DELAY * 2))
+    expect(onChange.mock.calls.length).toBe(calls)
+  })
+
+  it('hides the gpsOff banner once the pin is placed by hand', () => {
+    geo.mockReturnValue({ status: 'denied', retry })
+    render(<LocationPicker areaCenter={area} onChange={onChange} />)
+    expect(screen.getByText(/Location is off/)).toBeInTheDocument()
+    fireClick(30.5, 31.5)
+    expect(screen.queryByText(/Location is off/)).toBeNull()
   })
 
   it('the marker is not draggable', () => {
@@ -133,7 +187,7 @@ describe('LocationPicker', () => {
     geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
     render(<LocationPicker areaCenter={area} onChange={onChange} />)
     fireClick(30.5, 31.5)
-    await userEvent.click(screen.getByRole('button', { name: 'My location' }))
+    await ui().click(screen.getByRole('button', { name: 'My location' }))
     expect(retry).toHaveBeenCalled()
     expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '29.9')
     expect(last()[0]).toMatchObject({ lat: 29.9, lng: 31.2, pinMoved: false })
@@ -153,7 +207,7 @@ describe('LocationPicker', () => {
     expect(last()[0]).toEqual({ lat: 28, lng: 30, accuracyM: 7, pinMoved: false })
     expect(screen.getByText('GPS ±7 m')).toBeInTheDocument() // the stored accuracy, not the live fix
     expect(screen.queryByText(/GPS ±12/)).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: 'My location' }))
+    await ui().click(screen.getByRole('button', { name: 'My location' }))
     expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '29.9')
     expect(last()[0]).toEqual({ lat: 29.9, lng: 31.2, accuracyM: 12, pinMoved: true })
   })
@@ -164,7 +218,7 @@ describe('LocationPicker', () => {
     render(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
     fireClick(30.5, 31.5)
     expect(last()[0]).toEqual({ lat: 30.5, lng: 31.5, accuracyM: null, pinMoved: true })
-    await userEvent.click(screen.getByRole('button', { name: 'Move pin north' }))
+    await ui().click(screen.getByRole('button', { name: 'Move pin north' }))
     expect(last()[0].accuracyM).toBeNull()
   })
 
@@ -172,7 +226,7 @@ describe('LocationPicker', () => {
     const value = { lat: 28, lng: 30, accuracyM: 7, pinMoved: false }
     geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
     const { rerender } = render(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
-    await userEvent.click(screen.getByRole('button', { name: 'My location' }))
+    await ui().click(screen.getByRole('button', { name: 'My location' }))
     geo.mockReturnValue({ status: 'ok', coords: { lat: 29.8, lng: 31.3 }, accuracyM: 3, retry })
     rerender(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
     expect(last()[0]).toEqual({ lat: 29.9, lng: 31.2, accuracyM: 12, pinMoved: true })
@@ -182,7 +236,7 @@ describe('LocationPicker', () => {
     const value = { lat: 28, lng: 30, accuracyM: 7, pinMoved: false }
     geo.mockReturnValue({ status: 'pending', retry })
     const { rerender } = render(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
-    await userEvent.click(screen.getByRole('button', { name: 'My location' }))
+    await ui().click(screen.getByRole('button', { name: 'My location' }))
     expect(retry).toHaveBeenCalled()
     geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
     rerender(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)

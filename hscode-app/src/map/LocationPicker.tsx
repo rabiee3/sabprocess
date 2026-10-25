@@ -53,8 +53,27 @@ function Recenter({ pos }: { pos: LatLng }) {
 }
 
 /** Leaflet fires `click` only for a real tap, never after a pan, drag or pinch-zoom. */
+const DOUBLE_TAP_MS = 250
+
+/** A double-tap zoom fires `click` per tap before `dblclick`, so placing waits briefly and a dblclick cancels it. */
 function TapToPlace({ onPlace }: { onPlace: (p: LatLng) => void }) {
-  useMapEvents({ click: (e) => onPlace({ lat: e.latlng.lat, lng: e.latlng.lng }) })
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const cancel = () => {
+    clearTimeout(timer.current)
+    timer.current = undefined
+  }
+  useEffect(() => cancel, [])
+  useMapEvents({
+    click: (e) => {
+      cancel()
+      const p = { lat: e.latlng.lat, lng: e.latlng.lng }
+      timer.current = setTimeout(() => {
+        timer.current = undefined
+        onPlace(p)
+      }, DOUBLE_TAP_MS)
+    },
+    dblclick: cancel,
+  })
   return null
 }
 
@@ -122,7 +141,7 @@ export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = 
 
   return (
     <section className="flex flex-col gap-3">
-      {gpsOff && <Banner tone="warning">{t('survey.location.gpsOff')}</Banner>}
+      {gpsOff && !manual && <Banner tone="warning">{t('survey.location.gpsOff')}</Banner>}
       {weak && <Banner tone="warning">{t('survey.location.weak')}</Banner>}
 
       <div className="relative">

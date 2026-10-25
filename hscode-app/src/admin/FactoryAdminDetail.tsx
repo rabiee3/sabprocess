@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { draftFromFactory } from '../survey/draft'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { Banner } from '../ui/Banner'
@@ -87,6 +88,12 @@ export function FactoryAdminDetail({ fid }: { fid: string }) {
     void run('save', () => saveEdits(fid, data.openedAt, toAdminEdit(draft)), 'saved')
   }
 
+  // The location picker re-emits GPS metadata on mount, so only the pin and the typed fields count as edits.
+  const comparable = (d: typeof draft) =>
+    JSON.stringify({ ...d, gpsStatus: null, location: d.location && { lat: d.location.lat, lng: d.location.lng } }, (k, v) => (k === 'key' ? undefined : v)) // row keys are random per draft
+  const dirty = comparable(draft) !== comparable(draftFromFactory(factory, data.contact, data.photos))
+  const locked = busy !== null || dirty
+
   const status = factory.status
   return (
     <article className="flex flex-col gap-5">
@@ -128,6 +135,9 @@ export function FactoryAdminDetail({ fid }: { fid: string }) {
       <AdminFactoryForm value={draft} errors={errors} onChange={(next) => setDraft(data, next)} />
       <PhotosAndContact photos={data.photos} contact={data.contact} />
 
+      {dirty && status !== 'pending' && status !== 'rejected' && (
+        <p className="text-body-sm text-ink-subtle">{t('admin.factories.detail.unsavedHint')}</p>
+      )}
       <div className="flex flex-wrap gap-3 border-t border-line pt-4">
         <button
           type="button"
@@ -138,12 +148,12 @@ export function FactoryAdminDetail({ fid }: { fid: string }) {
           {t('admin.factories.delete')}
         </button>
         {status === 'approved' && (
-          <button type="button" disabled={busy !== null} onClick={() => void run('hide', () => hideFactory(fid), 'hidden')} className={SECONDARY}>
+          <button type="button" disabled={locked} onClick={() => void run('hide', () => hideFactory(fid), 'hidden')} className={SECONDARY}>
             {t('admin.factories.hide')}
           </button>
         )}
         {status === 'hidden' && (
-          <button type="button" disabled={busy !== null} onClick={() => void run('unhide', () => unhideFactory(fid), 'unhidden')} className={SECONDARY}>
+          <button type="button" disabled={locked} onClick={() => void run('unhide', () => unhideFactory(fid), 'unhidden')} className={SECONDARY}>
             {t('admin.factories.unhide')}
           </button>
         )}

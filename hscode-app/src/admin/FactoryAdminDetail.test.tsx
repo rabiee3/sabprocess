@@ -134,6 +134,26 @@ describe('FactoryAdminDetail', () => {
     expect(await screen.findByText('Alpha Steel is now hidden from the public map.')).toBeInTheDocument()
   })
 
+  it('disables Hide while the form has unsaved edits, with a hint', async () => {
+    const user = userEvent.setup()
+    setup()
+    const hide = await screen.findByRole('button', { name: 'Hide' })
+    expect(hide).toBeEnabled()
+    expect(screen.queryByText('Save or discard your changes first')).toBeNull()
+    await user.type(screen.getByLabelText('Factory name (English)'), 'X')
+    expect(screen.getByRole('button', { name: 'Hide' })).toBeDisabled()
+    expect(screen.getByText('Save or discard your changes first')).toBeInTheDocument()
+  })
+
+  it('disables Unhide while the form has unsaved edits', async () => {
+    const user = userEvent.setup()
+    serve({ status: 'hidden' })
+    setup()
+    expect(await screen.findByRole('button', { name: 'Unhide' })).toBeEnabled()
+    await user.type(screen.getByLabelText('Factory name (English)'), 'X')
+    expect(screen.getByRole('button', { name: 'Unhide' })).toBeDisabled()
+  })
+
   it('hidden: banner and Unhide', async () => {
     const user = userEvent.setup()
     serve({ status: 'hidden' })

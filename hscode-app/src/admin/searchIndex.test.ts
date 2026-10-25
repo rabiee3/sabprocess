@@ -20,7 +20,14 @@ describe('searchIndex', () => {
     const f = indexFill(list)
     expect(f).toBeGreaterThan(0)
     expect(f).toBeLessThan(1)
-    expect(f).toBeCloseTo(JSON.stringify(list).length / 1_048_576, 10)
+    expect(f).toBeCloseTo(new TextEncoder().encode(JSON.stringify(list)).length / 1_048_576, 10)
+  })
+  it('counts UTF-8 bytes, not characters (Arabic is 2 bytes per char)', () => {
+    const list = [e('a', 'مصنع الحديد والصلب')]
+    const chars = JSON.stringify(list).length
+    const bytes = new TextEncoder().encode(JSON.stringify(list)).length
+    expect(bytes).toBeGreaterThan(chars)
+    expect(indexFill(list)).toBe(bytes / 1_048_576)
   })
   it('limit is 0.97', () => expect(INDEX_LIMIT).toBe(0.97))
 })

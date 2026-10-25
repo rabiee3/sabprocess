@@ -10,4 +10,4 @@ export function upsertEntry(entries: IndexEntry[], e: IndexEntry): IndexEntry[] 
 export const removeEntry = (entries: IndexEntry[], id: string): IndexEntry[] => entries.filter((x) => x.id !== id)
 
 /** 0–1 share of the 1 MiB document limit used by the entries. */
-export const indexFill = (entries: IndexEntry[]): number => JSON.stringify(entries).length / 1_048_576
+export const indexFill = (entries: IndexEntry[]): number => new TextEncoder().encode(JSON.stringify(entries)).length / 1_048_576
