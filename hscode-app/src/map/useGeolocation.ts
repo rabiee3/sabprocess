@@ -12,15 +12,16 @@ export interface UseGeolocation extends GeoState {
   retry(): void
 }
 
-export function useGeolocation(opts: { timeoutMs?: number } = {}): UseGeolocation {
+export function useGeolocation(opts: { timeoutMs?: number; enabled?: boolean } = {}): UseGeolocation {
   const timeoutMs = opts.timeoutMs ?? 15000
+  const enabled = opts.enabled ?? true
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState<GeoState>(() => ({
-    status: typeof navigator !== 'undefined' && navigator.geolocation ? 'pending' : 'unavailable',
+    status: enabled && typeof navigator !== 'undefined' && navigator.geolocation ? 'pending' : 'unavailable',
   }))
 
   useEffect(() => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    if (!enabled || typeof navigator === 'undefined' || !navigator.geolocation) {
       return
     }
     let best: number | undefined
@@ -48,7 +49,7 @@ export function useGeolocation(opts: { timeoutMs?: number } = {}): UseGeolocatio
       clearTimeout(timer)
       navigator.geolocation.clearWatch(id)
     }
-  }, [attempt, timeoutMs])
+  }, [attempt, timeoutMs, enabled])
 
   const retry = useCallback(() => {
     setState((s) => (s.status === 'ok' ? s : { status: 'pending' }))

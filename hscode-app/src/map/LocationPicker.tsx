@@ -15,6 +15,8 @@ type Props = {
   value?: FactoryLocation
   areaCenter: LatLng
   onChange: (loc: FactoryLocation, gpsStatus: GpsStatus) => void
+  /** False for a reviewer looking at someone else's pin: no geolocation, no "My location", no GPS banners. */
+  gps?: boolean
 }
 
 const NUDGE_DEG = 0.000045 // ~5 m
@@ -50,9 +52,9 @@ function Recenter({ pos }: { pos: LatLng }) {
   return null
 }
 
-export function LocationPicker({ value, areaCenter, onChange }: Props) {
+export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = true }: Props) {
   const { t } = useTranslation()
-  const gps = useGeolocation()
+  const gps = useGeolocation({ enabled: gpsEnabled })
   const [userPin, setPin] = useState<LatLng>(() => value ?? areaCenter)
   // A stored value is a fixed starting pin: GPS fixes never replace it.
   const [fixed] = useState(!!value)
@@ -65,7 +67,9 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
     onChangeRef.current = onChange
   })
 
-  const hasFix = gps.status === 'ok' && !!gps.coords
+  const storedPin = fixed && accSrc === 'stored'
+  const storedAcc = storedPin ? (value?.accuracyM ?? null) : null
+  const hasFix = gpsEnabled && !storedPin && gps.status === 'ok' && !!gps.coords
   const liveAccuracyM = gps.status === 'ok' && gps.accuracyM !== undefined ? gps.accuracyM : (value?.accuracyM ?? null)
   const accuracyM = liveAccuracyM // display only: banner, circle, label
   const emitAccuracyM = !fixed
@@ -112,7 +116,7 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
     gps.retry()
   }
 
-  const gpsOff = gps.status === 'denied' || gps.status === 'unavailable' || gps.status === 'timeout'
+  const gpsOff = gpsEnabled && (gps.status === 'denied' || gps.status === 'unavailable' || gps.status === 'timeout')
   const weak = hasFix && accuracyM !== null && accuracyM > WEAK_M
 
   return (
@@ -123,11 +127,13 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
       <div className="relative">
         <MapView center={pin} zoom={16} className="h-72 w-full overflow-hidden rounded">
           <Recenter pos={pin} />
+          {storedAcc !== null && <Circle center={[pin.lat, pin.lng]} radius={storedAcc} />}
           {hasFix && accuracyM !== null && gps.coords && (
             <Circle center={[gps.coords.lat, gps.coords.lng]} radius={accuracyM} />
           )}
           <Marker position={[pin.lat, pin.lng]} icon={icon} title={t('survey.location.hint')} draggable eventHandlers={handlers} />
         </MapView>
+        {gpsEnabled && (
         <button
           type="button"
           onClick={myLocation}
@@ -137,15 +143,16 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
           <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: locateIcon }} />
           {t('survey.location.myLocation')}
         </button>
+        )}
       </div>
 
       <div className="flex items-center justify-between gap-3">
         <div dir="ltr" className="font-mono text-sm text-ink-strong">
           {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
         </div>
-        {accuracyM !== null && hasFix && (
+        {(storedAcc ?? (hasFix ? accuracyM : null)) !== null && (
           <div dir="ltr" className="text-sm text-ink">
-            {t('survey.location.accuracy', { m: Math.round(accuracyM) })}
+            {t('survey.location.accuracy', { m: Math.round((storedAcc ?? accuracyM)!) })}
           </div>
         )}
       </div>

@@ -26,12 +26,13 @@ export function AdminFactoryForm({ value, onChange, errors }: Props) {
   return (
     <div className="flex flex-col gap-6">
       <StepBasics draft={value} dispatch={dispatch} errors={errors} />
-      <StepProducts draft={value} dispatch={dispatch} errors={errors} />
+      <StepProducts draft={value} dispatch={dispatch} errors={errors} headingLevel={3} />
       <section>
         <h3 className="mb-2 text-title font-semibold text-ink-strong">{t('admin.review.location')}</h3>
         <LocationPicker
           value={value.location}
           areaCenter={center}
+          gps={false}
           onChange={(location) => dispatch({ type: 'setLocation', location })}
         />
         {errors.includes('survey.location.required') && <FieldError>{t('survey.location.required')}</FieldError>}

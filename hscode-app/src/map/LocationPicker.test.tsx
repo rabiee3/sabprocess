@@ -27,7 +27,7 @@ vi.mock('react-leaflet', () => ({
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
 
 const geo = vi.fn()
-vi.mock('./useGeolocation', () => ({ useGeolocation: () => geo() }))
+vi.mock('./useGeolocation', () => ({ useGeolocation: (o: unknown) => geo(o) }))
 
 import { LocationPicker } from './LocationPicker'
 
@@ -128,7 +128,8 @@ describe('LocationPicker', () => {
       expect(loc.pinMoved).toBe(false)
     }
     expect(last()[0]).toEqual({ lat: 28, lng: 30, accuracyM: 7, pinMoved: false })
-    expect(screen.getByText(/GPS ±12/)).toBeInTheDocument()
+    expect(screen.getByText('GPS ±7 m')).toBeInTheDocument() // the stored accuracy, not the live fix
+    expect(screen.queryByText(/GPS ±12/)).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'My location' }))
     expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '29.9')
     expect(last()[0]).toEqual({ lat: 29.9, lng: 31.2, accuracyM: 12, pinMoved: true })
@@ -175,5 +176,23 @@ describe('LocationPicker', () => {
       />,
     )
     expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '28')
+  })
+
+  it('value-backed: draws the stored accuracy circle, no gpsOff, ignores the live fix', () => {
+    geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
+    render(<LocationPicker value={{ lat: 28, lng: 30, accuracyM: 85, pinMoved: true }} areaCenter={area} onChange={onChange} gps={false} />)
+    expect(screen.getByTestId('circle')).toHaveAttribute('data-radius', '85')
+    expect(screen.getByText('GPS ±85 m')).toBeInTheDocument()
+    expect(screen.queryByText(/Location is off/)).toBeNull()
+    expect(screen.queryByText(/GPS signal is weak/)).toBeNull()
+  })
+
+  it('gps={false}: geolocation is disabled and My location is absent', () => {
+    geo.mockReturnValue({ status: 'unavailable', retry })
+    render(<LocationPicker value={{ lat: 28, lng: 30, accuracyM: null, pinMoved: false }} areaCenter={area} onChange={onChange} gps={false} />)
+    expect(geo).toHaveBeenCalledWith({ enabled: false })
+    expect(screen.queryByRole('button', { name: 'My location' })).toBeNull()
+    expect(screen.queryByText(/Location is off/)).toBeNull()
+    expect(screen.queryByTestId('circle')).toBeNull()
   })
 })

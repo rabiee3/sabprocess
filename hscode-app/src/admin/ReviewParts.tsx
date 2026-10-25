@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { normalizeDigits } from '../survey/draft'
 import type { ContactDraft, PhotoData } from '../survey/types'
 import { BottomSheet } from '../ui/BottomSheet'
 import { FieldError } from '../survey/steps/shared'
+import { isSafeImage } from './safeImage'
 import { safeUrl, whatsappHref } from './contactLinks'
 
 export function PhotoStrip({ photos }: { photos: PhotoData[] }) {
@@ -17,16 +19,21 @@ export function PhotoStrip({ photos }: { photos: PhotoData[] }) {
             <button
               type="button"
               aria-label={t('admin.review.photoOpen', { n: i + 1 })}
+              disabled={!isSafeImage(p.data)}
               onClick={() => setOpen(i)}
               className="block min-h-touch overflow-hidden rounded border border-line"
             >
-              <img src={p.data} alt="" loading="lazy" className="size-24 object-cover" />
+              {isSafeImage(p.data) ? (
+                <img src={p.data} alt="" loading="lazy" className="size-24 object-cover" />
+              ) : (
+                <span aria-hidden="true" className="block size-24 bg-surface-alt" />
+              )}
             </button>
           </li>
         ))}
       </ul>
       <BottomSheet open={open !== null} title={t('admin.review.photos')} onClose={() => setOpen(null)}>
-        {open !== null && photos[open] && (
+        {open !== null && isSafeImage(photos[open]?.data) && (
           <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
             <img src={photos[open].data} alt={t('admin.review.photoAlt', { n: open + 1 })} className="max-h-full max-w-full" />
           </div>
@@ -53,7 +60,7 @@ export function ContactBlock({ contact }: { contact: ContactDraft }) {
     rows.push({
       label: t('admin.review.phone'),
       value: (
-        <a dir="ltr" href={`tel:${phone}`} className={`font-mono ${LINK}`}>
+        <a dir="ltr" href={`tel:${normalizeDigits(phone)}`} className={`font-mono ${LINK}`}>
           {phone}
         </a>
       ),

@@ -10,7 +10,7 @@ import { AdminContext } from './AdminContext'
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: ReactNode }) => <div data-testid="map">{children}</div>,
   TileLayer: () => null,
-  Circle: () => null,
+  Circle: ({ radius }: { radius: number }) => <div data-testid="circle" data-radius={radius} />,
   useMap: () => ({ setView: vi.fn(), getZoom: () => 16 }),
   Marker: ({ position, title }: { position: [number, number]; title?: string }) => (
     <div data-testid="marker" data-lat={position[0]} data-title={title} />
@@ -216,5 +216,30 @@ describe('ReviewQueue', () => {
     await user.click(screen.getByRole('button', { name: 'Open photo 1' }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByRole('img', { name: 'Factory photo 1' })).toHaveAttribute('src', 'data:image/jpeg;base64,AAAA')
+  })
+
+  it('outline: factory name h2, sections h3, no h1; no GPS controls on the review map', async () => {
+    setup('/admin/review/f1')
+    act(() => pushQueue([f1]))
+    await screen.findByRole('heading', { level: 2, name: 'Factory f1' })
+    expect(screen.getByRole('heading', { level: 3, name: 'Products made' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'My location' })).toBeNull()
+    expect(screen.getByTestId('circle')).toHaveAttribute('data-radius', '85')
+  })
+
+  it('only data:image sources are rendered; Arabic-digit phones link with ASCII digits', async () => {
+    loadForReview.mockResolvedValue({
+      factory: { ...f1, thumb: 'https://evil.example/x.png' },
+      openedAt,
+      contact: { phone: '٠١٠١٢٣٤٥٦٧٨' },
+      photos: [{ id: 'p1', data: 'https://evil.example/p.jpg' }],
+    })
+    setup('/admin/review/f1')
+    act(() => pushQueue([{ ...f1, thumb: 'https://evil.example/x.png' }]))
+    await screen.findByRole('heading', { level: 2, name: 'Factory f1' })
+    expect(document.querySelector('img[src^="https"]')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Open photo 1' })).toBeDisabled()
+    expect(screen.getByRole('link', { name: '٠١٠١٢٣٤٥٦٧٨' })).toHaveAttribute('href', 'tel:01012345678')
   })
 })

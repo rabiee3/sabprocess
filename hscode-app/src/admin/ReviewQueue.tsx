@@ -39,7 +39,7 @@ export function ReviewQueue() {
     const rest = sorted.filter((f) => f.id !== info.fid)
     const at = sorted.findIndex((f) => f.id === info.fid)
     const next = (at >= 0 ? rest[at] : undefined) ?? rest[0]
-    navigate(next ? `/admin/review/${next.id}` : '/admin/review')
+    navigate(next ? `/admin/review/${next.id}` : '/admin/review', { replace: true })
   }
 
   const queue = (

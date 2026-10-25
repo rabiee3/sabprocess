@@ -7,6 +7,7 @@ import type { Factory } from '../lib/types'
 import { MapView } from '../map/MapView'
 import { pinIcon } from '../map/pins'
 import { factoryFlags } from './flags'
+import { isSafeImage } from './safeImage'
 import { displayName, formatDate } from './reviewForm'
 
 const CAIRO = { lat: 30.0444, lng: 31.2357 }
@@ -52,7 +53,7 @@ export function QueuePane({ items, selected, surveyors, onSelect }: Props) {
                 aria-current={isSel ? 'true' : undefined}
                 className={`flex min-h-touch gap-3 rounded border p-3 ${isSel ? 'border-brand-600 bg-brand-50' : 'border-line bg-surface'}`}
               >
-                {f.thumb ? (
+                {isSafeImage(f.thumb) ? (
                   <img src={f.thumb} alt="" loading="lazy" className="size-16 shrink-0 rounded object-cover" />
                 ) : (
                   <span aria-hidden="true" className="size-16 shrink-0 rounded bg-surface-alt" />
