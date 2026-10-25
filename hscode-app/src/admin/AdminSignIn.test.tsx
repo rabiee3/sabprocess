@@ -60,3 +60,31 @@ describe('AdminSignIn', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: en.admin.signIn.submit })).toBeEnabled())
   })
 })
+
+describe('AdminSignIn layout', () => {
+  beforeEach(() => {
+    initI18n()
+  })
+  it('pins the language toggle to the top end corner, outside the form', () => {
+    const { container } = render(<AdminSignIn />)
+    const group = screen.getByRole('group', { name: en.lang.label })
+    const wrap = group.parentElement!
+    expect(wrap.className).toMatch(/\babsolute\b/)
+    expect(wrap.className).toMatch(/\btop-3\b/)
+    expect(wrap.className).toMatch(/\bend-3\b/)
+    expect(wrap.className).not.toMatch(/inset-(block|inline)/)
+    expect(container.querySelector('form')!.contains(group)).toBe(false)
+  })
+})
+
+describe('AdminSignIn layout', () => {
+  it('puts the logo above the card, outside the form', () => {
+    initI18n()
+    render(<AdminSignIn />)
+    const logo = screen.getByRole('img', { name: 'HSCode' })
+    const form = document.querySelector('form')!
+    expect(form.contains(logo)).toBe(false)
+    expect(logo.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+  })
+})

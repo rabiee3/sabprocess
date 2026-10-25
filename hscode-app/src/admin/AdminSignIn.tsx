@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { signInAdmin } from '../auth/api'
 import { Banner } from '../ui/Banner'
+import { DarkBackdrop } from '../ui/DarkBackdrop'
 import { LangToggle } from '../ui/LangToggle'
 import { Logo } from '../ui/Logo'
 
@@ -44,15 +45,18 @@ export function AdminSignIn() {
   }
 
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center gap-5 bg-surface-alt p-4">
-      <div className="absolute inset-block-start-3 inset-inline-end-3">
+    <DarkBackdrop className="min-h-dvh">
+    <main className="relative flex flex-1 flex-col items-center justify-center gap-5 p-4 pt-16">
+      <div className="absolute top-3 end-3">
         <LangToggle />
+      </div>
+      <div className="w-full max-w-sm">
+        <Logo variant="dark" className="h-auto w-full" />
       </div>
       <form
         onSubmit={(e) => void onSubmit(e)}
         className="flex w-full max-w-sm flex-col gap-4 rounded border border-line bg-surface p-6"
       >
-        <Logo />
         <h1 className="text-xl font-semibold text-ink-strong">{t('admin.signIn.title')}</h1>
         {error && <Banner tone="danger">{t(error)}</Banner>}
         <label className="flex flex-col gap-1 text-sm font-semibold text-ink-strong">
@@ -88,5 +92,6 @@ export function AdminSignIn() {
         </button>
       </form>
     </main>
+    </DarkBackdrop>
   )
 }

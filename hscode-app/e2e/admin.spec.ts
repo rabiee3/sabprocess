@@ -148,3 +148,44 @@ test('(h) 768px: the drawer layout reviews and approves', async ({ page }) => {
     .poll(async () => (await indexEntries()).some((e) => e.id === 'e2e-drawer' && e.n.en === 'Drawer Works Two'))
     .toBe(true)
 })
+
+type Box = { x: number; y: number; width: number; height: number }
+const intersects = (p: Box, q: Box) =>
+  p.x < q.x + q.width && q.x < p.x + p.width && p.y < q.y + q.height && q.y < p.y + p.height
+
+test('(i) sign-in: the language toggle sits in the top end corner and never overlaps the email field', async ({ page }) => {
+  for (const size of [{ width: 360, height: 740 }, { width: 1280, height: 800 }, { width: 360, height: 420 }]) {
+    await page.setViewportSize(size)
+    await page.goto('admin')
+    const toggle = page.locator('[role="group"]:has(button[lang="ar"])') // its name changes with the language
+    const email = page.locator('input[type="email"]')
+    await expect(email).toBeVisible()
+    for (const lang of ['en', 'ar'] as const) {
+      await toggle.locator(`button[lang="${lang}"]`).click()
+      await expect(page.locator('html')).toHaveAttribute('lang', lang)
+      const t = (await toggle.boundingBox())!
+      const e = (await email.boundingBox())!
+      expect(intersects(t, e), `${size.width}x${size.height} ${lang}`).toBe(false)
+      expect(t.y).toBeLessThan(24)
+      // end corner: right edge in LTR, left edge in RTL
+      if (lang === 'en') expect(size.width - (t.x + t.width)).toBeLessThan(24)
+      else expect(t.x).toBeLessThan(24)
+    }
+    await toggle.locator('button[lang="en"]').click()
+  }
+})
+
+test('(j) desktop: the sidebar spans the full viewport height, in LTR and RTL', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await signInAdmin(page)
+  const aside = page.locator('aside')
+  for (const lang of ['en', 'ar'] as const) {
+    await page.locator(`header button[lang="${lang}"]`).click()
+    await expect(page.locator('html')).toHaveAttribute('lang', lang)
+    const box = (await aside.boundingBox())!
+    expect(Math.abs(box.height - 800)).toBeLessThanOrEqual(2)
+    expect(box.y).toBeLessThanOrEqual(1)
+    if (lang === 'en') expect(box.x).toBeLessThanOrEqual(1)
+    else expect(Math.abs(box.x + box.width - 1280)).toBeLessThanOrEqual(1)
+  }
+})

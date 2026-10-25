@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initI18n } from '../i18n'
 import type { Surveyor } from './types'
@@ -12,6 +12,22 @@ vi.mock('./stats', async (orig) => ({
   ...(await orig<typeof import('./stats')>()),
   loadStats: (...a: unknown[]) => loadStats(...a),
 }))
+const loadDemoFactories = vi.fn()
+const removeDemoFactories = vi.fn()
+vi.mock('./demo', () => ({
+  loadDemoFactories: (...a: unknown[]) => loadDemoFactories(...a),
+  removeDemoFactories: (...a: unknown[]) => removeDemoFactories(...a),
+}))
+vi.mock('./repo', () => {
+  class AdminError extends Error {
+    readonly code: string
+    constructor(code: string) {
+      super(code)
+      this.code = code
+    }
+  }
+  return { AdminError }
+})
 vi.mock('./surveyors', () => ({
   subscribeSurveyors: (cb: (r: Surveyor[]) => void) => {
     push = cb
@@ -21,6 +37,7 @@ vi.mock('./surveyors', () => ({
 }))
 
 import { Dashboard } from './Dashboard'
+import { AdminError } from './repo'
 
 const d = new Date('2026-10-20')
 const surveyors: Surveyor[] = [
@@ -39,6 +56,8 @@ const stats = (fill: number | null) => ({
 beforeEach(async () => {
   await initI18n()
   loadStats.mockReset().mockResolvedValue(stats(0.5))
+  loadDemoFactories.mockReset().mockResolvedValue({ added: 8, skipped: 2 })
+  removeDemoFactories.mockReset().mockResolvedValue({ removed: 5 })
   countSubmissions.mockReset().mockImplementation(async (uid: string) => {
     if (uid === 'u1') return { pending: 1, approved: 5, rejected: 2 }
     throw new Error('x')
@@ -104,5 +123,67 @@ describe('Dashboard', () => {
     expect(screen.queryByText(re)).toBeNull()
     expect(container.querySelector('a[download]')).toBeNull()
     expect(within(container).queryAllByRole('link')).toHaveLength(0)
+  })
+
+  describe('demo data', () => {
+    it('loads the demo factories, shows the result and refreshes the counts', async () => {
+      await setup()
+      await userEvent.click(screen.getByRole('button', { name: 'Load demo factories' }))
+      expect(await screen.findByText('Added 8, skipped 2.')).toBeInTheDocument()
+      expect(loadDemoFactories).toHaveBeenCalledTimes(1)
+      await waitFor(() => expect(loadStats).toHaveBeenCalledTimes(2))
+    })
+    it('disables both buttons while running and shows progress', async () => {
+      await setup()
+      let release!: () => void
+      loadDemoFactories.mockImplementation(
+        (_d: unknown, onProgress: (n: number, t: number) => void) =>
+          new Promise((res) => {
+            onProgress(3, 10)
+            release = () => res({ added: 10, skipped: 0 })
+          }),
+      )
+      await userEvent.click(screen.getByRole('button', { name: 'Load demo factories' }))
+      expect(await screen.findByText('Working: 3 of 10…')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Load demo factories' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Remove all demo factories' })).toBeDisabled()
+      await act(async () => release())
+      expect(await screen.findByText('Added 10, skipped 0.')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Load demo factories' })).toBeEnabled()
+    })
+    it('maps errors: index full, generic and offline', async () => {
+      await setup()
+      loadDemoFactories.mockRejectedValueOnce(new AdminError('indexFull'))
+      await userEvent.click(screen.getByRole('button', { name: 'Load demo factories' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/Search index is full/)
+      loadDemoFactories.mockRejectedValueOnce(new Error('x'))
+      await userEvent.click(screen.getByRole('button', { name: 'Load demo factories' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/Something went wrong/)
+      const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+      loadDemoFactories.mockRejectedValueOnce(new Error('x'))
+      await userEvent.click(screen.getByRole('button', { name: 'Load demo factories' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/offline/)
+      online.mockRestore()
+    })
+    it('removal needs confirmation, then removes and reports', async () => {
+      await setup()
+      await userEvent.click(screen.getByRole('button', { name: 'Remove all demo factories' }))
+      const dialog = await screen.findByRole('dialog')
+      expect(removeDemoFactories).not.toHaveBeenCalled()
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+      expect(removeDemoFactories).not.toHaveBeenCalled()
+      await userEvent.click(screen.getByRole('button', { name: 'Remove all demo factories' }))
+      await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Remove permanently' }))
+      expect(await screen.findByText('Removed 5 demo factories.')).toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(removeDemoFactories).toHaveBeenCalledTimes(1)
+    })
+    it('shows a mapped error when removal fails', async () => {
+      removeDemoFactories.mockRejectedValue(new Error('x'))
+      await setup()
+      await userEvent.click(screen.getByRole('button', { name: 'Remove all demo factories' }))
+      await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Remove permanently' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/Something went wrong/)
+    })
   })
 })

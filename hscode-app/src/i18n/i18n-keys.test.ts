@@ -26,12 +26,15 @@ const REQUIRED: Record<string, string[]> = {
   errors: ['offline', 'accessOff', 'rejected', 'quota', 'generic', 'tooLong', 'storageFull'],
 }
 
+const PLURAL = /_(zero|one|two|few|many|other)$/
 const E = flatten(en)
 const A = flatten(ar)
 
 describe('i18n catalogues', () => {
   it('en and ar have identical key sets', () => {
-    expect(Object.keys(A).sort()).toEqual(Object.keys(E).sort())
+    // Plural forms differ per language (en one/other, ar zero..other): compare the base keys.
+    const base = (o: Record<string, string>) => [...new Set(Object.keys(o).map((k) => k.replace(PLURAL, '')))].sort()
+    expect(base(A)).toEqual(base(E))
   })
   it('no value is empty', () => {
     for (const [k, v] of [...Object.entries(E), ...Object.entries(A)]) {
@@ -49,6 +52,7 @@ describe('i18n catalogues', () => {
   it('keeps interpolation placeholders aligned', () => {
     const ph = (s: string) => (s.match(/\{\{\w+\}\}/g) ?? []).sort().join()
     for (const [k, v] of Object.entries(E)) {
+      if (PLURAL.test(k)) continue // plural forms such as "one" may omit the count
       expect(ph(A[k] ?? ''), k).toBe(ph(v))
     }
   })

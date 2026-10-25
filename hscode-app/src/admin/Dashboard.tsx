@@ -1,14 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { areas } from '../data'
-import { Banner } from '../ui/Banner'
+import { Banner, type BannerTone } from '../ui/Banner'
+import { BottomSheet } from '../ui/BottomSheet'
 import { DataTable, type Column } from '../ui/DataTable'
+import { classify, type ActionError } from './classify'
+import { loadDemoFactories, removeDemoFactories } from './demo'
+import { DEMO_FACTORIES } from './demoFactories'
 import { INDEX_LIMIT } from './searchIndex'
 import { loadStats, STATUSES, type AreaCount, type Count, type Stats } from './stats'
 import { countSubmissions, subscribeSurveyors, type SubmissionCounts } from './surveyors'
 import type { Surveyor } from './types'
 
 const WARN_AT = 0.8
+const ERROR_KEY: Record<ActionError, string> = {
+  stale: 'errors.generic',
+  indexFull: 'errors.indexFull',
+  invalid: 'errors.generic',
+  offline: 'errors.offline',
+  generic: 'errors.generic',
+}
 const num = (n: Count | undefined) => (n == null ? '—' : String(n))
 
 type SurveyorRow = Surveyor & { counts: SubmissionCounts | null | undefined }
@@ -43,6 +54,8 @@ function IndexFill({ fill }: { fill: number | null }) {
   )
 }
 
+type DemoState = { running: 'load' | 'remove' | null; progress: [number, number] | null; notice: { tone: BannerTone; text: string } | null }
+
 export function Dashboard() {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
@@ -51,6 +64,8 @@ export function Dashboard() {
   const [surveyors, setSurveyors] = useState<Surveyor[]>([])
   const [counts, setCounts] = useState<Record<string, SubmissionCounts | null>>({})
   const asked = useRef(new Set<string>())
+  const [demo, setDemo] = useState<DemoState>({ running: null, progress: null, notice: null })
+  const [confirmRemove, setConfirmRemove] = useState(false)
 
   const load = useCallback(
     () =>
@@ -60,6 +75,26 @@ export function Dashboard() {
       }),
     [],
   )
+
+  async function runDemo(kind: 'load' | 'remove') {
+    if (demo.running) return
+    setDemo({ running: kind, progress: null, notice: null })
+    const onProgress = (done: number, total: number) => setDemo((d) => ({ ...d, progress: [done, total] }))
+    let notice: DemoState['notice']
+    try {
+      if (kind === 'load') {
+        const r = await loadDemoFactories(DEMO_FACTORIES, onProgress)
+        notice = { tone: 'success', text: t('admin.dash.demoLoaded', { added: r.added, skipped: r.skipped }) }
+      } else {
+        const r = await removeDemoFactories(onProgress)
+        notice = { tone: 'success', text: t(r.removed ? 'admin.dash.demoRemoved' : 'admin.dash.demoNone', { n: r.removed }) }
+      }
+    } catch (e) {
+      notice = { tone: 'danger', text: t(ERROR_KEY[classify(e)]) }
+    }
+    setDemo({ running: null, progress: null, notice })
+    void load()
+  }
 
   useEffect(() => {
     let live = true
@@ -168,6 +203,61 @@ export function Dashboard() {
           empty={t('admin.surveyors.empty')}
         />
       </section>
+
+      <section aria-labelledby="dash-demo" className="flex flex-col gap-3">
+        <h2 id="dash-demo" className="text-lg font-semibold text-ink-strong">
+          {t('admin.dash.demoTitle')}
+        </h2>
+        <p className="text-sm text-ink-subtle">{t('admin.dash.demoBody')}</p>
+        {demo.notice && <Banner tone={demo.notice.tone}>{demo.notice.text}</Banner>}
+        {demo.running && demo.progress && (
+          <p role="status" className="text-sm text-ink">
+            {t('admin.dash.demoProgress', { done: demo.progress[0], total: demo.progress[1] })}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={demo.running !== null}
+            onClick={() => void runDemo('load')}
+            className="min-h-cta rounded border border-line bg-surface px-4 text-body font-semibold text-ink-strong disabled:opacity-50"
+          >
+            {t('admin.dash.demoLoad')}
+          </button>
+          <button
+            type="button"
+            disabled={demo.running !== null}
+            onClick={() => setConfirmRemove(true)}
+            className="min-h-cta rounded border border-red-600 bg-surface px-4 text-body font-semibold text-red-700 disabled:opacity-50"
+          >
+            {t('admin.dash.demoRemove')}
+          </button>
+        </div>
+      </section>
+      <BottomSheet open={confirmRemove} title={t('admin.dash.demoRemoveTitle')} onClose={() => setConfirmRemove(false)}>
+        <div className="flex flex-col gap-4 p-4">
+          <Banner tone="danger">{t('admin.dash.demoRemoveBody')}</Banner>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setConfirmRemove(false)}
+              className="min-h-cta rounded border border-line bg-surface px-4 text-body font-semibold text-ink-strong"
+            >
+              {t('admin.factories.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmRemove(false)
+                void runDemo('remove')
+              }}
+              className="min-h-cta flex-1 rounded bg-red-600 px-4 text-body font-semibold text-white"
+            >
+              {t('admin.dash.demoRemoveConfirm')}
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   )
 }

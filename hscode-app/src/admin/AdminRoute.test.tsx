@@ -95,6 +95,17 @@ describe('AdminRoute', () => {
     await Promise.resolve()
     expect(screen.queryByText('4')).not.toBeInTheDocument()
   })
+  it('the sidebar spans the full viewport height with valid positioning classes', () => {
+    auth = { user, role: 'admin', active: true, loading: false }
+    const { container } = renderAt()
+    const aside = container.querySelector('aside')!
+    const cls = aside.className.split(/\s+/)
+    for (const c of ['fixed', 'inset-y-0', 'start-0', 'h-dvh']) expect(cls).toContain(c)
+    expect(aside.className).not.toMatch(/inset-(block|inline)/)
+    // the account box is pinned to the bottom (the nav grows), so the sidebar has no gap
+    expect(within(aside).getByRole('navigation').className).toMatch(/\bflex-1\b/)
+    expect(within(aside).getByText(user.email).parentElement!.className).toMatch(/\bborder-t\b/)
+  })
   it('the menu button toggles the drawer', async () => {
     auth = { user, role: 'admin', active: true, loading: false }
     renderAt()
