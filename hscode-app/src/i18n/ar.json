@@ -1,0 +1,9 @@
+{
+  "app": {
+    "name": "HSCode",
+    "tagline": "من يصنع ماذا؟ ومن يحتاج ماذا؟"
+  },
+  "lang": { "en": "EN", "ar": "ع" },
+  "nav": { "browse": "استعرض", "surveyors": "المعاينون", "signIn": "تسجيل الدخول" },
+  "common": { "comingSoon": "قريبًا" }
+}
