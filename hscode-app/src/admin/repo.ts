@@ -7,7 +7,6 @@ import {
   increment,
   runTransaction,
   serverTimestamp,
-  writeBatch,
   type Firestore,
   type Timestamp,
   type Transaction,
@@ -81,8 +80,9 @@ async function readShard(tx: Transaction, fs: Firestore): Promise<Shard> {
   return { exists: snap.exists(), entries }
 }
 
-function writeShard(tx: Transaction, fs: Firestore, s: Shard, entries: IndexEntry[]) {
-  if (indexFill(entries) > INDEX_LIMIT) throw new AdminError('indexFull')
+function writeShard(tx: Transaction, fs: Firestore, s: Shard, entries: IndexEntry[], isRemoval = false) {
+  // Removals are never blocked by the size limit.
+  if (!isRemoval && indexFill(entries) > INDEX_LIMIT) throw new AdminError('indexFull')
   // set() would reset increment() to 0 + 1, so an existing shard is updated instead.
   if (s.exists) tx.update(shardRef(fs), { version: increment(1), updatedAt: serverTimestamp(), entries })
   else tx.set(shardRef(fs), { version: 1, updatedAt: serverTimestamp(), entries })
@@ -91,7 +91,7 @@ function writeShard(tx: Transaction, fs: Firestore, s: Shard, entries: IndexEntr
 /** Writes the shard only when the removal changed something. */
 function dropFromShard(tx: Transaction, fs: Firestore, s: Shard, fid: string) {
   const next = removeEntry(s.entries, fid)
-  if (next.length !== s.entries.length) writeShard(tx, fs, s, next)
+  if (next.length !== s.entries.length) writeShard(tx, fs, s, next, true)
 }
 
 export async function loadForReview(
@@ -161,7 +161,7 @@ export async function saveEdits(fid: string, openedAt: Timestamp, edit: AdminEdi
 async function setStatus(fid: string, status: 'hidden' | 'approved', fs: Firestore): Promise<void> {
   await runTransaction(fs, async (tx) => {
     const stored = (await tx.get(factoryRef(fs, fid))).data()
-    if (!stored) throw new AdminError('invalid')
+    if (!stored || stored.status !== (status === 'hidden' ? 'approved' : 'hidden')) throw new AdminError('invalid')
     const shard = await readShard(tx, fs)
     tx.update(factoryRef(fs, fid), { status, updatedAt: serverTimestamp() })
     if (status === 'hidden') dropFromShard(tx, fs, shard, fid)
@@ -173,19 +173,19 @@ export const hideFactory = (fid: string, fs: Firestore = db): Promise<void> => s
 export const unhideFactory = (fid: string, fs: Firestore = db): Promise<void> => setStatus(fid, 'approved', fs)
 
 export async function deleteFactory(fid: string, fs: Firestore = db): Promise<void> {
-  const batch = writeBatch(fs)
-  for (const id of PHOTO_IDS) batch.delete(doc(fs, `factories/${fid}/photos/${id}`))
-  batch.delete(doc(fs, `factories/${fid}/private/contact`))
-  batch.delete(doc(fs, `factories/${fid}`))
-  await batch.commit()
   await runTransaction(fs, async (tx) => {
-    dropFromShard(tx, fs, await readShard(tx, fs), fid)
+    await tx.get(factoryRef(fs, fid))
+    const shard = await readShard(tx, fs)
+    for (const id of PHOTO_IDS) tx.delete(doc(fs, `factories/${fid}/photos/${id}`))
+    tx.delete(doc(fs, `factories/${fid}/private/contact`))
+    tx.delete(doc(fs, `factories/${fid}`))
+    dropFromShard(tx, fs, shard, fid)
   })
 }
 
 export async function adminCreateFactory(input: FactoryInput, opts: { sample: boolean }, fs: Firestore = db): Promise<string> {
   const fid = newFactoryId(fs)
-  const data: Record<string, unknown> = {
+  const fields: Omit<Factory, 'id' | 'createdAt' | 'updatedAt' | 'approvedAt'> = {
     name: input.name,
     area: input.area,
     location: input.location,
@@ -194,31 +194,15 @@ export async function adminCreateFactory(input: FactoryInput, opts: { sample: bo
     photoCount: input.photos.length,
     status: 'approved',
     createdBy: ADMIN_UID,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    approvedAt: serverTimestamp(),
   }
   for (const k of [...OPTIONAL_TEXT, 'thumb'] as const) {
     const v = clean(input[k])
-    if (v) data[k] = v
+    if (v) fields[k] = v
   }
-  if (opts.sample) data.sample = true
+  if (opts.sample) fields.sample = true
   const now = new Date()
-  const entry = toIndexEntry({
-    id: fid,
-    name: input.name,
-    area: input.area,
-    sector: clean(input.sector),
-    location: input.location,
-    productsMade: input.productsMade,
-    productsNeeded: input.productsNeeded,
-    photoCount: input.photos.length,
-    status: 'approved',
-    createdBy: ADMIN_UID,
-    createdAt: now,
-    updatedAt: now,
-    approvedAt: now,
-  })
+  const entry = toIndexEntry({ id: fid, ...fields, createdAt: now, updatedAt: now, approvedAt: now })
+  const data = { ...fields, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), approvedAt: serverTimestamp() }
   const contact = contactPayload(input.contact)
   await runTransaction(fs, async (tx) => {
     const shard = await readShard(tx, fs)

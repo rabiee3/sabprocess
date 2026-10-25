@@ -101,19 +101,34 @@ describe('approveFactory', () => {
     expect(await shard()).toBeUndefined()
   })
 
-  it('throws indexFull and writes nothing near the limit', async () => {
-    await seedPending()
+  const fillerShard = async (targetBytes: number) => {
     const big = Array.from({ length: 10 }, (_, i) => ({
-      id: `big${i}`, n: { en: 'x'.repeat(102_000) }, lat: 30, lng: 31, a: 'a', m: [], d: [],
+      id: `big${i}`, n: { en: 'x'.repeat(100_000) }, lat: 30, lng: 31, a: 'a', m: [], d: [],
     }))
-    expect(indexFill(big)).toBeLessThan(1)
+    const base = JSON.stringify(big).length
+    big[9].n.en += 'x'.repeat(Math.max(0, targetBytes - base))
     await seed(async (db) => {
       await setDoc(doc(db, 'searchIndex/shard-0'), { version: 5, updatedAt: serverTimestamp(), entries: big })
     })
-    expect(indexFill([...big, { id: FID, n: { en: 'Al-Nour Feed Mills' }, lat: 1, lng: 1, a: 'a', m: [], d: [] }])).toBeGreaterThan(INDEX_LIMIT)
+    return big
+  }
+  const limitBytes = Math.floor(INDEX_LIMIT * 1_048_576)
+
+  it('throws indexFull and writes nothing when only the new entry crosses the limit', async () => {
+    await seedPending()
+    const big = await fillerShard(limitBytes - 50)
+    expect(indexFill(big)).toBeLessThanOrEqual(INDEX_LIMIT)
     expect(await code(approveFactory(FID, await opened(), {}, asAdmin()))).toBe('indexFull')
     expect((await factory())!.status).toBe('pending')
     expect((await shard())!.version).toBe(5)
+  })
+
+  it('still approves when the new entry stays under the limit', async () => {
+    await seedPending()
+    await fillerShard(limitBytes - 3000)
+    await approveFactory(FID, await opened(), {}, asAdmin())
+    expect((await factory())!.status).toBe('approved')
+    expect((await shard())!.entries.map((e) => e.id)).toContain(FID)
   })
 })
 
@@ -130,6 +145,13 @@ describe('rejectFactory', () => {
     expect(await code(rejectFactory(FID, await opened(), 'x'.repeat(501), asAdmin()))).toBe('invalid')
     expect((await factory())!.status).toBe('pending')
   })
+  it('refuses a stale openedAt', async () => {
+    await seedPending()
+    const old = await opened()
+    await saveEdits(FID, old, { address: 'one' }, asAdmin())
+    expect(await code(rejectFactory(FID, old, 'late', asAdmin()))).toBe('stale')
+    expect((await factory())!.status).toBe('pending')
+  })
   it('removes the entry of a previously approved factory', async () => {
     await seedPending()
     await approveFactory(FID, await opened(), {}, asAdmin())
@@ -139,6 +161,25 @@ describe('rejectFactory', () => {
 })
 
 describe('saveEdits / hide / unhide', () => {
+  it('hide still works with the shard above the limit', async () => {
+    await seedPending()
+    await approveFactory(FID, await opened(), {}, asAdmin())
+    const entries = (await shard())!.entries
+    entries.push({ id: 'huge', n: { en: 'x'.repeat(1_020_000 - JSON.stringify(entries).length) }, lat: 30, lng: 31, a: 'a', m: [], d: [] })
+    await seed(async (db) => {
+      await setDoc(doc(db, 'searchIndex/shard-0'), { version: 9, updatedAt: serverTimestamp(), entries })
+    })
+    expect(indexFill(entries)).toBeGreaterThan(INDEX_LIMIT)
+    await hideFactory(FID, asAdmin())
+    expect((await shard())!.entries.map((e) => e.id)).toEqual(['huge'])
+  })
+  it('hide needs approved and unhide needs hidden', async () => {
+    await seedPending()
+    expect(await code(hideFactory(FID, asAdmin()))).toBe('invalid')
+    expect(await code(unhideFactory(FID, asAdmin()))).toBe('invalid')
+    expect((await factory())!.status).toBe('pending')
+    expect(await code(hideFactory('missing', asAdmin()))).toBe('invalid')
+  })
   it('saveEdits upserts the entry for approved, leaves the index alone for pending', async () => {
     await seedPending()
     await saveEdits(FID, await opened(), { address: 'New St' }, asAdmin())
@@ -168,6 +209,16 @@ describe('saveEdits / hide / unhide', () => {
 })
 
 describe('deleteFactory', () => {
+  it('leaves the shard untouched for a non-indexed factory', async () => {
+    await seedPending()
+    await seedFactory('other', validFactory('s1'))
+    await approveFactory('other', (await loadForReview('other', asAdmin()))!.openedAt, {}, asAdmin())
+    await deleteFactory(FID, asAdmin())
+    expect((await factory())).toBeUndefined()
+    const s = (await shard())!
+    expect(s.version).toBe(1)
+    expect(s.entries.map((e) => e.id)).toEqual(['other'])
+  })
   it('removes factory, children and index entry', async () => {
     await seedPending()
     await approveFactory(FID, await opened(), {}, asAdmin())
