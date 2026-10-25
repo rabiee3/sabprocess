@@ -12,7 +12,8 @@ const MAX = IDS.length
 
 type Props = {
   photos: PhotoData[]
-  onChange: (photos: PhotoData[], thumb?: string) => void
+  /** thumb: undefined = unchanged, null = clear, string = new thumb */
+  onChange: (photos: PhotoData[], thumb?: string | null) => void
 }
 
 function sorted(photos: PhotoData[]): PhotoData[] {
@@ -72,8 +73,9 @@ export function PhotoPicker({ photos, onChange }: Props) {
 
   async function emit(before: PhotoData[], next: PhotoData[]) {
     const first = next[0]
-    const changed = first && (first.id !== before[0]?.id || first.data !== before[0]?.data)
-    onChange(next, changed ? await thumbFor(first) : undefined)
+    if (!first) return onChange(next, null)
+    const changed = first.id !== before[0]?.id || first.data !== before[0]?.data
+    onChange(next, changed ? ((await thumbFor(first)) ?? null) : undefined)
   }
 
   async function remove(id: PhotoData['id']) {
@@ -138,6 +140,7 @@ export function PhotoPicker({ photos, onChange }: Props) {
                 <button
                   type="button"
                   aria-label={t('survey.photos.remove')}
+                  disabled={busy}
                   onClick={() => void remove(p.id)}
                   className="absolute end-1 top-1 flex min-h-touch min-w-11 items-center justify-center rounded-full bg-surface/90 text-ink-strong"
                 >

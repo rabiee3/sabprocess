@@ -76,4 +76,45 @@ describe('PhotoPicker', () => {
     await waitFor(() => expect(onChange).toHaveBeenCalled())
     expect(onChange.mock.calls[0][1]).toBe('data:image/webp;base64,thumb')
   })
+
+  it('disables remove while a multi-file add is running, so no photo reappears', async () => {
+    let release!: () => void
+    compressPhoto.mockImplementation(
+      (file: File) =>
+        new Promise<string>((res) => {
+          release = () => res(`data:image/webp;base64,${file.name}`)
+        }),
+    )
+    render(<Harness initial={[{ id: 'p1', data: 'd1' }]} />)
+    await userEvent.upload(gallery(), [f('a'), f('b')])
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove photo' })).toBeDisabled())
+    release()
+    await waitFor(() => expect(compressPhoto).toHaveBeenCalledTimes(2))
+    release()
+    await waitFor(() => expect(onChange).toHaveBeenCalled())
+    expect((onChange.mock.calls.at(-1)![0] as PhotoData[]).map((p) => p.id)).toEqual(['p1', 'p2', 'p3'])
+  })
+
+  it('passes thumb undefined when the first photo is unchanged', async () => {
+    render(<Harness initial={[{ id: 'p1', data: 'd1' }, { id: 'p2', data: 'd2' }]} />)
+    await userEvent.click(screen.getAllByRole('button', { name: 'Remove photo' })[1])
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1))
+    expect(onChange.mock.calls[0][1]).toBeUndefined()
+  })
+
+  it('passes thumb null when photos become empty', async () => {
+    render(<Harness initial={[{ id: 'p1', data: 'd1' }]} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Remove photo' }))
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith([], null))
+  })
+
+  it('passes thumb null when the first photo changed and the thumb cannot be regenerated', async () => {
+    makeThumb.mockRejectedValue(new Error('x'))
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('x')))
+    render(<Harness initial={[{ id: 'p1', data: 'd1' }, { id: 'p2', data: 'd2' }]} />)
+    await userEvent.click(screen.getAllByRole('button', { name: 'Remove photo' })[0])
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1))
+    expect(onChange.mock.calls[0][1]).toBeNull()
+    vi.unstubAllGlobals()
+  })
 })
