@@ -4,6 +4,8 @@ import { signOutUser } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { AdminLayout } from './AdminLayout'
 import { AdminSignIn } from './AdminSignIn'
+import { InvitesPage } from './InvitesPage'
+import { SurveyorsPage } from './SurveyorsPage'
 
 /** Stands in until the page's own task lands. The layout supplies the h1. */
 function PagePlaceholder() {
@@ -64,8 +66,8 @@ export function Component() {
         <Route path="factories" element={<PagePlaceholder />} />
         <Route path="factories/new" element={<PagePlaceholder />} />
         <Route path="factories/:fid" element={<PagePlaceholder />} />
-        <Route path="invites" element={<PagePlaceholder />} />
-        <Route path="surveyors" element={<PagePlaceholder />} />
+        <Route path="invites" element={<InvitesPage />} />
+        <Route path="surveyors" element={<SurveyorsPage />} />
         <Route path="dashboard" element={<PagePlaceholder />} />
       </Route>
     </Routes>

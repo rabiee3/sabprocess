@@ -19,6 +19,9 @@ vi.mock('firebase/firestore', () => ({
   getCountFromServer: () => getCount(),
 }))
 
+vi.mock('./InvitesPage', () => ({ InvitesPage: () => null }))
+vi.mock('./SurveyorsPage', () => ({ SurveyorsPage: () => null }))
+
 import { Component as AdminRoute } from './AdminRoute'
 import { useAdmin } from './AdminContext'
 import { AdminLayout } from './AdminLayout'
