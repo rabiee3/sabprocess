@@ -12,6 +12,7 @@ vi.mock('react-leaflet', () => ({
   TileLayer: () => null,
   Circle: ({ radius }: { radius: number }) => <div data-testid="circle" data-radius={radius} />,
   useMap: () => ({ setView: vi.fn(), getZoom: () => 16 }),
+  useMapEvents: () => ({}),
   Marker: ({ position, title }: { position: [number, number]; title?: string }) => (
     <div data-testid="marker" data-lat={position[0]} data-title={title} />
   ),

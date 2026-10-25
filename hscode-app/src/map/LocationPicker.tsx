@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Circle, Marker, useMap } from 'react-leaflet'
+import { Circle, Marker, useMap, useMapEvents } from 'react-leaflet'
 import { Banner } from '../ui/Banner'
 import type { FactoryLocation } from '../lib/types'
 import arrowIcon from '../assets/icons/arrow-back.svg?raw'
@@ -52,6 +52,12 @@ function Recenter({ pos }: { pos: LatLng }) {
   return null
 }
 
+/** Leaflet fires `click` only for a real tap, never after a pan, drag or pinch-zoom. */
+function TapToPlace({ onPlace }: { onPlace: (p: LatLng) => void }) {
+  useMapEvents({ click: (e) => onPlace({ lat: e.latlng.lat, lng: e.latlng.lng }) })
+  return null
+}
+
 export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = true }: Props) {
   const { t } = useTranslation()
   const gps = useGeolocation({ enabled: gpsEnabled })
@@ -72,13 +78,14 @@ export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = 
   const hasFix = gpsEnabled && !storedPin && gps.status === 'ok' && !!gps.coords
   const liveAccuracyM = gps.status === 'ok' && gps.accuracyM !== undefined ? gps.accuracyM : (value?.accuracyM ?? null)
   const accuracyM = liveAccuracyM // display only: banner, circle, label
-  const emitAccuracyM = !fixed
-    ? liveAccuracyM
-    : accSrc === 'stored'
-      ? (value?.accuracyM ?? null)
-      : accSrc === 'fix'
-        ? fixAcc
-        : null
+  const emitAccuracyM =
+    accSrc === 'manual'
+      ? null // placed by hand: no GPS accuracy describes this point
+      : !fixed
+        ? liveAccuracyM
+        : accSrc === 'stored'
+          ? (value?.accuracyM ?? null)
+          : fixAcc
 
   // The pin follows the GPS fix until the surveyor moves it (or the saved value was moved).
   const pin: LatLng = !fixed && !moved && hasFix && gps.coords ? gps.coords : userPin
@@ -88,22 +95,15 @@ export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = 
   }, [pin.lat, pin.lng, emitAccuracyM, moved, gps.status])
 
   const icon = useMemo(() => pinIcon('selected'), [])
-  const handlers = useMemo(
-    () => ({
-      dragend: (e: { target: { getLatLng(): LatLng } }) => {
-        const ll = e.target.getLatLng()
-        setPin({ lat: ll.lat, lng: ll.lng })
-        setMoved(true)
-        setAccSrc('manual')
-      },
-    }),
-    [],
-  )
 
-  function move(dir: Dir) {
-    setPin(nudge(pin, dir))
+  function place(p: LatLng) {
+    setPin(p)
     setMoved(true)
     setAccSrc('manual')
+  }
+
+  function move(dir: Dir) {
+    place(nudge(pin, dir))
   }
 
   function myLocation() {
@@ -127,11 +127,12 @@ export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = 
       <div className="relative">
         <MapView center={pin} zoom={16} className="h-72 w-full overflow-hidden rounded">
           <Recenter pos={pin} />
+          <TapToPlace onPlace={place} />
           {storedAcc !== null && <Circle center={[pin.lat, pin.lng]} radius={storedAcc} />}
           {hasFix && accuracyM !== null && gps.coords && (
             <Circle center={[gps.coords.lat, gps.coords.lng]} radius={accuracyM} />
           )}
-          <Marker position={[pin.lat, pin.lng]} icon={icon} title={t('survey.location.hint')} draggable eventHandlers={handlers} />
+          <Marker position={[pin.lat, pin.lng]} icon={icon} title={t('survey.location.hint')} />
         </MapView>
         {gpsEnabled && (
         <button

@@ -1,27 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { initI18n, setLanguage } from '../i18n'
+
+let mapClick: ((e: { latlng: { lat: number; lng: number } }) => void) | undefined
+const fireClick = (lat: number, lng: number) => act(() => mapClick?.({ latlng: { lat, lng } }))
 
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: ReactNode }) => <div data-testid="map">{children}</div>,
   TileLayer: () => null,
   Circle: ({ radius }: { radius: number }) => <div data-testid="circle" data-radius={radius} />,
   useMap: () => ({ setView: vi.fn(), getZoom: () => 16 }),
-  Marker: ({
-    position,
-    eventHandlers,
-  }: {
-    position: [number, number]
-    eventHandlers?: { dragend?: (e: unknown) => void }
-  }) => (
-    <button
-      data-testid="marker"
-      data-lat={position[0]}
-      data-lng={position[1]}
-      onClick={() => eventHandlers?.dragend?.({ target: { getLatLng: () => ({ lat: 30.5, lng: 31.5 }) } })}
-    />
+  useMapEvents: (h: { click: typeof mapClick }) => {
+    mapClick = h.click
+    return {}
+  },
+  Marker: ({ position, draggable }: { position: [number, number]; draggable?: boolean }) => (
+    <div data-testid="marker" data-lat={position[0]} data-lng={position[1]} data-draggable={String(!!draggable)} />
   ),
 }))
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
@@ -68,11 +64,26 @@ describe('LocationPicker', () => {
     expect(last()[0].lng).toBeCloseTo(31 + 0.000045 / Math.cos((30.000045 * Math.PI) / 180), 7)
   })
 
-  it('drag sets pinMoved', async () => {
-    geo.mockReturnValue({ status: 'denied', retry })
+  it('a map click places the pin by hand: pinMoved, accuracy null', () => {
+    geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
     render(<LocationPicker areaCenter={area} onChange={onChange} />)
-    await userEvent.click(screen.getByTestId('marker'))
-    expect(last()[0]).toMatchObject({ lat: 30.5, lng: 31.5, pinMoved: true })
+    fireClick(30.5, 31.5)
+    expect(last()[0]).toEqual({ lat: 30.5, lng: 31.5, accuracyM: null, pinMoved: true })
+    expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '30.5')
+  })
+
+  it('the marker is not draggable', () => {
+    render(<LocationPicker areaCenter={area} onChange={onChange} />)
+    expect(screen.getByTestId('marker')).toHaveAttribute('data-draggable', 'false')
+  })
+
+  it('value-backed: a click replaces the stored pin and its circle', () => {
+    const value = { lat: 28, lng: 30, accuracyM: 7, pinMoved: false }
+    render(<LocationPicker areaCenter={area} value={value} onChange={onChange} gps={false} />)
+    expect(screen.getByTestId('circle')).toBeInTheDocument()
+    fireClick(28.1, 30.1)
+    expect(screen.queryByTestId('circle')).toBeNull()
+    expect(last()[0]).toEqual({ lat: 28.1, lng: 30.1, accuracyM: null, pinMoved: true })
   })
 
   it('GPS fix places the pin unmoved, with accuracy and circle', () => {
@@ -92,24 +103,24 @@ describe('LocationPicker', () => {
     expect(screen.getByText(/signal is weak/)).toBeInTheDocument()
   })
 
-  it('pin follows a later fix until moved, then only accuracy updates', async () => {
+  it('pin follows a later fix until tapped, then stays put with accuracy null', async () => {
     geo.mockReturnValue({ status: 'pending', retry })
     const { rerender } = render(<LocationPicker areaCenter={area} onChange={onChange} />)
     expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '30')
     geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 30, retry })
     rerender(<LocationPicker areaCenter={area} onChange={onChange} />)
     expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '29.9')
-    await userEvent.click(screen.getByTestId('marker')) // drag to 30.5
+    fireClick(30.5, 31.5)
     geo.mockReturnValue({ status: 'ok', coords: { lat: 29.8, lng: 31.3 }, accuracyM: 10, retry })
     rerender(<LocationPicker areaCenter={area} onChange={onChange} />)
     expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '30.5')
-    expect(last()[0]).toMatchObject({ lat: 30.5, lng: 31.5, accuracyM: 10, pinMoved: true })
+    expect(last()[0]).toEqual({ lat: 30.5, lng: 31.5, accuracyM: null, pinMoved: true })
   })
 
   it('My location re-centres on the fix and retries', async () => {
     geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
     render(<LocationPicker areaCenter={area} onChange={onChange} />)
-    await userEvent.click(screen.getByTestId('marker'))
+    fireClick(30.5, 31.5)
     await userEvent.click(screen.getByRole('button', { name: 'My location' }))
     expect(retry).toHaveBeenCalled()
     expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '29.9')
@@ -135,11 +146,11 @@ describe('LocationPicker', () => {
     expect(last()[0]).toEqual({ lat: 29.9, lng: 31.2, accuracyM: 12, pinMoved: true })
   })
 
-  it('value-backed: drag or nudge emits accuracyM null', async () => {
+  it('value-backed: tap or nudge emits accuracyM null', async () => {
     geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
     const value = { lat: 28, lng: 30, accuracyM: 7, pinMoved: false }
     render(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
-    await userEvent.click(screen.getByTestId('marker'))
+    fireClick(30.5, 31.5)
     expect(last()[0]).toEqual({ lat: 30.5, lng: 31.5, accuracyM: null, pinMoved: true })
     await userEvent.click(screen.getByRole('button', { name: 'Move pin north' }))
     expect(last()[0].accuracyM).toBeNull()
