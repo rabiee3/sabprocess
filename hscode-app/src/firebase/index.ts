@@ -3,6 +3,7 @@ import { connectAuthEmulator, getAuth } from 'firebase/auth'
 import {
   connectFirestoreEmulator,
   initializeFirestore,
+  memoryLocalCache,
   persistentLocalCache,
   persistentMultipleTabManager,
 } from 'firebase/firestore'
@@ -15,7 +16,11 @@ export const app = initializeApp(
 )
 
 export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  // No IndexedDB (jsdom unit tests, Node): fall back to the in-memory cache.
+  localCache:
+    typeof indexedDB === 'undefined'
+      ? memoryLocalCache()
+      : persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 })
 
 export const auth = getAuth(app)
