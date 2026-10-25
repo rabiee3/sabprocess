@@ -1,9 +1,188 @@
 rules_version = '2';
-// TEMPORARY deny-all placeholder; Task 6 replaces this with the real rules.
+// HSCode security rules: behavioural spec in docs/superpowers/specs/2026-10-25-hscode-design.md §5.
+// There is no server code (Spark plan), so these rules are the only authorization layer.
 service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+  match /databases/{db}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.uid == 'k0a0b8HhATfZuFcC0clBqGmtGmF3'; }
+    function userDoc() { return get(/databases/$(db)/documents/users/$(request.auth.uid)); }
+    function isActiveSurveyor() { return signedIn() && exists(/databases/$(db)/documents/users/$(request.auth.uid))
+      && userDoc().data.role == 'surveyor' && userDoc().data.active == true; }
+    function inEgypt(l) { return l.lat is number && l.lng is number
+      && l.lat >= 21.5 && l.lat <= 32.0 && l.lng >= 24.5 && l.lng <= 37.0; }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function changedKeys() { return incoming().diff(existing()).affectedKeys(); }
+    // True when field `f` is the same before and after (absent on both sides counts as unchanged).
+    function unchanged(f) { return incoming().get(f, null) == existing().get(f, null); }
+    // Optional string field: absent, or a string of at most `max` chars.
+    function optString(m, f, max) { return !(f in m) || (m[f] is string && m[f].size() <= max); }
+
+    // ---------------------------------------------------------------- users/{uid}
+    function validUserBase(d) {
+      return d.name is string && d.name.size() <= 120
+        && d.email is string && d.email.size() <= 254
+        && d.createdAt == request.time;
+    }
+
+    // Invite claim: user doc + invite in one batch (spec §5.2)
+    function claimsInvite(uid) {
+      let code = request.resource.data.inviteCode;
+      let before = get(/databases/$(db)/documents/invites/$(code)).data;
+      let after = getAfter(/databases/$(db)/documents/invites/$(code)).data;
+      return code is string && code.matches('^[0-9]{6}$') && before.usedBy == null && before.cancelled == false
+        && after.usedBy == uid && request.resource.data.role == 'surveyor' && request.resource.data.active == true;
+    }
+
+    match /users/{uid} {
+      function isSelf() { return signedIn() && request.auth.uid == uid; }
+
+      allow read: if isSelf() || isAdmin();
+
+      allow create: if isSelf() && validUserBase(incoming()) && (
+        // Plain first sign-in: an active client, nothing else.
+        (incoming().keys().hasOnly(['role', 'name', 'email', 'active', 'createdAt'])
+          && incoming().role == 'client' && incoming().active == true)
+        // Or straight to surveyor, but only together with a valid invite claim.
+        || (incoming().keys().hasOnly(['role', 'name', 'email', 'active', 'createdAt', 'inviteCode'])
+          && claimsInvite(uid))
+      );
+
+      allow update: if
+        // Self: rename only.
+        (isSelf() && changedKeys().hasOnly(['name'])
+          && incoming().name is string && incoming().name.size() <= 120)
+        // Self: an active client upgrades to surveyor via an invite claim.
+        || (isSelf() && existing().role == 'client' && existing().active == true
+          && changedKeys().hasOnly(['role', 'inviteCode', 'active'])
+          && claimsInvite(uid))
+        // Admin: (de)activate only.
+        || (isAdmin() && changedKeys().hasOnly(['active']) && incoming().active is bool);
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------- invites/{code}
+    match /invites/{code} {
+      allow read, delete: if isAdmin();
+      allow create: if isAdmin() && code.matches('^[0-9]{6}$');
+      // The non-admin branch is the second half of the claim: it requires the user doc written in the
+      // same batch to carry this code. A non-existent code is a *create*, which only the admin may do.
+      allow update: if isAdmin() || (signedIn()
+        && resource.data.usedBy == null && resource.data.cancelled == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy', 'usedAt'])
+        && request.resource.data.usedBy == request.auth.uid && request.resource.data.usedAt == request.time
+        && getAfter(/databases/$(db)/documents/users/$(request.auth.uid)).data.inviteCode == code);
+    }
+
+    // ---------------------------------------------------------------- searchIndex/{shard}
+    match /searchIndex/{shard} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------- factories/{fid}
+    function validName(n) {
+      return n is map && n.keys().hasOnly(['en', 'ar'])
+        && optString(n, 'en', 120) && optString(n, 'ar', 120)
+        && (('en' in n && n.en.size() > 0) || ('ar' in n && n.ar.size() > 0));
+    }
+    function validLocation(l) {
+      return l is map && l.keys().hasOnly(['lat', 'lng', 'accuracyM', 'pinMoved'])
+        && l.keys().hasAll(['lat', 'lng', 'accuracyM', 'pinMoved'])
+        && inEgypt(l)
+        && (l.accuracyM == null || l.accuracyM is number)
+        && l.pinMoved is bool;
+    }
+    function optList(d, f) { return !(f in d) || (d[f] is list && d[f].size() <= 30); }
+    function optTimestamp(d, f) { return !(f in d) || d[f] is timestamp; }
+
+    // Shape of a factory document (spec §4, §5.3). Applied on create and on every update.
+    function validFactory(d) {
+      return d.keys().hasOnly(['name', 'area', 'areaOther', 'address', 'sector', 'location',
+          'productsMade', 'productsNeeded', 'thumb', 'photoCount', 'status', 'rejectReason',
+          'createdBy', 'createdAt', 'updatedAt', 'approvedAt', 'sample'])
+        && d.keys().hasAll(['name', 'area', 'location', 'status', 'createdBy', 'createdAt', 'updatedAt'])
+        && validName(d.name)
+        && d.area is string && d.area.size() > 0 && d.area.size() <= 64
+        && optString(d, 'areaOther', 120) && optString(d, 'address', 300) && optString(d, 'sector', 64)
+        && validLocation(d.location)
+        && optList(d, 'productsMade') && optList(d, 'productsNeeded')
+        && optString(d, 'thumb', 20480)
+        && (!('photoCount' in d) || (d.photoCount is int && d.photoCount >= 0 && d.photoCount <= 3))
+        && d.status in ['pending', 'approved', 'rejected', 'hidden']
+        && optString(d, 'rejectReason', 500)
+        && d.createdBy is string
+        && d.createdAt is timestamp && d.updatedAt is timestamp && optTimestamp(d, 'approvedAt')
+        && (!('sample' in d) || d.sample is bool);
+    }
+
+    // Children of a factory are checked against the parent *after* the write (batched creates, spec Review Focus 3)
+    function parentAfter(fid) { return getAfter(/databases/$(db)/documents/factories/$(fid)).data; }
+    function ownerCanEdit(fid) { return isActiveSurveyor() && parentAfter(fid).createdBy == request.auth.uid
+      && parentAfter(fid).status in ['pending', 'rejected']; }
+
+    // Reads use the parent as stored (get, not getAfter).
+    function parent(fid) { return get(/databases/$(db)/documents/factories/$(fid)).data; }
+    function canReadFactory(f) {
+      return f.status == 'approved'
+        || (signedIn() && f.createdBy == request.auth.uid && f.status in ['pending', 'rejected']);
+    }
+
+    match /factories/{fid} {
+      allow read: if isAdmin() || canReadFactory(resource.data);
+
+      allow create: if (isAdmin() && validFactory(incoming())) || (
+        isActiveSurveyor() && validFactory(incoming())
+          && incoming().status == 'pending' && incoming().createdBy == request.auth.uid
+          && incoming().createdAt == request.time && incoming().updatedAt == request.time
+          // Review fields and the demo flag are the admin's alone.
+          && !('approvedAt' in incoming()) && !('rejectReason' in incoming()) && !('sample' in incoming())
+      );
+
+      allow update: if (isAdmin() && validFactory(incoming())) || (
+        isActiveSurveyor() && existing().createdBy == request.auth.uid
+          && existing().status in ['pending', 'rejected']
+          && validFactory(incoming())
+          && incoming().status == 'pending'
+          && incoming().updatedAt == request.time
+          && unchanged('createdBy') && unchanged('createdAt') && unchanged('approvedAt')
+          && unchanged('sample') && unchanged('rejectReason')
+      );
+
+      allow delete: if isAdmin();
+
+      // ---------------------------------------------------------------- photos/{p1|p2|p3}
+      match /photos/{pid} {
+        function validPhoto(d) {
+          return d.keys().hasOnly(['data', 'order']) && d.keys().hasAll(['data', 'order'])
+            && d.data is string && d.data.size() <= 122880
+            && d.order is int && d.order >= 0 && d.order <= 3;
+        }
+
+        allow read: if isAdmin() || canReadFactory(parent(fid));
+        allow create, update: if pid in ['p1', 'p2', 'p3'] && validPhoto(incoming())
+          && (isAdmin() || ownerCanEdit(fid));
+        allow delete: if isAdmin() || ownerCanEdit(fid);
+      }
+
+      // ---------------------------------------------------------------- private/contact
+      match /private/contact {
+        function validContact(d) {
+          return d.keys().hasOnly(['phone', 'whatsapp', 'whatsappSameAsPhone', 'website', 'facebook', 'contactPerson'])
+            && optString(d, 'phone', 40) && optString(d, 'whatsapp', 40)
+            && (!('whatsappSameAsPhone' in d) || d.whatsappSameAsPhone is bool)
+            && optString(d, 'website', 300) && optString(d, 'facebook', 300)
+            && optString(d, 'contactPerson', 120);
+        }
+
+        allow read: if isAdmin()
+          || (signedIn() && parent(fid).status == 'approved')
+          || (signedIn() && parent(fid).createdBy == request.auth.uid);
+        allow create, update: if validContact(incoming()) && (isAdmin() || ownerCanEdit(fid));
+        allow delete: if isAdmin() || ownerCanEdit(fid);
+      }
     }
   }
 }
