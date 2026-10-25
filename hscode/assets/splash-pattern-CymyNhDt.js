@@ -1,0 +1,1 @@
+var e=`/hscode/assets/splash-pattern-BltLf5Je.svg`;export{e as t};

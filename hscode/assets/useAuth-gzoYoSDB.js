@@ -1,0 +1,1 @@
+import{J as e,K as t,f as n}from"./index-B0P6Wk1V.js";var r=e(t(),1);function i(){return(0,r.useContext)(n)}export{i as t};
