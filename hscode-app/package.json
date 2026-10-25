@@ -10,7 +10,8 @@
     "test": "vitest run",
     "check:build": "node scripts/check-build.mjs",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "data:hs": "node scripts/build-hs-data.mjs"
   },
   "dependencies": {
     "i18next": "^26.5.10",

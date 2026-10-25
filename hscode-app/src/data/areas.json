@@ -1,0 +1,14 @@
+[
+  { "id": "oct6-zone-1", "en": "6th of October - Industrial Zone 1", "ar": "السادس من أكتوبر - المنطقة الصناعية الأولى", "center": { "lat": 29.9227638, "lng": 30.9129223 } },
+  { "id": "oct6-zone-2", "en": "6th of October - Industrial Zone 2", "ar": "السادس من أكتوبر - المنطقة الصناعية الثانية", "center": { "lat": 29.9236938, "lng": 30.9023357 } },
+  { "id": "oct6-zone-3", "en": "6th of October - Industrial Zone 3", "ar": "السادس من أكتوبر - المنطقة الصناعية الثالثة", "center": { "lat": 29.9174249, "lng": 30.8927223 } },
+  { "id": "oct6-zone-4", "en": "6th of October - Industrial Zone 4", "ar": "السادس من أكتوبر - المنطقة الصناعية الرابعة", "center": { "lat": 29.9143275, "lng": 30.8954 } },
+  { "id": "oct6-zone-5", "en": "6th of October - Industrial Zone 5", "ar": "السادس من أكتوبر - المنطقة الصناعية الخامسة", "center": { "lat": 29.9101, "lng": 30.8908 } },
+  { "id": "oct6-zone-6", "en": "6th of October - Industrial Zone 6", "ar": "السادس من أكتوبر - المنطقة الصناعية السادسة", "center": { "lat": 29.905926, "lng": 30.8861434 } },
+  { "id": "oct6-extension", "en": "6th of October - Industrial Extension", "ar": "السادس من أكتوبر - امتداد المنطقة الصناعية", "center": { "lat": 29.9, "lng": 30.88 } },
+  { "id": "10th-ramadan", "en": "10th of Ramadan City", "ar": "مدينة العاشر من رمضان", "center": { "lat": 30.2900096, "lng": 31.749342 } },
+  { "id": "sadat-city", "en": "Sadat City", "ar": "مدينة السادات", "center": { "lat": 30.366907, "lng": 30.602487 } },
+  { "id": "obour", "en": "Obour City", "ar": "مدينة العبور", "center": { "lat": 30.1953099, "lng": 31.4606706 } },
+  { "id": "borg-el-arab", "en": "Borg El Arab", "ar": "برج العرب", "center": { "lat": 30.8695204, "lng": 29.6002667 } },
+  { "id": "other", "en": "Other", "ar": "أخرى", "center": { "lat": 30.0444, "lng": 31.2357 } }
+]
