@@ -139,7 +139,7 @@ describe('FactoryStepper', () => {
     expect(outbox.list('u1').map((e) => e.fid)).toEqual(['fnew'])
     expect(screen.getByText(/^LIST/)).toBeInTheDocument()
     await waitFor(() => expect(loadDraft('u1', 'fnew')).toBeNull())
-  })
+  }, 20_000) // ~25 sequential userEvent steps: well over 5 s on a loaded machine
 
   it('offline shows Save on this phone and still submits', async () => {
     online = false

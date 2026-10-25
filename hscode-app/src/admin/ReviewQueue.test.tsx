@@ -137,7 +137,9 @@ describe('ReviewQueue', () => {
     expect(screen.getByText(/GPS accuracy was ±85 m/)).toBeInTheDocument()
     const name = screen.getByLabelText('Factory name (English)')
     await user.clear(name)
+    await waitFor(() => expect(name).toHaveValue(''))
     await user.type(name, 'Nile Pipes')
+    await waitFor(() => expect(name).toHaveValue('Nile Pipes'))
     await user.click(screen.getByRole('button', { name: 'Approve & publish' }))
     await waitFor(() => expect(approveFactory).toHaveBeenCalled())
     const [fid, opened, edit] = approveFactory.mock.calls[0]

@@ -1,11 +1,17 @@
 // Seeds the local Firebase emulators with demo data.
 // Run inside emulators:exec (or with FIRESTORE_EMULATOR_HOST set): npm run seed:emu
 import { initializeApp } from 'firebase-admin/app'
+import { getAuth } from 'firebase-admin/auth'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
+import { ADMIN_UID } from '../src/firebase/config.ts'
 import { toIndexEntry } from '../src/lib/indexEntry.ts'
 import type { Factory, Product } from '../src/lib/types.ts'
 
-process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080'
+// Emulator only: the admin password below must never reach a real project.
+if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
+  console.error('seed-emulator refuses to run without FIRESTORE_EMULATOR_HOST and FIREBASE_AUTH_EMULATOR_HOST.')
+  process.exit(1)
+}
 initializeApp({ projectId: 'demo-hscode' })
 const db = getFirestore()
 
@@ -128,5 +134,32 @@ const user = (role: string, name: string) => ({
 batch.set(db.doc('users/s1'), { ...user('surveyor', 'Demo Surveyor'), inviteCode: '111111' })
 batch.set(db.doc('users/c1'), user('client', 'Demo Client'))
 
+// Two pending submissions by s1 for the admin review queue: weak GPS + pin never moved, and a hand-placed pin.
+const pending = (id: string, en: string, ar: string, location: Factory['location']) => {
+  batch.set(db.doc(`factories/${id}`), {
+    name: { en, ar },
+    area: 'oct6-zone-1',
+    sector: 'plastics-packaging',
+    location,
+    productsMade: [product('Plastic crates', 'صناديق بلاستيك', '3923')],
+    productsNeeded: [],
+    photoCount: 0,
+    status: 'pending',
+    createdBy: 's1',
+    createdAt: ts(now),
+    updatedAt: ts(now),
+    sample: false,
+  })
+  batch.set(db.doc(`factories/${id}/private/contact`), { phone: '+20 100 000 0005', whatsappSameAsPhone: true })
+}
+pending('demo-pending-gps', 'Pending Gps Works', 'أعمال معلقة', { lat: 29.9231, lng: 30.9129, accuracyM: 85, pinMoved: false })
+pending('demo-pending-hand', 'Pending Hand Works', 'أعمال يدوية', { lat: 29.9241, lng: 30.9135, accuracyM: null, pinMoved: true })
+
 await batch.commit()
-console.log(`Seeded ${factories.length} approved factories, 3 invites, 2 users, 1 rejected factory.`)
+
+// The admin account (email + password sign-in) in the Auth emulator; its uid is the app's ADMIN_UID.
+const auth = getAuth()
+await auth.deleteUser(ADMIN_UID).catch(() => {})
+await auth.createUser({ uid: ADMIN_UID, email: 'admin@example.test', password: 'emulator-only-123', emailVerified: true })
+
+console.log(`Seeded ${factories.length} approved factories, 2 pending, 3 invites, 2 users, 1 rejected factory, 1 admin account.`)
