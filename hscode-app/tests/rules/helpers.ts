@@ -5,7 +5,14 @@ import {
 } from '@firebase/rules-unit-testing'
 import type { Firestore } from 'firebase/firestore'
 
-export const ADMIN_UID = 'k0a0b8HhATfZuFcC0clBqGmtGmF3'
+import { ADMIN_UID } from '../../src/firebase/config'
+
+export { ADMIN_UID }
+
+function emulatorHost(): { host: string; port: number } {
+  const [host, port] = (process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080').split(':')
+  return { host: host || '127.0.0.1', port: Number(port) || 8080 }
+}
 
 let env: RulesTestEnvironment | undefined
 
@@ -15,8 +22,7 @@ export async function getEnv(): Promise<RulesTestEnvironment> {
     projectId: 'demo-hscode',
     firestore: {
       rules: readFileSync('firestore.rules', 'utf8'),
-      host: '127.0.0.1',
-      port: 8080,
+      ...emulatorHost(),
     },
   })
   return env
