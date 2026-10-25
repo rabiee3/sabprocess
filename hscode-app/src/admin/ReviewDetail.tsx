@@ -42,13 +42,13 @@ export function ReviewDetail({ fid, submittedBy, onDone }: Props) {
   const pending = factory.status === 'pending'
   const errors = showErrors ? formErrors(draft) : []
 
-  async function run(kind: 'approve' | 'reject', op: () => Promise<void>) {
+  async function run(kind: 'approve' | 'reject', op: () => Promise<void>, doneName = name) {
     if (busy) return
     setBusy(kind)
     setError(null)
     try {
       await op()
-      onDone({ fid, outcome: kind === 'approve' ? 'approved' : 'rejected', name })
+      onDone({ fid, outcome: kind === 'approve' ? 'approved' : 'rejected', name: doneName })
     } catch (e) {
       setBusy(null)
       setRejecting(false)
@@ -59,7 +59,9 @@ export function ReviewDetail({ fid, submittedBy, onDone }: Props) {
   function approve() {
     setShowErrors(true)
     if (formErrors(draft).length > 0) return
-    void run('approve', () => approveFactory(fid, data.openedAt, toAdminEdit(draft)))
+    const edit = toAdminEdit(draft)
+    // The banner names what was just published (the edited name), not the name as submitted.
+    void run('approve', () => approveFactory(fid, data.openedAt, edit), displayName(draft.name, lang, t('survey.list.untitled')))
   }
 
   return (

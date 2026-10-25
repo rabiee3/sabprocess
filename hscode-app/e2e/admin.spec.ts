@@ -45,7 +45,7 @@ test('(a) review queue: flags, rename and approve publishes to the index', async
   await openFromQueue(page, 'Pending Gps Works')
   await page.getByLabel(en.survey.basics.nameEn).fill('Renamed Gps Works')
   await page.getByRole('button', { name: a.review.approve }).click()
-  await expect(page.getByText(named(a.review.approved, 'Pending Gps Works'))).toBeVisible()
+  await expect(page.getByText(named(a.review.approved, 'Renamed Gps Works'))).toBeVisible()
   await expect(queueLink(page, 'Renamed Gps Works')).toHaveCount(0)
   await expect
     .poll(async () => (await indexEntries()).some((e) => e.id === 'demo-pending-gps' && e.n.en === 'Renamed Gps Works'))
@@ -105,6 +105,10 @@ test('(f) dashboard shows counts, and no export or download control exists', asy
   const tiles = page.getByRole('region', { name: a.dash.statusTitle }).getByRole('listitem')
   await expect(tiles).toHaveCount(4)
   await expect(tiles.first().locator('p').nth(1)).toHaveText(/^\d+$/)
+  // The seed has 3 approved + 2 pending + 1 rejected; other tests only move factories between statuses.
+  await expect
+    .poll(async () => (await tiles.locator('p:nth-child(2)').allTextContents()).reduce((n, t) => n + Number(t), 0))
+    .toBeGreaterThanOrEqual(6)
   await expect(page.getByRole('meter', { name: a.dash.indexLabel })).toBeVisible()
   for (const path of ['review', 'factories', 'invites', 'surveyors', 'dashboard']) {
     await nav(page).locator(`a[href$="/admin/${path}"]`).click()
@@ -137,7 +141,7 @@ test('(h) 768px: the drawer layout reviews and approves', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 2, name: 'Drawer Works' })).toBeVisible()
   await page.getByLabel(en.survey.basics.nameEn).fill('Drawer Works Two')
   await page.getByRole('button', { name: a.review.approve }).click()
-  await expect(page.getByText(named(a.review.approved, 'Drawer Works'))).toBeVisible()
+  await expect(page.getByText(named(a.review.approved, 'Drawer Works Two'))).toBeVisible()
   await page.getByRole('button', { name: a.menu }).click()
   await expect(nav(page)).toBeVisible()
   await expect

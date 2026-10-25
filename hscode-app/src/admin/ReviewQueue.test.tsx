@@ -137,6 +137,8 @@ describe('ReviewQueue', () => {
     expect(screen.getByText(/GPS accuracy was ±85 m/)).toBeInTheDocument()
     const name = screen.getByLabelText('Factory name (English)')
     await user.clear(name)
+    // Guard, not a fix: under heavy CPU load the controlled input once kept its old value after clear().
+    // The app re-seeds nothing (see the mid-edit snapshot test), so only the test needed to wait for the commit.
     await waitFor(() => expect(name).toHaveValue(''))
     await user.type(name, 'Nile Pipes')
     await waitFor(() => expect(name).toHaveValue('Nile Pipes'))
@@ -147,6 +149,30 @@ describe('ReviewQueue', () => {
     expect(opened).toBe(openedAt)
     expect(edit).toMatchObject({ name: { en: 'Nile Pipes' }, area: 'oct6-zone-1' })
     expect(refreshPending).toHaveBeenCalled()
+  })
+
+  it('a new queue snapshot mid-edit does not wipe the edits, and loads the factory once', async () => {
+    const user = userEvent.setup()
+    setup('/admin/review/f1')
+    act(() => pushQueue([f1, f2]))
+    const name = await screen.findByLabelText('Factory name (English)')
+    await user.clear(name)
+    await user.type(name, 'Half done')
+    act(() => pushQueue([{ ...f1 }, { ...f2 }, fac('f3', 3)]))
+    act(() => pushQueue([{ ...f1, updatedAt: new Date() }, fac('f3', 3)]))
+    expect(screen.getByLabelText('Factory name (English)')).toHaveValue('Half done')
+    expect(loadForReview).toHaveBeenCalledTimes(1)
+  })
+
+  it('after approve the banner names the published (edited) name', async () => {
+    const user = userEvent.setup()
+    setup('/admin/review/f1')
+    act(() => pushQueue([f1, f2]))
+    const name = await screen.findByLabelText('Factory name (English)')
+    await user.clear(name)
+    await user.type(name, 'Nile Pipes')
+    await user.click(screen.getByRole('button', { name: 'Approve & publish' }))
+    expect(await screen.findByText('Nile Pipes was approved and published.')).toBeInTheDocument()
   })
 
   it('after approve it opens the next pending item and shows a status banner', async () => {
