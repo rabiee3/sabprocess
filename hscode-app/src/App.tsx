@@ -1,6 +1,6 @@
 function Logo() {
   return (
-    <span dir="ltr" className="inline-flex">
+    <span dir="ltr" className="inline-flex rounded">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 90 30"
