@@ -77,7 +77,7 @@ export function AdminLayout() {
       )}
       <aside
         inert={!isDesktop && !open}
-        className={`fixed inset-block-0 inset-inline-start-0 z-40 flex w-64 flex-col border-e border-line bg-surface transition-transform lg:visible lg:translate-x-0 ${
+        className={`fixed inset-y-0 start-0 z-40 flex h-dvh w-64 flex-col border-e border-line bg-surface transition-transform lg:visible lg:translate-x-0 ${
           open ? 'translate-x-0' : 'invisible ltr:-translate-x-full rtl:translate-x-full lg:ltr:translate-x-0 lg:rtl:translate-x-0'
         }`}
       >

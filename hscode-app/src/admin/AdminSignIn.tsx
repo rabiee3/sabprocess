@@ -44,8 +44,8 @@ export function AdminSignIn() {
   }
 
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center gap-5 bg-surface-alt p-4">
-      <div className="absolute inset-block-start-3 inset-inline-end-3">
+    <main className="relative flex min-h-dvh flex-col items-center justify-center gap-5 bg-surface-alt p-4 pt-16">
+      <div className="absolute top-3 end-3">
         <LangToggle />
       </div>
       <form

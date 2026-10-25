@@ -375,7 +375,18 @@
       "colPending": "Pending",
       "colRejected": "Rejected",
       "colSurveyor": "Surveyor",
-      "updated": "Updated {{time}}"
+      "updated": "Updated {{time}}",
+      "demoTitle": "Demo data",
+      "demoBody": "Fill the map with sample factories to try search and Who supplies this? Demo factories are flagged as samples and can all be removed in one step.",
+      "demoLoad": "Load demo factories",
+      "demoRemove": "Remove all demo factories",
+      "demoProgress": "Working: {{done}} of {{total}}…",
+      "demoLoaded": "Added {{added}}, skipped {{skipped}}.",
+      "demoRemoved": "Removed {{n}} demo factories.",
+      "demoNone": "There are no demo factories to remove.",
+      "demoRemoveTitle": "Remove all demo factories?",
+      "demoRemoveBody": "Every factory flagged as a sample will be permanently deleted with its photos and contact details. Real factories are not touched. This can't be undone.",
+      "demoRemoveConfirm": "Remove permanently"
     }
   }
 }

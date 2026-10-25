@@ -60,3 +60,19 @@ describe('AdminSignIn', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: en.admin.signIn.submit })).toBeEnabled())
   })
 })
+
+describe('AdminSignIn layout', () => {
+  beforeEach(() => {
+    initI18n()
+  })
+  it('pins the language toggle to the top end corner, outside the form', () => {
+    const { container } = render(<AdminSignIn />)
+    const group = screen.getByRole('group', { name: en.lang.label })
+    const wrap = group.parentElement!
+    expect(wrap.className).toMatch(/\babsolute\b/)
+    expect(wrap.className).toMatch(/\btop-3\b/)
+    expect(wrap.className).toMatch(/\bend-3\b/)
+    expect(wrap.className).not.toMatch(/inset-(block|inline)/)
+    expect(container.querySelector('form')!.contains(group)).toBe(false)
+  })
+})
