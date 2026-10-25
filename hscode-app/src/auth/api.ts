@@ -46,8 +46,15 @@ export async function signOutUser(): Promise<void> {
   await signOut(auth)
 }
 
-/** Creates users/{uid} as an active client if missing. Skipped for the admin. */
-export async function ensureUserDoc(user: User, fs: Firestore = db): Promise<void> {
+/** The User fields the user doc is built from. */
+export type UserProfile = Pick<User, 'uid' | 'displayName' | 'email'>
+
+/**
+ * Creates users/{uid} as an active client if missing. Skipped for the admin.
+ * The rules bind `email` to the token's email; a Google token always carries one, so the `''`
+ * fallback only applies to tokens the rules reject anyway.
+ */
+export async function ensureUserDoc(user: UserProfile, fs: Firestore = db): Promise<void> {
   if (user.uid === ADMIN_UID) return
   const ref = doc(fs, 'users', user.uid)
   if ((await getDoc(ref)).exists()) return
@@ -67,10 +74,11 @@ export async function ensureUserDoc(user: User, fs: Firestore = db): Promise<voi
  * Only permission-denied / not-found map to 'invalid'; anything else (e.g. offline) is re-thrown.
  */
 export async function claimInvite(
-  uid: string,
+  user: UserProfile,
   code: string,
   fs: Firestore = db,
 ): Promise<'ok' | 'invalid'> {
+  const { uid } = user
   try {
     const userRef = doc(fs, 'users', uid)
     const exists = (await getDoc(userRef)).exists()
@@ -78,13 +86,12 @@ export async function claimInvite(
     if (exists) {
       batch.update(userRef, { role: 'surveyor', active: true, inviteCode: code })
     } else {
-      const current = auth.currentUser?.uid === uid ? auth.currentUser : null
       batch.set(userRef, {
         role: 'surveyor',
         active: true,
         inviteCode: code,
-        name: current?.displayName ?? '',
-        email: current?.email ?? '',
+        name: user.displayName ?? '',
+        email: user.email ?? '',
         createdAt: serverTimestamp(),
       })
     }

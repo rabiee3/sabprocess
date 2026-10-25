@@ -9,7 +9,7 @@ import {
   writeBatch,
   type Firestore,
 } from 'firebase/firestore'
-import { asAdmin, asUser } from './helpers'
+import { asAdmin, asUser, emailOf } from './helpers'
 import { seedUsersAndInvites } from './fixtures'
 
 beforeEach(seedUsersAndInvites)
@@ -18,7 +18,7 @@ const newUser = (extra: Record<string, unknown> = {}) => ({
   role: 'client',
   active: true,
   name: 'New User',
-  email: 'new@example.com',
+  email: emailOf('u9'),
   createdAt: serverTimestamp(),
   ...extra,
 })

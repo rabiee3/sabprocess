@@ -35,9 +35,29 @@ function current(): RulesTestEnvironment {
 
 export const asVisitor = (): Firestore =>
   current().unauthenticatedContext().firestore() as unknown as Firestore
-export const asUser = (uid: string): Firestore =>
-  current().authenticatedContext(uid).firestore() as unknown as Firestore
-export const asAdmin = (): Firestore => asUser(ADMIN_UID)
+/** Token claims: `sign_in_provider` (google.com, password, anonymous, ...) and an optional email. */
+export type TokenClaims = { provider: string; email?: string }
+
+const contextFor = (uid: string, { provider, email }: TokenClaims): Firestore =>
+  current()
+    .authenticatedContext(uid, {
+      firebase: { sign_in_provider: provider },
+      ...(email === undefined ? {} : { email }),
+    })
+    .firestore() as unknown as Firestore
+
+/** The email every test user's token carries: `${uid}@example.com`. */
+export const emailOf = (uid: string): string => `${uid}@example.com`
+
+/** A Google-signed-in user (every non-admin user signs in with Google, spec §2). */
+export const asUser = (uid: string): Firestore => contextFor(uid, { provider: 'google.com', email: emailOf(uid) })
+
+/** Same uid/email as asUser, but another sign-in provider (negative tests). Pass `email: null` to omit it. */
+export const asUserWithProvider = (uid: string, provider: string, email: string | null = emailOf(uid)): Firestore =>
+  contextFor(uid, { provider, email: email ?? undefined })
+
+/** The admin signs in with email/password; the rules trust the UID alone. */
+export const asAdmin = (): Firestore => asUserWithProvider(ADMIN_UID, 'password', 'admin@example.com')
 
 /** Runs `fn` with security rules disabled, to seed fixtures. */
 export async function seed(fn: (db: Firestore) => Promise<void>): Promise<void> {

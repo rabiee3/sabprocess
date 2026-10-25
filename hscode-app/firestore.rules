@@ -4,9 +4,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
     function signedIn() { return request.auth != null; }
+    // The admin signs in with email/password, so the admin check is the UID alone.
     function isAdmin() { return signedIn() && request.auth.uid == 'k0a0b8HhATfZuFcC0clBqGmtGmF3'; }
+    // Every other user signs in with Google (spec §2); use this, never bare signedIn(), in non-admin branches.
+    function isGoogle() { return signedIn() && request.auth.token.firebase.sign_in_provider == 'google.com'; }
     function userDoc() { return get(/databases/$(db)/documents/users/$(request.auth.uid)); }
-    function isActiveSurveyor() { return signedIn() && exists(/databases/$(db)/documents/users/$(request.auth.uid))
+    function isActiveSurveyor() { return isGoogle() && exists(/databases/$(db)/documents/users/$(request.auth.uid))
       && userDoc().data.role == 'surveyor' && userDoc().data.active == true; }
     function inEgypt(l) { return l.lat is number && l.lng is number
       && l.lat >= 21.5 && l.lat <= 32.0 && l.lng >= 24.5 && l.lng <= 37.0; }
@@ -25,6 +28,8 @@ service cloud.firestore {
         && d.email is string && d.email.size() <= 254
         && d.createdAt == request.time;
     }
+    // On create the stored email must be the token's (a token without an email fails, which is acceptable).
+    function emailMatchesToken(d) { return d.email == request.auth.token.email; }
 
     // Invite claim: user doc + invite in one batch (spec §5.2)
     function claimsInvite(uid) {
@@ -36,11 +41,11 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      function isSelf() { return signedIn() && request.auth.uid == uid; }
+      function isSelf() { return isGoogle() && request.auth.uid == uid; }
 
       allow read: if isSelf() || isAdmin();
 
-      allow create: if isSelf() && validUserBase(incoming()) && (
+      allow create: if isSelf() && validUserBase(incoming()) && emailMatchesToken(incoming()) && (
         // Plain first sign-in: an active client, nothing else.
         (incoming().keys().hasOnly(['role', 'name', 'email', 'active', 'createdAt'])
           && incoming().role == 'client' && incoming().active == true)
@@ -69,7 +74,7 @@ service cloud.firestore {
       allow create: if isAdmin() && code.matches('^[0-9]{6}$');
       // The non-admin branch is the second half of the claim: it requires the user doc written in the
       // same batch to carry this code. A non-existent code is a *create*, which only the admin may do.
-      allow update: if isAdmin() || (signedIn()
+      allow update: if isAdmin() || (isGoogle()
         && resource.data.usedBy == null && resource.data.cancelled == false
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy', 'usedAt'])
         && request.resource.data.usedBy == request.auth.uid && request.resource.data.usedAt == request.time
@@ -127,7 +132,7 @@ service cloud.firestore {
     function parent(fid) { return get(/databases/$(db)/documents/factories/$(fid)).data; }
     function canReadFactory(f) {
       return f.status == 'approved'
-        || (signedIn() && f.createdBy == request.auth.uid && f.status in ['pending', 'rejected']);
+        || (isGoogle() && f.createdBy == request.auth.uid && f.status in ['pending', 'rejected']);
     }
 
     match /factories/{fid} {
@@ -178,8 +183,8 @@ service cloud.firestore {
         }
 
         allow read: if isAdmin()
-          || (signedIn() && parent(fid).status == 'approved')
-          || (signedIn() && parent(fid).createdBy == request.auth.uid);
+          || (isGoogle() && parent(fid).status == 'approved')
+          || (isGoogle() && parent(fid).createdBy == request.auth.uid);
         allow create, update: if validContact(incoming()) && (isAdmin() || ownerCanEdit(fid));
         allow delete: if isAdmin() || ownerCanEdit(fid);
       }

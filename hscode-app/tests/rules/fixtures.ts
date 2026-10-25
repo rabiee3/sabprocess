@@ -1,5 +1,5 @@
 import { doc, serverTimestamp, setDoc, type Firestore } from 'firebase/firestore'
-import { seed } from './helpers'
+import { emailOf, seed } from './helpers'
 
 /** A spec-§4 factory as a surveyor submits it (status pending, owned by `uid`). */
 export function validFactory(uid: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -32,17 +32,12 @@ export const validContact = (): Record<string, unknown> => ({
 /** Seeds the users and invites listed in the Task 6 brief. */
 export async function seedUsersAndInvites(): Promise<void> {
   await seed(async (db: Firestore) => {
-    const user = (role: string, active: boolean) => ({
-      role,
-      active,
-      name: 'Test',
-      email: 'test@example.com',
-      createdAt: serverTimestamp(),
-    })
-    await setDoc(doc(db, 'users/s1'), user('surveyor', true))
-    await setDoc(doc(db, 'users/s2'), user('surveyor', true))
-    await setDoc(doc(db, 'users/off'), user('surveyor', false))
-    await setDoc(doc(db, 'users/c1'), user('client', true))
+    const user = (uid: string, role: string, active: boolean) =>
+      setDoc(doc(db, `users/${uid}`), { role, active, name: 'Test', email: emailOf(uid), createdAt: serverTimestamp() })
+    await user('s1', 'surveyor', true)
+    await user('s2', 'surveyor', true)
+    await user('off', 'surveyor', false)
+    await user('c1', 'client', true)
     const invite = (usedBy: string | null, cancelled: boolean) => ({
       usedBy,
       cancelled,
