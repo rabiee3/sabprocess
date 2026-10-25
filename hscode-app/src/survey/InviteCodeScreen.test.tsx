@@ -1,15 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initI18n } from '../i18n'
 import en from '../i18n/en.json'
 
 const claimInvite = vi.fn()
 let online = true
+let role = 'client'
 vi.mock('../auth/api', () => ({ claimInvite: (...a: unknown[]) => claimInvite(...a), signInWithGoogle: vi.fn(), signOutUser: vi.fn() }))
 vi.mock('../ui/useOnline', () => ({ useOnline: () => online }))
 vi.mock('../auth/useAuth', () => ({
-  useAuth: () => ({ user: { uid: 'u1', email: 'a@b.com', displayName: 'A' }, role: 'client', active: false, loading: false }),
+  useAuth: () => ({ user: { uid: 'u1', email: 'a@b.com', displayName: 'A' }, role, active: false, loading: false }),
 }))
 
 import { InviteCodeScreen } from './InviteCodeScreen'
@@ -25,7 +26,9 @@ describe('InviteCodeScreen', () => {
     initI18n()
     claimInvite.mockReset()
     online = true
+    role = 'client'
   })
+  afterEach(() => vi.useRealTimers())
 
   it('shows who is signed in and disables the button until 6 digits', async () => {
     render(<InviteCodeScreen />)
@@ -70,5 +73,37 @@ describe('InviteCodeScreen', () => {
     expect(unlock()).toBeDisabled()
     await userEvent.click(unlock())
     expect(claimInvite).not.toHaveBeenCalled()
+  })
+
+  describe('unlock fallback', () => {
+    async function claimOk() {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      claimInvite.mockResolvedValue('ok')
+      const view = render(<InviteCodeScreen />)
+      await enter('012345')
+      await userEvent.click(unlock())
+      expect(await screen.findByText(en.survey.invite.unlocking)).toBeInTheDocument()
+      return view
+    }
+
+    it('after 15 s still unlocking shows the slow banner and Reload, claim stays locked', async () => {
+      await claimOk()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15000)
+      })
+      expect(screen.getByText(en.survey.invite.unlockSlow)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: en.common.reload })).toBeInTheDocument()
+      expect(unlock()).toBeDisabled()
+    })
+
+    it('a role flip before 15 s shows no slow banner', async () => {
+      const view = await claimOk()
+      role = 'surveyor'
+      view.rerender(<InviteCodeScreen />)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20000)
+      })
+      expect(screen.queryByText(en.survey.invite.unlockSlow)).toBeNull()
+    })
   })
 })

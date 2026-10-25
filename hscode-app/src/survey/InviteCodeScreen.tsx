@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { claimInvite } from '../auth/api'
 import { normalizeInviteCode } from '../auth/invite'
@@ -11,13 +11,21 @@ type Status = 'idle' | 'busy' | 'unlocking' | 'invalid' | 'error'
 
 export function InviteCodeScreen() {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user, role } = useAuth()
   const online = useOnline()
   const [digits, setDigits] = useState('')
   const [status, setStatus] = useState<Status>('idle')
+  const [slow, setSlow] = useState(false)
   const inFlight = useRef(false)
   const code = normalizeInviteCode(digits)
   const locked = status === 'busy' || status === 'unlocking'
+
+  // Fallback: the claim succeeded but the users-doc snapshot never flipped the role.
+  useEffect(() => {
+    if (status !== 'unlocking' || role === 'surveyor') return
+    const id = setTimeout(() => setSlow(true), 15000)
+    return () => clearTimeout(id)
+  }, [status, role])
 
   async function submit() {
     if (!user || !code || !online || inFlight.current) return
@@ -58,7 +66,19 @@ export function InviteCodeScreen() {
       {!online && <Banner tone="warning">{t('errors.offline')}</Banner>}
       {status === 'invalid' && <Banner tone="danger">{t('survey.invite.invalid')}</Banner>}
       {status === 'error' && <Banner tone="danger">{t(online ? 'errors.generic' : 'errors.offline')}</Banner>}
-      {status === 'unlocking' && <Banner tone="success">{t('survey.invite.unlocking')}</Banner>}
+      {status === 'unlocking' && !slow && <Banner tone="success">{t('survey.invite.unlocking')}</Banner>}
+      {status === 'unlocking' && slow && role !== 'surveyor' && (
+        <Banner tone="warning">
+          <p>{t('survey.invite.unlockSlow')}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-2 min-h-touch rounded border border-line-strong bg-surface px-3 font-semibold text-ink-strong"
+          >
+            {t('common.reload')}
+          </button>
+        </Banner>
+      )}
       <button
         type="button"
         onClick={() => void submit()}

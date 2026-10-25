@@ -17,7 +17,8 @@
   "common": {
     "comingSoon": "Coming soon",
     "close": "Close",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "reload": "Reload"
   },
   "role": {
     "client": "Client",
@@ -40,7 +41,8 @@
       "invalid": "This code isn't valid or was already used. Check the 6 digits with your supervisor.",
       "offline": "You're offline — connect to unlock surveying",
       "signedInAs": "Signed in as {{email}}",
-      "unlocking": "Unlocking…"
+      "unlocking": "Unlocking…",
+      "unlockSlow": "Your code was accepted, but your account hasn't updated yet. Reload the page to continue."
     },
     "list": {
       "title": "My submissions",
