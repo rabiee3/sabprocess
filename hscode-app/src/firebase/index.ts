@@ -28,6 +28,8 @@ export const auth = getAuth(app)
 if (useEmulator) {
   connectFirestoreEmulator(db, '127.0.0.1', 8080)
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+  // Marker the e2e suite asserts, so a run against production config aborts.
+  if (typeof document !== 'undefined') document.documentElement.dataset.emulator = 'true'
 } else if (typeof window !== 'undefined') {
   // Analytics is lazy and never runs in emulator mode or unsupported environments (e.g. jsdom).
   void import('firebase/analytics').then(async ({ getAnalytics, isSupported }) => {

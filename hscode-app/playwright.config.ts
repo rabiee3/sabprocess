@@ -3,8 +3,9 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: 'e2e',
   fullyParallel: true,
+  forbidOnly: !!process.env.CI,
   reporter: [['list'], ['html', { open: 'never' }]],
-  use: { baseURL: 'http://localhost:5173/hscode/' },
+  use: { baseURL: 'http://localhost:5174/hscode/' },
   projects: [
     {
       name: 'mobile',
@@ -18,9 +19,11 @@ export default defineConfig({
     { name: 'desktop', use: { viewport: { width: 1280, height: 800 } } },
   ],
   webServer: {
-    command: 'npx vite --mode emulator --port 5173',
-    url: 'http://localhost:5173/hscode/',
-    reuseExistingServer: !process.env.CI,
+    // Always our own emulator-mode server on a dedicated port: never reuse a dev server that may
+    // point at production (hscode-egypt).
+    command: 'npx vite --mode emulator --port 5174 --strictPort',
+    url: 'http://localhost:5174/hscode/',
+    reuseExistingServer: false,
     timeout: 60000,
   },
 })

@@ -7,6 +7,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: { outDir: '../hscode', emptyOutDir: true },
   test: {
+    // Every test run (unit and rules) targets the emulators / demo-hscode, never production.
+    env: { VITE_USE_EMULATOR: 'true' },
     projects: [
       {
         extends: true,

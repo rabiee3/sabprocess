@@ -3,6 +3,9 @@ import { expect, test } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/tile.openstreetmap.org/**', (route) => route.fulfill({ status: 204, body: '' }))
+  // Guard: every test fails unless the app runs in emulator mode, so e2e never reaches production.
+  await page.goto('./')
+  await expect(page.locator('html'), 'app is not in emulator mode').toHaveAttribute('data-emulator', 'true')
 })
 
 test('shell loads in EN, toggles to AR RTL without horizontal scroll, passes axe', async ({ page }) => {
