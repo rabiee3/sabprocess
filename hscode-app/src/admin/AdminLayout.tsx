@@ -57,6 +57,12 @@ export function AdminLayout() {
   const { pathname } = useLocation()
   // The drawer is open only on the path it was opened at, so any navigation (incl. Back) closes it.
   const [openAt, setOpenAt] = useState<string | null>(null)
+  const [seenPath, setSeenPath] = useState(pathname)
+  if (seenPath !== pathname) {
+    // Any navigation clears the open state, so Back to the path it was opened at cannot reopen it.
+    setSeenPath(pathname)
+    setOpenAt(null)
+  }
   const open = openAt === pathname
   const setOpen = (o: boolean) => setOpenAt(o ? pathname : null)
   const toggleRef = useRef<HTMLButtonElement>(null)

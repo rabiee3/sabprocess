@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEffect } from 'react'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router'
 import { initI18n } from '../i18n'
 import en from '../i18n/en.json'
 
@@ -24,6 +24,10 @@ import { useAdmin } from './AdminContext'
 import { AdminLayout } from './AdminLayout'
 
 let refresh2: () => void
+function BackButton() {
+  const navigate = useNavigate()
+  return <button onClick={() => void navigate(-1)}>back</button>
+}
 function Spy() {
   const { refreshPending } = useAdmin()
   useEffect(() => {
@@ -117,6 +121,25 @@ describe('AdminRoute', () => {
     expect(btn).toHaveAttribute('aria-expanded', 'true')
     await userEvent.click(screen.getByRole('link', { name: en.admin.nav.surveyors }))
     expect(btn).toHaveAttribute('aria-expanded', 'false')
+  })
+  it('Back to the path the drawer was opened at does not reopen it', async () => {
+    auth = { user, role: 'admin', active: true, loading: false }
+    const { container } = render(
+      <MemoryRouter initialEntries={['/admin/review']}>
+        <Routes>
+          <Route path="/admin/*" element={<AdminRoute />} />
+        </Routes>
+        <BackButton />
+      </MemoryRouter>,
+    )
+    const btn = screen.getByRole('button', { name: en.admin.menu })
+    await userEvent.click(btn)
+    await userEvent.click(screen.getByRole('link', { name: en.admin.nav.surveyors }))
+    await userEvent.click(screen.getByRole('button', { name: 'back' }))
+    expect(screen.getByRole('heading', { level: 1, name: en.admin.nav.review })).toBeInTheDocument()
+    expect(btn).toHaveAttribute('aria-expanded', 'false')
+    expect(container.querySelector('aside')).toHaveAttribute('inert')
+    expect(container.querySelector('aside')!.contains(document.activeElement)).toBe(false)
   })
   it('the badge has accessible text in the link name', async () => {
     auth = { user, role: 'admin', active: true, loading: false }
