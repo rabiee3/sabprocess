@@ -288,6 +288,7 @@
       "empty": "No surveyors yet."
     },
     "create": {
+      "pinRequired": "Tap the map where the factory is.",
       "contact": "Contact",
       "sample": "Sample (demo) factory",
       "sampleHint": "Marks this factory as demo data. It is published to the map right away.",

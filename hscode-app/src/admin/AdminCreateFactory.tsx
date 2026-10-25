@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { validateFactoryFields } from '../lib/factoryValidation'
@@ -16,7 +16,8 @@ import { adminCreateFactory } from './repo'
 /** Fields and contact checks, plus a pin the admin has placed by hand (a new factory has no stored one). */
 function createErrors(d: Draft): string[] {
   const errs = validateFactoryFields(d)
-  if (!d.location || !d.location.pinMoved || !insideEgypt(d.location.lat, d.location.lng)) errs.push('survey.location.required')
+  if (!d.location || !d.location.pinMoved) errs.push('admin.create.pinRequired')
+  else if (!insideEgypt(d.location.lat, d.location.lng)) errs.push('survey.location.required')
   return errs
 }
 
@@ -38,14 +39,18 @@ export function AdminCreateFactory() {
   const [sample, setSample] = useState(false)
   const [showErrors, setShowErrors] = useState(false)
   const [busy, setBusy] = useState(false)
+  const inFlight = useRef(false)
+  // Area the pin was placed under: freezes the picker's key so later area changes don't reset a placed pin.
+  const [frozenArea, setFrozenArea] = useState<string | null>(null)
   const [error, setError] = useState<ActionError | null>(null)
 
   const errors = showErrors ? createErrors(draft) : []
 
   async function save() {
-    if (busy) return
+    if (inFlight.current) return
     setShowErrors(true)
     if (createErrors(draft).length > 0) return
+    inFlight.current = true
     setBusy(true)
     setError(null)
     try {
@@ -56,6 +61,7 @@ export function AdminCreateFactory() {
       navigate(`/admin/factories/${id}`, { replace: true, state: { created: name } })
     } catch (e) {
       setError(classify(e))
+      inFlight.current = false
       setBusy(false)
     }
   }
@@ -67,7 +73,11 @@ export function AdminCreateFactory() {
       </Link>
       {error && <Banner tone="danger">{t(ERROR_KEY[error])}</Banner>}
       {errors.length > 0 && <Banner tone="danger">{t('admin.factories.detail.fixErrors')}</Banner>}
-      <AdminFactoryForm value={draft} errors={errors} onChange={setDraft} />
+      <AdminFactoryForm value={draft} errors={errors} pickerKey={frozenArea ?? draft.area}
+        onChange={(next) => {
+          if (next.location?.pinMoved && !draft.location?.pinMoved) setFrozenArea(draft.area)
+          setDraft(next)
+        }} />
       <section>
         <h3 className="mb-2 text-title font-semibold text-ink-strong">{t('admin.create.contact')}</h3>
         <StepContacts draft={draft} dispatch={dispatch} errors={errors} />
