@@ -21,7 +21,7 @@ export function StatusChip({ status }: { status: ChipStatus }) {
   const s = STYLES[status]
   return (
     <span data-chip className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${s.box}`}>
-      <span aria-hidden="true" className="size-4 shrink-0" dangerouslySetInnerHTML={{ __html: s.svg }} />
+      <span aria-hidden="true" className="size-4 shrink-0 [&>svg]:size-4" dangerouslySetInnerHTML={{ __html: s.svg }} />
       {t(`survey.list.${status}`)}
     </span>
   )

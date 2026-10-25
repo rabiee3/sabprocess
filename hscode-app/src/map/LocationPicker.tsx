@@ -131,7 +131,7 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
           {hasFix && accuracyM !== null && gps.coords && (
             <Circle center={[gps.coords.lat, gps.coords.lng]} radius={accuracyM} />
           )}
-          <Marker position={[pin.lat, pin.lng]} icon={icon} draggable eventHandlers={handlers} />
+          <Marker position={[pin.lat, pin.lng]} icon={icon} title={t('survey.location.hint')} draggable eventHandlers={handlers} />
         </MapView>
         <button
           type="button"

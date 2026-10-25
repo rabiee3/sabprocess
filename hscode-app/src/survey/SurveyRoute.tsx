@@ -51,6 +51,7 @@ export function Component() {
     return (
       <Shell>
         <main className="flex justify-center p-8">
+          <h1 className="sr-only">{t('common.loading')}</h1>
           <div
             role="status"
             aria-label={t('common.loading')}
@@ -78,6 +79,7 @@ export function Component() {
     return (
       <Shell>
         <main className="p-4">
+          <h1 className="sr-only">{t('nav.surveyors')}</h1>
           <p className="text-body text-ink-subtle">{t('survey.gate.adminNote')}</p>
           <Link to="/admin" className="mt-3 inline-flex min-h-touch items-center font-semibold text-blue-800 underline">
             {t('nav.admin')}

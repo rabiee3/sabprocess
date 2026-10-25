@@ -40,7 +40,7 @@ export function Stepper({ step, total, title, onClose, onBack, onNext, nextLabel
         </div>
       </header>
       <main className="mx-auto w-full max-w-md flex-1 p-4 pb-28">{children}</main>
-      <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface p-3">
+      <footer className="fixed inset-x-0 bottom-0 border-t border-line bg-surface p-3">
         <div className="mx-auto flex max-w-md gap-3">
           {onBack && (
             <button
@@ -60,7 +60,7 @@ export function Stepper({ step, total, title, onClose, onBack, onNext, nextLabel
             {nextLabel}
           </button>
         </div>
-      </div>
+      </footer>
     </div>
   )
 }

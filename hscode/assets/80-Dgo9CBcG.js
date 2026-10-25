@@ -1,0 +1,1 @@
+var e=[{code:`800110`,en:`Tin; unwrought, not alloyed`},{code:`800120`,en:`Tin; unwrought, alloys`},{code:`800200`,en:`Tin; waste and scrap`},{code:`800300`,en:`Tin; bars, rods, profiles and wire`},{code:`800700`,en:`Tin; articles n.e.c. in chapter 80`}];export{e as default};

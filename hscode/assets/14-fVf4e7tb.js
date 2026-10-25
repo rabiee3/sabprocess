@@ -1,0 +1,1 @@
+var e=[{code:`140110`,en:`Bamboo used primarily for plaiting`},{code:`140120`,en:`Rattans used primarily for plaiting`},{code:`140190`,en:`Vegetable materials of a kind used primarily for plaiting; n.e.c. in heading no. 1401`},{code:`140420`,en:`Vegetable products; cotton linters`},{code:`140490`,en:`Vegetable products; n.e.c. in chapter 14`}];export{e as default};

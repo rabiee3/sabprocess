@@ -98,6 +98,26 @@ batch.set(db.doc('invites/111111'), {
   createdAt: Timestamp.now(),
 })
 
+batch.set(db.doc('invites/012345'), { usedBy: null, cancelled: false, createdAt: Timestamp.now() })
+
+// A rejected submission by s1, for trying "Fix and resubmit" by hand in dev.
+batch.set(db.doc('factories/demo-rejected'), {
+  name: { en: 'Rejected Demo Works', ar: '' },
+  area: 'oct6-zone-1',
+  sector: 'plastics-packaging',
+  location: { lat: 29.9228, lng: 30.9129, accuracyM: 20, pinMoved: true },
+  productsMade: [product('Plastic crates', '', '3923')],
+  productsNeeded: [],
+  photoCount: 0,
+  status: 'rejected',
+  rejectReason: 'Photo is blurry',
+  createdBy: 's1',
+  createdAt: ts(now),
+  updatedAt: ts(now),
+  sample: false,
+})
+batch.set(db.doc('factories/demo-rejected/private/contact'), { phone: '+20 100 000 0004', whatsappSameAsPhone: true })
+
 const user = (role: string, name: string) => ({
   role,
   active: true,
@@ -109,4 +129,4 @@ batch.set(db.doc('users/s1'), { ...user('surveyor', 'Demo Surveyor'), inviteCode
 batch.set(db.doc('users/c1'), user('client', 'Demo Client'))
 
 await batch.commit()
-console.log(`Seeded ${factories.length} factories, 2 invites, 2 users.`)
+console.log(`Seeded ${factories.length} approved factories, 3 invites, 2 users, 1 rejected factory.`)

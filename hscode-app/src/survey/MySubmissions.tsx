@@ -151,7 +151,7 @@ export function MySubmissions() {
           })}
         </ul>
       </main>
-      <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface p-3">
+      <footer className="fixed inset-x-0 bottom-0 border-t border-line bg-surface p-3">
         <Link
           to="new"
           className="mx-auto flex min-h-cta max-w-md items-center justify-center gap-2 rounded bg-brand-500 px-4 text-body font-semibold text-ink-strong"
@@ -159,7 +159,7 @@ export function MySubmissions() {
           <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: plusIcon }} />
           {t('survey.list.add')}
         </Link>
-      </div>
+      </footer>
     </>
   )
 }
