@@ -35,7 +35,7 @@ export type AdminEdit = Partial<
   Pick<Factory, 'name' | 'area' | 'areaOther' | 'address' | 'sector' | 'location' | 'productsMade' | 'productsNeeded'>
 >
 
-type Shard = { exists: boolean; entries: IndexEntry[] }
+export type Shard = { exists: boolean; entries: IndexEntry[] }
 
 const PHOTO_IDS = ['p1', 'p2', 'p3'] as const
 const OPTIONAL_TEXT = ['areaOther', 'address', 'sector'] as const
@@ -74,13 +74,13 @@ async function readFresh(tx: Transaction, fs: Firestore, fid: string, openedAt: 
   return factory
 }
 
-async function readShard(tx: Transaction, fs: Firestore): Promise<Shard> {
+export async function readShard(tx: Transaction, fs: Firestore): Promise<Shard> {
   const snap = await tx.get(shardRef(fs))
   const entries = snap.exists() ? ((snap.data().entries as IndexEntry[] | undefined) ?? []) : []
   return { exists: snap.exists(), entries }
 }
 
-function writeShard(tx: Transaction, fs: Firestore, s: Shard, entries: IndexEntry[], isRemoval = false) {
+export function writeShard(tx: Transaction, fs: Firestore, s: Shard, entries: IndexEntry[], isRemoval = false) {
   // Removals are never blocked by the size limit.
   if (!isRemoval && indexFill(entries) > INDEX_LIMIT) throw new AdminError('indexFull')
   // set() would reset increment() to 0 + 1, so an existing shard is updated instead.

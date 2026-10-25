@@ -49,4 +49,10 @@ describe('toIndexEntry', () => {
     expect('en' in e.m[0].n).toBe(false);
     expect(e.n).not.toBe(base.name);
   });
+
+  it('flags sample factories with x: true and omits x otherwise', () => {
+    expect(toIndexEntry({ ...base, sample: true }).x).toBe(true);
+    expect('x' in toIndexEntry(base)).toBe(false);
+    expect('x' in toIndexEntry({ ...base, sample: false })).toBe(false);
+  });
 });

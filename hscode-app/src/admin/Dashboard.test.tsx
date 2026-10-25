@@ -18,6 +18,8 @@ vi.mock('./demo', () => ({
   loadDemoFactories: (...a: unknown[]) => loadDemoFactories(...a),
   removeDemoFactories: (...a: unknown[]) => removeDemoFactories(...a),
 }))
+const rebuildSearchIndex = vi.fn()
+vi.mock('./rebuildIndex', () => ({ rebuildSearchIndex: (...a: unknown[]) => rebuildSearchIndex(...a) }))
 vi.mock('./repo', () => {
   class AdminError extends Error {
     readonly code: string
@@ -57,6 +59,7 @@ beforeEach(async () => {
   await initI18n()
   loadStats.mockReset().mockResolvedValue(stats(0.5))
   loadDemoFactories.mockReset().mockResolvedValue({ added: 8, skipped: 2 })
+  rebuildSearchIndex.mockReset().mockResolvedValue({ count: 7 })
   removeDemoFactories.mockReset().mockResolvedValue({ removed: 5 })
   countSubmissions.mockReset().mockImplementation(async (uid: string) => {
     if (uid === 'u1') return { pending: 1, approved: 5, rejected: 2 }
@@ -123,6 +126,25 @@ describe('Dashboard', () => {
     expect(screen.queryByText(re)).toBeNull()
     expect(container.querySelector('a[download]')).toBeNull()
     expect(within(container).queryAllByRole('link')).toHaveLength(0)
+  })
+
+  describe('rebuild search index', () => {
+    it('confirms, rebuilds and shows the count', async () => {
+      await setup()
+      await userEvent.click(screen.getByRole('button', { name: 'Rebuild search index' }))
+      expect(rebuildSearchIndex).not.toHaveBeenCalled()
+      await userEvent.click(screen.getByRole('button', { name: 'Rebuild now' }))
+      expect(await screen.findByText('Rebuilt: 7 factories')).toBeInTheDocument()
+      expect(rebuildSearchIndex).toHaveBeenCalledTimes(1)
+      await waitFor(() => expect(loadStats).toHaveBeenCalledTimes(2))
+    })
+    it('shows the index-full error', async () => {
+      rebuildSearchIndex.mockRejectedValue(new AdminError('indexFull'))
+      await setup()
+      await userEvent.click(screen.getByRole('button', { name: 'Rebuild search index' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Rebuild now' }))
+      expect(await screen.findByRole('alert')).toBeInTheDocument()
+    })
   })
 
   describe('demo data', () => {

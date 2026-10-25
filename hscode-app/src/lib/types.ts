@@ -54,6 +54,8 @@ export interface IndexEntry {
   m: { n: LocalizedName; h?: string }[];
   d: { n: LocalizedName; h?: string }[];
   at?: number;
+  /** Sample (demo) factory. */
+  x?: true;
 }
 
 export const EGYPT_BOUNDS = { minLat: 21.5, maxLat: 32, minLng: 24.5, maxLng: 37 } as const;

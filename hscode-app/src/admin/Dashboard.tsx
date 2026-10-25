@@ -7,6 +7,7 @@ import { DataTable, type Column } from '../ui/DataTable'
 import { classify, type ActionError } from './classify'
 import { loadDemoFactories, removeDemoFactories } from './demo'
 import { DEMO_FACTORIES } from './demoFactories'
+import { rebuildSearchIndex } from './rebuildIndex'
 import { INDEX_LIMIT } from './searchIndex'
 import { loadStats, STATUSES, type AreaCount, type Count, type Stats } from './stats'
 import { countSubmissions, subscribeSurveyors, type SubmissionCounts } from './surveyors'
@@ -66,6 +67,8 @@ export function Dashboard() {
   const asked = useRef(new Set<string>())
   const [demo, setDemo] = useState<DemoState>({ running: null, progress: null, notice: null })
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [confirmRebuild, setConfirmRebuild] = useState(false)
+  const [rebuild, setRebuild] = useState<{ running: boolean; notice: DemoState['notice'] }>({ running: false, notice: null })
 
   const load = useCallback(
     () =>
@@ -93,6 +96,20 @@ export function Dashboard() {
       notice = { tone: 'danger', text: t(ERROR_KEY[classify(e)]) }
     }
     setDemo({ running: null, progress: null, notice })
+    void load()
+  }
+
+  async function runRebuild() {
+    if (rebuild.running) return
+    setRebuild({ running: true, notice: null })
+    let notice: DemoState['notice']
+    try {
+      const r = await rebuildSearchIndex()
+      notice = { tone: 'success', text: t('admin.dash.rebuildDone', { n: r.count }) }
+    } catch (e) {
+      notice = { tone: 'danger', text: t(ERROR_KEY[classify(e)]) }
+    }
+    setRebuild({ running: false, notice })
     void load()
   }
 
@@ -177,6 +194,18 @@ export function Dashboard() {
           {t('admin.dash.indexTitle')}
         </h2>
         {stats && <IndexFill fill={stats.indexFill} />}
+        <p className="text-sm text-ink-subtle">{t('admin.dash.rebuildBody')}</p>
+        {rebuild.notice && <Banner tone={rebuild.notice.tone}>{rebuild.notice.text}</Banner>}
+        <div>
+          <button
+            type="button"
+            disabled={rebuild.running}
+            onClick={() => setConfirmRebuild(true)}
+            className="min-h-cta rounded border border-line bg-surface px-4 text-body font-semibold text-ink-strong disabled:opacity-50"
+          >
+            {rebuild.running ? t('admin.dash.rebuildRunning') : t('admin.dash.rebuild')}
+          </button>
+        </div>
       </section>
 
       <section aria-labelledby="dash-areas" className="flex flex-col gap-3">
@@ -234,6 +263,30 @@ export function Dashboard() {
           </button>
         </div>
       </section>
+      <BottomSheet open={confirmRebuild} title={t('admin.dash.rebuildTitle')} onClose={() => setConfirmRebuild(false)}>
+        <div className="flex flex-col gap-4 p-4">
+          <p className="text-body text-ink">{t('admin.dash.rebuildBody')}</p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setConfirmRebuild(false)}
+              className="min-h-cta rounded border border-line bg-surface px-4 text-body font-semibold text-ink-strong"
+            >
+              {t('admin.factories.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmRebuild(false)
+                void runRebuild()
+              }}
+              className="min-h-cta flex-1 rounded bg-green-700 px-4 text-body font-semibold text-white"
+            >
+              {t('admin.dash.rebuildConfirm')}
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
       <BottomSheet open={confirmRemove} title={t('admin.dash.demoRemoveTitle')} onClose={() => setConfirmRemove(false)}>
         <div className="flex flex-col gap-4 p-4">
           <Banner tone="danger">{t('admin.dash.demoRemoveBody')}</Banner>

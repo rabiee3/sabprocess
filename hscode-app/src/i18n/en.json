@@ -386,6 +386,12 @@
       "demoNone": "There are no demo factories to remove.",
       "demoRemoveTitle": "Remove all demo factories?",
       "demoRemoveBody": "Every factory flagged as a sample will be permanently deleted with its photos and contact details. Real factories are not touched. This can't be undone.",
+      "rebuild": "Rebuild search index",
+      "rebuildBody": "Recreate the public search index from every approved factory. Use it if the map and the approved list disagree. It replaces the index, so an approval made at the same moment may need a second run.",
+      "rebuildTitle": "Rebuild search index?",
+      "rebuildConfirm": "Rebuild now",
+      "rebuildDone": "Rebuilt: {{n}} factories",
+      "rebuildRunning": "Working…",
       "demoRemoveConfirm": "Remove permanently"
     }
   },
