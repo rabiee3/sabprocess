@@ -54,6 +54,8 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
   const { t } = useTranslation()
   const gps = useGeolocation()
   const [userPin, setPin] = useState<LatLng>(() => value ?? areaCenter)
+  // A stored value is a fixed starting pin: GPS fixes never replace it.
+  const [fixed] = useState(!!value)
   const [moved, setMoved] = useState(value?.pinMoved ?? false)
   const onChangeRef = useRef(onChange)
   useEffect(() => {
@@ -64,7 +66,7 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
   const accuracyM = gps.status === 'ok' && gps.accuracyM !== undefined ? gps.accuracyM : (value?.accuracyM ?? null)
 
   // The pin follows the GPS fix until the surveyor moves it (or the saved value was moved).
-  const pin: LatLng = !moved && hasFix && gps.coords ? gps.coords : userPin
+  const pin: LatLng = !fixed && !moved && hasFix && gps.coords ? gps.coords : userPin
 
   useEffect(() => {
     onChangeRef.current({ lat: pin.lat, lng: pin.lng, accuracyM, pinMoved: moved }, gps.status)
@@ -90,7 +92,7 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
   function myLocation() {
     if (gps.coords) {
       setPin({ lat: gps.coords.lat, lng: gps.coords.lng })
-      setMoved(false)
+      setMoved(fixed)
     }
     gps.retry()
   }

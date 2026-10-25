@@ -116,6 +116,23 @@ describe('LocationPicker', () => {
     expect(last()[0]).toMatchObject({ lat: 29.9, lng: 31.2, pinMoved: false })
   })
 
+  it('a stored value is never replaced by a GPS fix; My location moves it deliberately', async () => {
+    geo.mockReturnValue({ status: 'pending', retry })
+    const value = { lat: 28, lng: 30, accuracyM: null, pinMoved: false }
+    const { rerender } = render(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
+    geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
+    rerender(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
+    expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '28')
+    for (const [loc] of onChange.mock.calls) {
+      expect(loc.lat).toBe(28)
+      expect(loc.pinMoved).toBe(false)
+    }
+    expect(last()[0]).toMatchObject({ lat: 28, lng: 30, accuracyM: 12, pinMoved: false })
+    await userEvent.click(screen.getByRole('button', { name: 'My location' }))
+    expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '29.9')
+    expect(last()[0]).toMatchObject({ lat: 29.9, lng: 31.2, pinMoved: true })
+  })
+
   it('uses value as initial pin', () => {
     geo.mockReturnValue({ status: 'denied', retry })
     render(

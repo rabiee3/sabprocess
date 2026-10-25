@@ -43,6 +43,15 @@ describe('useGeolocation', () => {
     expect(result.current.status).toBe('denied')
   })
 
+  it('unavailable on error code 2, timeout on code 3', () => {
+    const { result } = renderHook(() => useGeolocation())
+    act(() => onErr({ code: 2 }))
+    expect(result.current.status).toBe('unavailable')
+    act(() => result.current.retry())
+    act(() => onErr({ code: 3 }))
+    expect(result.current.status).toBe('timeout')
+  })
+
   it('timeout when no fix arrives', () => {
     const { result } = renderHook(() => useGeolocation())
     act(() => void vi.advanceTimersByTime(15000))

@@ -40,7 +40,7 @@ export function useGeolocation(opts: { timeoutMs?: number } = {}): UseGeolocatio
       (e) => {
         clearTimeout(timer)
         // Keep an existing fix on transient errors; only report when nothing usable yet.
-        setState((s) => (s.status === 'ok' ? s : { status: e.code === 1 ? 'denied' : 'timeout' }))
+        setState((s) => (s.status === 'ok' ? s : { status: e.code === 1 ? 'denied' : e.code === 2 ? 'unavailable' : 'timeout' }))
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: timeoutMs },
     )
