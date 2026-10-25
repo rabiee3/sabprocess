@@ -67,7 +67,9 @@
       "gpsOff": "Location is off. The pin starts at the centre of the selected area. Move it onto the factory before saving.",
       "weak": "GPS signal is weak. Move the pin onto the gate by hand.",
       "myLocation": "My location",
-      "accuracy": "GPS ±{{m}} m"
+      "accuracy": "GPS ±{{m}} m",
+      "required": "Place the pin on the factory inside Egypt.",
+      "mustMove": "Move the pin onto the factory before continuing."
     },
     "basics": {
       "nameEn": "Factory name (English)",
@@ -76,7 +78,9 @@
       "area": "Industrial area",
       "areaOther": "Other area",
       "sector": "Sector",
-      "address": "Address or landmark"
+      "address": "Address or landmark",
+      "areaRequired": "Choose an industrial area.",
+      "areaOtherRequired": "Enter the name of the area."
     },
     "products": {
       "made": "Products made",
@@ -84,7 +88,8 @@
       "name": "Product name",
       "hsOptional": "HS code (optional)",
       "add": "Add product",
-      "remove": "Remove product"
+      "remove": "Remove product",
+      "nameRequired": "Enter a product name."
     },
     "contacts": {
       "intro": "Optional — skip anything the factory prefers not to share.",
