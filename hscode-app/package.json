@@ -13,11 +13,11 @@
     "preview": "vite preview",
     "data:hs": "node scripts/build-hs-data.mjs",
     "emu": "firebase emulators:start --only firestore,auth --project demo-hscode",
-    "test:rules": "node scripts/check-ports.mjs && firebase emulators:exec --only firestore --project demo-hscode \"vitest run --project rules\"",
+    "test:rules": "node scripts/with-emulators.mjs firestore \"vitest run --project rules\"",
     "deploy:rules": "firebase deploy --only firestore:rules --project hscode-egypt",
     "emu:dev": "vite --mode emulator --port 5174 --strictPort",
     "seed:emu": "tsx seed/seed-emulator.ts",
-    "e2e": "node scripts/check-ports.mjs && firebase emulators:exec --only firestore,auth --project demo-hscode \"npm run seed:emu && playwright test\"",
+    "e2e": "node scripts/with-emulators.mjs firestore,auth \"npm run seed:emu && playwright test\"",
     "verify": "npm run lint && npm run typecheck && npm test && npm run test:rules && npm run e2e && npm run build && npm run check:build"
   },
   "dependencies": {
