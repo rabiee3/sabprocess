@@ -21,6 +21,7 @@
     "verify": "npm run lint && npm run typecheck && npm test && npm run test:rules && npm run e2e && npm run build && npm run check:build"
   },
   "dependencies": {
+    "browser-image-compression": "^2.0.2",
     "firebase": "^13.1.0",
     "i18next": "^26.5.10",
     "react": "^19.3.1",

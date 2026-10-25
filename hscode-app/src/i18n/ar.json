@@ -15,7 +15,8 @@
     "admin": "الإدارة"
   },
   "common": {
-    "comingSoon": "قريبًا"
+    "comingSoon": "قريبًا",
+    "close": "إغلاق"
   },
   "role": {
     "client": "عميل",

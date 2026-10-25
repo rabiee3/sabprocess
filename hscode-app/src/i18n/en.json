@@ -15,7 +15,8 @@
     "admin": "Admin"
   },
   "common": {
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "close": "Close"
   },
   "role": {
     "client": "Client",
