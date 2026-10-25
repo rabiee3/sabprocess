@@ -5,7 +5,7 @@ service cloud.firestore {
   match /databases/{db}/documents {
     function signedIn() { return request.auth != null; }
     // The admin signs in with email/password, so the admin check is the UID alone.
-    function isAdmin() { return signedIn() && request.auth.uid == 'k0a0b8HhATfZuFcC0clBqGmtGmF3'; }
+    function isAdmin() { return signedIn() && request.auth.uid == 'CYQ2CC3DXMTne79XA79vqsYxB8R2'; }
     // Every other user signs in with Google (spec §2); use this, never bare signedIn(), in non-admin branches.
     function isGoogle() { return signedIn() && request.auth.token.firebase.sign_in_provider == 'google.com'; }
     function userDoc() { return get(/databases/$(db)/documents/users/$(request.auth.uid)); }

@@ -1,6 +1,6 @@
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
-import { asAdmin, asUser, asVisitor, seed } from './helpers'
+import { ADMIN_UID, asAdmin, asUser, asVisitor, seed } from './helpers'
 import { seedFactory, seedUsersAndInvites, validFactory } from './fixtures'
 
 beforeEach(async () => {
@@ -220,7 +220,7 @@ describe('factories: admin and delete', () => {
     await assertSucceeds(
       setDoc(
         doc(asAdmin(), 'factories/fSample'),
-        validFactory('k0a0b8HhATfZuFcC0clBqGmtGmF3', {
+        validFactory(ADMIN_UID, {
           status: 'approved',
           sample: true,
           approvedAt: serverTimestamp(),

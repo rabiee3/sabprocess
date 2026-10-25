@@ -14,7 +14,7 @@ import { INDEX_LIMIT, indexFill } from '../../src/admin/searchIndex'
 import { resubmitFactory } from '../../src/survey/repo'
 import type { IndexEntry } from '../../src/lib/types'
 import type { FactoryInput } from '../../src/survey/types'
-import { asAdmin, seed } from './helpers'
+import { ADMIN_UID, asAdmin, seed } from './helpers'
 import { seedFactory, seedUsersAndInvites, validContact, validFactory, validPhoto } from './fixtures'
 import { asUser } from './helpers'
 
@@ -236,7 +236,7 @@ describe('adminCreateFactory', () => {
     const fs = asAdmin()
     const fid = await adminCreateFactory(input, { sample: true }, fs)
     const f = (await getDoc(doc(fs, `factories/${fid}`))).data()!
-    expect(f).toMatchObject({ status: 'approved', sample: true, photoCount: 1, createdBy: 'k0a0b8HhATfZuFcC0clBqGmtGmF3' })
+    expect(f).toMatchObject({ status: 'approved', sample: true, photoCount: 1, createdBy: ADMIN_UID })
     expect(f.approvedAt).toBeDefined()
     expect((await getDoc(doc(fs, `factories/${fid}/photos/p1`))).data()).toMatchObject({ order: 0 })
     expect((await getDoc(doc(fs, `factories/${fid}/private/contact`))).data()).toEqual({ phone: '0100' })
