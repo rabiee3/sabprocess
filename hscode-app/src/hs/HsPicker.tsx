@@ -30,6 +30,7 @@ export function HsPicker({ open, productLabel, value, onUse, onClose }: Props) {
   const [browsing, setBrowsing] = useState(false)
   const [chapter, setChapter] = useState<string | undefined>()
   const [subs, setSubs] = useState<HsSub[]>([])
+  const [subsFailed, setSubsFailed] = useState(false)
   const seq = useRef(0)
 
   useEffect(() => {
@@ -47,14 +48,21 @@ export function HsPicker({ open, productLabel, value, onUse, onClose }: Props) {
   }, [open])
 
   useEffect(() => {
+    setSubsFailed(false)
     if (!heading) {
       setSubs([])
       return
     }
     let live = true
-    void loadSubheadings(heading).then((s) => {
-      if (live) setSubs(s)
-    })
+    // The subheading chunk is lazy-loaded; offline and uncached it fails.
+    loadSubheadings(heading).then(
+      (s) => live && setSubs(s),
+      () => {
+        if (!live) return
+        setSubs([])
+        setSubsFailed(true)
+      },
+    )
     return () => {
       live = false
     }
@@ -88,7 +96,7 @@ export function HsPicker({ open, productLabel, value, onUse, onClose }: Props) {
     const code = digits.slice(0, 4)
     if (!headings().some((h) => h.code === code)) return
     const my = ++seq.current
-    void loadSubheadings(code).then((list) => {
+    void loadSubheadings(code).catch((): HsSub[] => []).then((list) => {
       if (my !== seq.current) return
       const subCode = digits.slice(0, 6)
       const subOk = list.some((s) => s.code === subCode)
@@ -212,6 +220,8 @@ export function HsPicker({ open, productLabel, value, onUse, onClose }: Props) {
             )}
           </div>
         ) : null}
+
+        {heading && subsFailed && <p className="mt-5 text-sm text-ink-subtle">{t('hs.needsConnection')}</p>}
 
         {heading && subs.length > 0 && (
           <>

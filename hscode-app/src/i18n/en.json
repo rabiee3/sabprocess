@@ -119,7 +119,7 @@
       "intro": "Up to 3 photos. The gate and signboard help the admin approve faster.",
       "camera": "Camera",
       "gallery": "Gallery",
-      "failed": "This photo couldn't be added — try another",
+      "failed": "This photo couldn't be added — try the Camera button, or pick a JPEG photo",
       "remove": "Remove photo"
     },
     "review": {
@@ -153,7 +153,8 @@
     "knowTariff": "Optional — I know the full 10-digit code",
     "noResults": "No matching heading. Try another word or a code.",
     "back": "Back",
-    "chapter": "Chapter {{code}}"
+    "chapter": "Chapter {{code}}",
+    "needsConnection": "More detail needs a connection"
   },
   "errors": {
     "offline": "You're offline — connect to continue",

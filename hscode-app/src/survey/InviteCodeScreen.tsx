@@ -7,7 +7,9 @@ import { Banner } from '../ui/Banner'
 import { DigitInput } from '../ui/DigitInput'
 import { useOnline } from '../ui/useOnline'
 
-type Status = 'idle' | 'busy' | 'unlocking' | 'invalid' | 'error'
+type Status = 'idle' | 'busy' | 'timeout' | 'unlocking' | 'invalid' | 'error'
+
+const CLAIM_TIMEOUT_MS = 15000
 
 export function InviteCodeScreen() {
   const { t } = useTranslation()
@@ -31,6 +33,9 @@ export function InviteCodeScreen() {
     if (!user || !code || !online || inFlight.current) return
     inFlight.current = true
     setStatus('busy')
+    // A claim with no connection is queued and may never settle here: stop spinning, say so. If it applies
+    // later, the result below (or the users-doc snapshot) still unlocks; a second tap waits for this claim.
+    const timer = setTimeout(() => setStatus((s) => (s === 'busy' ? 'timeout' : s)), CLAIM_TIMEOUT_MS)
     try {
       // Decide only on the claim's return value; the role flips later via the auth snapshot.
       const result = await claimInvite(user, code)
@@ -38,6 +43,7 @@ export function InviteCodeScreen() {
     } catch {
       setStatus('error')
     } finally {
+      clearTimeout(timer)
       inFlight.current = false
     }
   }
@@ -65,6 +71,7 @@ export function InviteCodeScreen() {
       />
       {!online && <Banner tone="warning">{t('errors.offline')}</Banner>}
       {status === 'invalid' && <Banner tone="danger">{t('survey.invite.invalid')}</Banner>}
+      {status === 'timeout' && online && <Banner tone="warning">{t('errors.offline')}</Banner>}
       {status === 'error' && <Banner tone="danger">{t(online ? 'errors.generic' : 'errors.offline')}</Banner>}
       {status === 'unlocking' && !slow && <Banner tone="success">{t('survey.invite.unlocking')}</Banner>}
       {status === 'unlocking' && slow && role !== 'surveyor' && (

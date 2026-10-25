@@ -10,6 +10,10 @@ import type { StepProps } from './shared'
 
 const WEAK_M = 50
 
+type Lang = 'en' | 'ar'
+/** A name in the current language, else in the other one. */
+const nameIn = (n: { en: string; ar: string }, lang: Lang) => (lang === 'ar' ? n.ar || n.en : n.en || n.ar)
+
 function Section({ title, onEdit, children }: { title: string; onEdit: () => void; children: ReactNode }) {
   const { t } = useTranslation()
   return (
@@ -26,14 +30,14 @@ function Section({ title, onEdit, children }: { title: string; onEdit: () => voi
   )
 }
 
-function Products({ list, variant }: { list: ProductDraft[]; variant: 'made' | 'needed' }) {
+function Products({ list, variant, lang }: { list: ProductDraft[]; variant: 'made' | 'needed'; lang: Lang }) {
   return (
     <ul>
       {list.map((p) => {
         const code = hsString(p.hs)
         return (
           <li key={p.key} className="flex items-center gap-2 py-0.5">
-            <span>{p.name.en || p.name.ar}</span>
+            <span>{nameIn(p.name, lang)}</span>
             {code && <HsBadge code={code} variant={variant} />}
           </li>
         )
@@ -45,7 +49,7 @@ function Products({ list, variant }: { list: ProductDraft[]; variant: 'made' | '
 export function StepReview({ draft, goTo }: StepProps & { goTo: (s: StepId) => void }) {
   const { t, i18n } = useTranslation()
   const online = useOnline()
-  const lang = i18n.language.startsWith('ar') ? 'ar' : 'en'
+  const lang: Lang = i18n.language.startsWith('ar') ? 'ar' : 'en'
   const area = areas().find((a) => a.id === draft.area)
   const sector = sectors().find((s) => s.id === draft.sector)
   const loc = draft.location
@@ -76,16 +80,16 @@ export function StepReview({ draft, goTo }: StepProps & { goTo: (s: StepId) => v
         )}
       </Section>
       <Section title={t('survey.step.basics')} onEdit={() => goTo('basics')}>
-        <p className="font-semibold">{draft.name[lang] || draft.name.en || draft.name.ar}</p>
+        <p className="font-semibold">{nameIn(draft.name, lang)}</p>
         <p>{area ? area[lang] : draft.area}{draft.area === 'other' && draft.areaOther ? ` — ${draft.areaOther}` : ''}</p>
         {sector && <p>{sector[lang]}</p>}
         {draft.address && <p>{draft.address}</p>}
       </Section>
       <Section title={t('survey.step.products')} onEdit={() => goTo('products')}>
         <p className="font-semibold">{t('survey.products.made')}</p>
-        <Products list={draft.productsMade} variant="made" />
+        <Products list={draft.productsMade} variant="made" lang={lang} />
         <p className="mt-2 font-semibold">{t('survey.products.needed')}</p>
-        <Products list={draft.productsNeeded} variant="needed" />
+        <Products list={draft.productsNeeded} variant="needed" lang={lang} />
       </Section>
       <Section title={t('survey.step.contacts')} onEdit={() => goTo('contacts')}>
         {contactLines.map(([k, l]) => (

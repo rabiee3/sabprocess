@@ -106,4 +106,24 @@ describe('InviteCodeScreen', () => {
       expect(screen.queryByText(en.survey.invite.unlockSlow)).toBeNull()
     })
   })
+
+  it('a claim that has not settled after 15 s stops spinning and shows the offline message; a late ok still unlocks', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let settle: (v: 'ok') => void = () => {}
+    claimInvite.mockImplementation(() => new Promise((r) => (settle = r)))
+    render(<InviteCodeScreen />)
+    await enter('012345')
+    await userEvent.click(unlock())
+    expect(unlock()).toBeDisabled()
+    expect(screen.queryByText(en.errors.offline)).toBeNull()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15000)
+    })
+    expect(screen.getByText(en.errors.offline)).toBeInTheDocument()
+    expect(unlock()).toBeEnabled()
+    await act(async () => settle('ok'))
+    expect(screen.getByText(en.survey.invite.unlocking)).toBeInTheDocument()
+    expect(claimInvite).toHaveBeenCalledTimes(1)
+  })
 })
+

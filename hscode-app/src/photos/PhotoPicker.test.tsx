@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { initI18n, setLanguage } from '../i18n'
 import type { PhotoData } from '../survey/types'
+import en from '../i18n/en.json'
 
 const compressPhoto = vi.fn()
 const makeThumb = vi.fn()
@@ -66,7 +67,9 @@ describe('PhotoPicker', () => {
     })
     render(<Harness />)
     await userEvent.upload(gallery(), [f('ok'), f('bad')])
-    expect(await screen.findByText("This photo couldn't be added — try another")).toBeInTheDocument()
+    expect(await screen.findByText(en.survey.photos.failed)).toBeInTheDocument()
+    expect(en.survey.photos.failed).toMatch(/Camera/)
+    expect(en.survey.photos.failed).toMatch(/JPEG/)
     expect(screen.getAllByRole('button', { name: 'Remove photo' })).toHaveLength(1)
   })
 

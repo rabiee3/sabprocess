@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { initI18n } from '../i18n'
@@ -425,4 +425,34 @@ describe('FactoryStepper', () => {
       expect(screen.getByText('LIST storageFull')).toBeInTheDocument()
     })
   })
+
+  it('review shows factory and product names in the current language, falling back to the other', () => {
+    saveDraft(
+      'u1',
+      fullDraft({
+        name: { en: 'Acme', ar: 'أكمي' },
+        productsMade: [
+          { key: 'a', name: { en: 'Pipe', ar: 'ماسورة' } },
+          { key: 'b', name: { en: 'Valve', ar: '' } },
+        ],
+        productsNeeded: [{ key: 'c', name: { en: '', ar: 'حديد' } }],
+      }),
+    )
+    const i18n = initI18n()
+    void i18n.changeLanguage('ar')
+    try {
+      renderAt('/survey/new?step=review')
+      expect(screen.getByText('أكمي')).toBeInTheDocument()
+      expect(screen.getByText('ماسورة')).toBeInTheDocument()
+      expect(screen.queryByText('Pipe')).toBeNull()
+      expect(screen.getByText('Valve')).toBeInTheDocument()
+    } finally {
+      void i18n.changeLanguage('en')
+    }
+    cleanup()
+    renderAt('/survey/new?step=review')
+    expect(screen.getByText('Pipe')).toBeInTheDocument()
+    expect(screen.getByText('حديد')).toBeInTheDocument()
+  })
 })
+
