@@ -118,7 +118,7 @@ describe('LocationPicker', () => {
 
   it('a stored value is never replaced by a GPS fix; My location moves it deliberately', async () => {
     geo.mockReturnValue({ status: 'pending', retry })
-    const value = { lat: 28, lng: 30, accuracyM: null, pinMoved: false }
+    const value = { lat: 28, lng: 30, accuracyM: 7, pinMoved: false }
     const { rerender } = render(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
     geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
     rerender(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
@@ -127,10 +127,21 @@ describe('LocationPicker', () => {
       expect(loc.lat).toBe(28)
       expect(loc.pinMoved).toBe(false)
     }
-    expect(last()[0]).toMatchObject({ lat: 28, lng: 30, accuracyM: 12, pinMoved: false })
+    expect(last()[0]).toEqual({ lat: 28, lng: 30, accuracyM: 7, pinMoved: false })
+    expect(screen.getByText(/GPS ±12/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'My location' }))
     expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '29.9')
-    expect(last()[0]).toMatchObject({ lat: 29.9, lng: 31.2, pinMoved: true })
+    expect(last()[0]).toEqual({ lat: 29.9, lng: 31.2, accuracyM: 12, pinMoved: true })
+  })
+
+  it('value-backed: drag or nudge emits accuracyM null', async () => {
+    geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
+    const value = { lat: 28, lng: 30, accuracyM: 7, pinMoved: false }
+    render(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
+    await userEvent.click(screen.getByTestId('marker'))
+    expect(last()[0]).toEqual({ lat: 30.5, lng: 31.5, accuracyM: null, pinMoved: true })
+    await userEvent.click(screen.getByRole('button', { name: 'Move pin north' }))
+    expect(last()[0].accuracyM).toBeNull()
   })
 
   it('uses value as initial pin', () => {

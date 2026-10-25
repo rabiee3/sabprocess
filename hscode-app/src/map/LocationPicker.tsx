@@ -56,6 +56,8 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
   const [userPin, setPin] = useState<LatLng>(() => value ?? areaCenter)
   // A stored value is a fixed starting pin: GPS fixes never replace it.
   const [fixed] = useState(!!value)
+  // Value-backed mode: where the emitted accuracy comes from (stored value, a deliberate GPS fix, or a manual move).
+  const [accSrc, setAccSrc] = useState<'stored' | 'fix' | 'manual'>('stored')
   const [moved, setMoved] = useState(value?.pinMoved ?? false)
   const onChangeRef = useRef(onChange)
   useEffect(() => {
@@ -63,14 +65,22 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
   })
 
   const hasFix = gps.status === 'ok' && !!gps.coords
-  const accuracyM = gps.status === 'ok' && gps.accuracyM !== undefined ? gps.accuracyM : (value?.accuracyM ?? null)
+  const liveAccuracyM = gps.status === 'ok' && gps.accuracyM !== undefined ? gps.accuracyM : (value?.accuracyM ?? null)
+  const accuracyM = liveAccuracyM // display only: banner, circle, label
+  const emitAccuracyM = !fixed
+    ? liveAccuracyM
+    : accSrc === 'stored'
+      ? (value?.accuracyM ?? null)
+      : accSrc === 'fix'
+        ? (gps.accuracyM ?? null)
+        : null
 
   // The pin follows the GPS fix until the surveyor moves it (or the saved value was moved).
   const pin: LatLng = !fixed && !moved && hasFix && gps.coords ? gps.coords : userPin
 
   useEffect(() => {
-    onChangeRef.current({ lat: pin.lat, lng: pin.lng, accuracyM, pinMoved: moved }, gps.status)
-  }, [pin.lat, pin.lng, accuracyM, moved, gps.status])
+    onChangeRef.current({ lat: pin.lat, lng: pin.lng, accuracyM: emitAccuracyM, pinMoved: moved }, gps.status)
+  }, [pin.lat, pin.lng, emitAccuracyM, moved, gps.status])
 
   const icon = useMemo(() => pinIcon('selected'), [])
   const handlers = useMemo(
@@ -79,6 +89,7 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
         const ll = e.target.getLatLng()
         setPin({ lat: ll.lat, lng: ll.lng })
         setMoved(true)
+        setAccSrc('manual')
       },
     }),
     [],
@@ -87,12 +98,14 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
   function move(dir: Dir) {
     setPin(nudge(pin, dir))
     setMoved(true)
+    setAccSrc('manual')
   }
 
   function myLocation() {
     if (gps.coords) {
       setPin({ lat: gps.coords.lat, lng: gps.coords.lng })
       setMoved(fixed)
+      setAccSrc('fix')
     }
     gps.retry()
   }
