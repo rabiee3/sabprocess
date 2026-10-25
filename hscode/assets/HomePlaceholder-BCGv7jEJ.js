@@ -1,1 +1,0 @@
-import{t as e}from"./Placeholder-1FHL15Tz.js";import{s as t}from"./index-BBs0sTtL.js";var n=t();function r(){return(0,n.jsx)(e,{titleKey:`app.tagline`})}export{r as Component};
