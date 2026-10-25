@@ -137,7 +137,8 @@ test('(c) offline submit is saved on the phone, survives a reload, then uploads 
   await expect(row(page, en.survey.list.savedOnPhone)).toHaveCount(0)
 })
 
-test('(d) a rejected factory shows the reason; Fix and resubmit returns it to Pending', async ({ page }) => {
+// Skipped while ALLOW_EDIT (src/survey/features.ts) is false: editing and resubmitting is hidden. Re-enable with the switch.
+test.skip('(d) a rejected factory shows the reason; Fix and resubmit returns it to Pending', async ({ page }) => {
   const email = newEmail('d')
   await becomeSurveyor(page, email, await freshInvite())
   await startFactoryToReview(page, 'E2E Rejected Works')

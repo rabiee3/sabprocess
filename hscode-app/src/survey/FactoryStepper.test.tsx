@@ -374,6 +374,25 @@ describe('FactoryStepper', () => {
       renderAt('/survey/new?resume=fold&step=basics')
       expect(screen.getByLabelText(en.survey.basics.nameEn)).toHaveValue('Resumed')
     })
+
+    it('resuming a failed draft whose doc already exists on the server gets a new fid and clears the old draft', async () => {
+      saveDraft('u1', fullDraft({ fid: 'fold', name: { en: 'Resumed', ar: '' } }))
+      outbox.add('u1', 'fold')
+      outbox.markFailed('u1', 'fold', 'rejected')
+      render(
+        <MemoryRouter initialEntries={[{ pathname: '/survey/new', search: '?resume=fold&step=review', state: { docExists: true } }]}>
+          <Routes>
+            <Route path="/survey" element={<ListStub />} />
+            <Route path="/survey/new" element={<FactoryStepper mode="new" />} />
+          </Routes>
+        </MemoryRouter>,
+      )
+      await user.click(screen.getByRole('button', { name: en.survey.review.submit }))
+      expect(repo.submitFactory).toHaveBeenCalledWith('u1', 'fnew', expect.objectContaining({ name: { en: 'Resumed' } }))
+      expect(loadDraft('u1', 'fold')).toBeNull()
+      expect(outbox.list('u1').map((e) => e.fid)).toEqual(['fnew'])
+      expect(outbox.list('u1')[0]).toMatchObject({ kind: 'new' })
+    })
   })
 
   describe('storage (F5)', () => {

@@ -13,9 +13,9 @@ const item = (id: string, updatedAt: number, pendingWrite = false, status: Facto
 })
 
 /** Submits fid at device time `at`. */
-function submittedAt(fid: string, at: number) {
+function submittedAt(fid: string, at: number, kind: 'new' | 'edit' = 'edit') {
   vi.setSystemTime(at)
-  outbox.add('u1', fid)
+  outbox.add('u1', fid, kind)
 }
 
 beforeEach(() => {
@@ -47,6 +47,18 @@ describe('reconcile', () => {
     const out = reconcile('u1', [item('a', T - 10 * MIN)], false)
     expect(out).toMatchObject([{ fid: 'a', state: 'failed', error: 'rejected' }])
     expect(loadDraft('u1', 'a')).not.toBeNull()
+  })
+
+  it('a NEW entry is confirmed by its doc even when the phone clock runs an hour ahead', () => {
+    saveDraft('u1', emptyDraft('a'))
+    submittedAt('a', T + 60 * MIN, 'new')
+    expect(reconcile('u1', [item('a', T)], false)).toEqual([])
+    expect(loadDraft('u1', 'a')).toBeNull()
+  })
+
+  it('an entry without a kind (old data) is treated as new', () => {
+    localStorage.setItem('hscode.outbox.u1', JSON.stringify([{ fid: 'a', savedAt: T + 60 * MIN, submittedAt: T + 60 * MIN, state: 'saved' }]))
+    expect(reconcile('u1', [item('a', T)], false)).toEqual([])
   })
 
   it('a doc still pending locally changes nothing', () => {

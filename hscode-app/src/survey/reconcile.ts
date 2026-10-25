@@ -7,8 +7,9 @@ export const SKEW_MS = 5 * 60 * 1000
 
 /**
  * Matches this user's outbox against a My-submissions snapshot and returns the updated entries.
- * - Doc confirmed by the server (no pending write) at or after the submit: entry done, its draft dropped.
- * - Doc confirmed but older than the submit: the write never landed (e.g. rejected while the app was closed) → failed 'rejected'.
+ * - New factory whose doc the server confirmed (no pending write): entry done, its draft dropped. No clock comparison.
+ * - Edit: same, but only when the doc's updatedAt is at or after the submit (within SKEW_MS).
+ * - Edit confirmed but older than the submit: the write never landed (e.g. rejected while the app was closed) → failed 'rejected'.
  * - Doc missing from a server snapshot: the create never landed → failed 'generic'. Cache-only snapshots prove nothing.
  * Drafts of approved factories are dropped too (they can't be edited any more).
  */
@@ -17,7 +18,8 @@ export function reconcile(uid: string, items: SubmissionItem[], fromCache: boole
   for (const e of outbox.list(uid)) {
     const hit = byId.get(e.fid)
     if (hit && !hit.pendingWrite) {
-      if (hit.factory.updatedAt.getTime() >= e.submittedAt - SKEW_MS) {
+      // A new factory is proven by its doc alone (no clock involved); only an edit needs the clock check.
+      if (e.kind === 'new' || hit.factory.updatedAt.getTime() >= e.submittedAt - SKEW_MS) {
         outbox.remove(uid, e.fid)
         clearDraft(uid, e.fid)
       } else if (e.state === 'saved') {

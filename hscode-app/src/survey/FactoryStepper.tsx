@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { Banner } from '../ui/Banner'
 import { Stepper } from '../ui/Stepper'
@@ -13,6 +13,7 @@ import {
   emptyDraft,
   latestNewDraft,
   loadDraft,
+  saveDraft,
   stepErrors,
   toFactoryInput,
   type Draft,
@@ -82,7 +83,7 @@ function Form({ uid, initial, mode }: { uid: string; initial: Draft; mode: 'new'
     submitted.current = true
     // Keep the final draft and queue the fid; the Firestore write is queued either way.
     const draftSaved = autosave.finish(draft)
-    const queued = outbox.add(uid, draft.fid)
+    const queued = outbox.add(uid, draft.fid, mode)
     // The draft stays until the outcome is known: a failed upload reopens it from My submissions.
     const fid = draft.fid
     commit.then(
@@ -174,12 +175,25 @@ function EditLoader({ uid }: { uid: string }) {
   )
 }
 
+/** The same content under a brand-new fid, as a 'new' draft; the old draft and its outbox row are dropped. */
+function reissueDraft(uid: string, old: Draft): Draft {
+  const fresh: Draft = { ...old, fid: newFactoryId(), mode: 'new', previousPhotoIds: [] }
+  saveDraft(uid, fresh)
+  clearDraft(uid, old.fid)
+  outbox.remove(uid, old.fid)
+  return fresh
+}
+
 function NewLoader({ uid }: { uid: string }) {
   const [params] = useSearchParams()
+  const docExists = (useLocation().state as { docExists?: boolean } | null)?.docExists === true
   const [initial] = useState(() => {
     // ?resume=<fid>: reopen that draft (a failed upload from My submissions).
     const resume = params.get('resume')
     const saved = resume ? loadDraft(uid, resume) : null
+    // The doc already exists on the server: submitting under its fid would be an update the rules reject.
+    // Keep the content, move it to a fresh fid and drop the old draft and outbox row.
+    if (saved && docExists) return reissueDraft(uid, saved)
     return (saved?.mode === 'new' ? saved : null) ?? latestNewDraft(uid) ?? emptyDraft(newFactoryId())
   })
   return <Form uid={uid} initial={initial} mode="new" />

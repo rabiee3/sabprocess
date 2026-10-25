@@ -11,6 +11,7 @@ import siloImg from '../assets/placeholders/photo-silo.svg'
 import plantImg from '../assets/placeholders/photo-plant.svg'
 import warehouseImg from '../assets/placeholders/photo-warehouse.svg'
 import plusIcon from '../assets/icons/plus.svg?raw'
+import { ALLOW_EDIT } from './features'
 import { outbox, type OutboxEntry } from './outbox'
 import { reconcile } from './reconcile'
 import { subscribeMySubmissions, type SubmissionItem, type SurveyErrorCode } from './repo'
@@ -115,6 +116,8 @@ export function MySubmissions() {
             const entry = entryOf(f.id)
             const failed = entry?.state === 'failed'
             const chip: ChipStatus = failed ? 'uploadFailed' : pendingWrite ? 'savedOnPhone' : (f.status as ChipStatus) // query excludes hidden
+            // Editing is off: a failed upload reopens the kept draft as a new factory, never as an edit.
+            const link = ALLOW_EDIT ? `edit/${f.id}` : failed ? `new?resume=${encodeURIComponent(f.id)}` : null
             const body = (
               <div className="flex items-start gap-3">
                 <img src={f.thumb || placeholderFor(f.id)} alt="" className="size-16 shrink-0 rounded object-cover" />
@@ -129,8 +132,8 @@ export function MySubmissions() {
             )
             return (
               <li key={f.id} className="rounded border border-line bg-surface p-3">
-                {f.status !== 'approved' ? (
-                  <Link to={`edit/${f.id}`} className="block min-h-touch">
+                {f.status !== 'approved' && link ? (
+                  <Link to={link} state={ALLOW_EDIT ? undefined : { docExists: true }} className="block min-h-touch">
                     {body}
                   </Link>
                 ) : (
@@ -143,7 +146,7 @@ export function MySubmissions() {
                     <p className="text-ink">{f.rejectReason}</p>
                   </div>
                 )}
-                {f.status === 'rejected' && (
+                {ALLOW_EDIT && f.status === 'rejected' && (
                   <Link
                     to={`edit/${f.id}`}
                     className="mt-2 flex min-h-touch items-center justify-center rounded border border-brand-700 px-3 font-semibold text-brand-900"

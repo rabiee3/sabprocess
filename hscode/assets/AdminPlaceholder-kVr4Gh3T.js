@@ -1,1 +1,0 @@
-import{t as e}from"./Placeholder-DV2B6LPR.js";import{c as t}from"./index-DDn7BFjG.js";var n=t();function r(){return(0,n.jsx)(e,{titleKey:`nav.admin`,areaLabel:`admin`})}export{r as Component};
