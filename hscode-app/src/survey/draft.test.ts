@@ -57,6 +57,11 @@ describe('reducer', () => {
     expect(d.thumb).toBeUndefined()
     expect('thumb' in d).toBe(false)
   })
+  it('mustMove applies to new drafts only', () => {
+    const base = { ...emptyDraft('f1'), location: { lat: 30, lng: 31, accuracyM: null, pinMoved: false }, gpsStatus: 'denied' as const }
+    expect(stepErrors(base, 'location')).toContain('survey.location.mustMove')
+    expect(stepErrors({ ...base, mode: 'edit' }, 'location')).toEqual([])
+  })
   it('product keys are unique', () => {
     expect(productKey()).not.toBe(productKey())
   })

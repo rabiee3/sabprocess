@@ -131,7 +131,7 @@ export function stepErrors(d: Draft, step: StepId): string[] {
   switch (step) {
     case 'location':
       if (!d.location || !insideEgypt(d.location.lat, d.location.lng)) out.push('survey.location.required')
-      else if (d.gpsStatus !== 'ok' && !d.location.pinMoved) out.push('survey.location.mustMove')
+      else if (d.mode === 'new' && d.gpsStatus !== 'ok' && !d.location.pinMoved) out.push('survey.location.mustMove')
       break
     case 'basics':
       if (blank(d.name.en) && blank(d.name.ar)) out.push('survey.basics.nameRequired')

@@ -58,6 +58,7 @@ function Form({ initial, mode }: { initial: Draft; mode: 'new' | 'edit' }) {
   }
 
   function submit() {
+    if (submitted.current) return
     for (const s of STEPS) {
       if (stepErrors(draft, s).length > 0) {
         markTried(s)

@@ -50,7 +50,15 @@ export function StepReview({ draft, goTo }: StepProps & { goTo: (s: StepId) => v
   const sector = sectors().find((s) => s.id === draft.sector)
   const loc = draft.location
   const c = draft.contact
-  const contactLines = [c.phone, c.whatsappSameAsPhone ? c.phone : c.whatsapp, c.website, c.facebook, c.contactPerson].filter(Boolean)
+  const contactLines = (
+    [
+      ['phone', c.phone],
+      ['whatsapp', c.whatsappSameAsPhone ? c.phone : c.whatsapp],
+      ['website', c.website],
+      ['facebook', c.facebook],
+      ['person', c.contactPerson],
+    ] as [string, string | undefined][]
+  ).filter(([, v]) => v)
   return (
     <div>
       <h2 className="mb-2 text-title font-semibold text-ink-strong">{t('survey.review.title')}</h2>
@@ -80,8 +88,8 @@ export function StepReview({ draft, goTo }: StepProps & { goTo: (s: StepId) => v
         <Products list={draft.productsNeeded} variant="needed" />
       </Section>
       <Section title={t('survey.step.contacts')} onEdit={() => goTo('contacts')}>
-        {contactLines.map((l) => (
-          <p key={l} dir="auto">
+        {contactLines.map(([k, l]) => (
+          <p key={k} dir="auto">
             {l}
           </p>
         ))}

@@ -18,12 +18,21 @@ vi.mock('./repo', async (orig) => ({
   resubmitFactory: vi.fn(() => Promise.resolve()),
   loadFactoryForEdit: vi.fn(),
 }))
+const pickerProps: { current: { value?: unknown } } = { current: {} }
+let pickerStatus = 'ok'
+let pickerMoved = true
 vi.mock('../map/LocationPicker', () => ({
-  LocationPicker: ({ onChange }: { onChange: (l: unknown, s: string) => void }) => (
-    <button type="button" onClick={() => onChange({ lat: 30, lng: 31, accuracyM: 10, pinMoved: true }, 'ok')}>
-      set-pin
-    </button>
-  ),
+  LocationPicker: (props: { value?: unknown; onChange: (l: unknown, s: string) => void }) => {
+    pickerProps.current = props
+    return (
+      <button
+        type="button"
+        onClick={() => props.onChange({ lat: 30, lng: 31, accuracyM: 10, pinMoved: pickerMoved }, pickerStatus)}
+      >
+        set-pin
+      </button>
+    )
+  },
 }))
 vi.mock('../photos/PhotoPicker', () => ({
   PhotoPicker: ({ onChange }: { onChange: (p: unknown, t?: string | null) => void }) => (
@@ -74,6 +83,9 @@ describe('FactoryStepper', () => {
     initI18n()
     localStorage.clear()
     online = true
+    pickerStatus = 'ok'
+    pickerMoved = true
+    pickerProps.current = {}
     vi.clearAllMocks()
     vi.mocked(repo.submitFactory).mockImplementation(() => Promise.resolve())
   })
@@ -210,6 +222,51 @@ describe('FactoryStepper', () => {
     first.unmount()
     renderAt('/survey/new?step=basics')
     expect(screen.getByLabelText(en.survey.basics.nameEn)).toHaveValue('Zed')
+  })
+
+  it('new mode: an unmoved stored pin is not passed as a fixed value, a moved one is', () => {
+    saveDraft(fullDraft({ location: { lat: 30, lng: 31, accuracyM: 10, pinMoved: false } }))
+    const a = renderAt('/survey/new')
+    expect(pickerProps.current.value).toBeUndefined()
+    a.unmount()
+    saveDraft(fullDraft())
+    renderAt('/survey/new')
+    expect(pickerProps.current.value).toMatchObject({ pinMoved: true })
+  })
+
+  it('edit mode: a stored unmoved pin with GPS denied does not block Next', async () => {
+    pickerStatus = 'denied'
+    pickerMoved = false
+    vi.mocked(repo.loadFactoryForEdit).mockResolvedValue({
+      factory: {
+        id: 'f9',
+        name: { en: 'Old' },
+        area: 'obour',
+        location: { lat: 30, lng: 31, accuracyM: null, pinMoved: false },
+        productsMade: [],
+        productsNeeded: [],
+        photoCount: 0,
+        status: 'rejected',
+        createdBy: 'u1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Factory,
+      contact: {},
+      photos: [],
+    })
+    renderAt('/survey/edit/f9', 'edit')
+    await screen.findByText('set-pin')
+    expect(pickerProps.current.value).toMatchObject({ pinMoved: false })
+    await user.click(screen.getByText('set-pin'))
+    await next()
+    expect(screen.getByText('Step 2 of 6')).toBeInTheDocument()
+  })
+
+  it('two fast submit clicks call submitFactory once', async () => {
+    saveDraft(fullDraft())
+    renderAt('/survey/new?step=review')
+    await user.dblClick(screen.getByRole('button', { name: en.survey.review.submit }))
+    expect(repo.submitFactory).toHaveBeenCalledTimes(1)
   })
 
   it('an invalid step param falls back to location', () => {

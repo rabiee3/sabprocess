@@ -13,8 +13,7 @@ export function StepLocation({ draft, dispatch, errors }: StepProps) {
       <h2 className="text-title font-semibold text-ink-strong">{t('survey.location.title')}</h2>
       <p className="mb-3 text-body-sm text-ink-subtle">{t('survey.location.hint')}</p>
       <LocationPicker
-        key="location-picker"
-        value={draft.location}
+        value={draft.mode === 'edit' || draft.location?.pinMoved ? draft.location : undefined}
         areaCenter={center}
         onChange={(location, status) => {
           dispatch({ type: 'setLocation', location })
