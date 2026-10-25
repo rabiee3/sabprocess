@@ -1,6 +1,6 @@
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, getDoc, serverTimestamp, setDoc, writeBatch, type Firestore } from 'firebase/firestore'
-import { asAdmin, asUser, asUserWithProvider, emailOf, seed } from './helpers'
+import { asAdmin, asUser, asUserWithProvider, emailOf, seed, type SignInProvider } from './helpers'
 import { seedFactory, seedUsersAndInvites, validContact, validFactory } from './fixtures'
 
 // Spec §2: every non-admin user signs in with Google. The admin signs in with email/password and is
@@ -38,7 +38,7 @@ function claimCreateBatch(db: Firestore, uid: string, code: string, email = emai
   return batch.commit()
 }
 
-describe.each(['password', 'anonymous'])("non-Google provider '%s'", (provider) => {
+describe.each<SignInProvider>(['password', 'anonymous'])("non-Google provider '%s'", (provider) => {
   const as = (uid: string) => asUserWithProvider(uid, provider)
 
   it('✗ reads private/contact of an approved factory', async () => {

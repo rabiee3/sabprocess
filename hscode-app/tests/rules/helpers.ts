@@ -35,8 +35,11 @@ function current(): RulesTestEnvironment {
 
 export const asVisitor = (): Firestore =>
   current().unauthenticatedContext().firestore() as unknown as Firestore
-/** Token claims: `sign_in_provider` (google.com, password, anonymous, ...) and an optional email. */
-export type TokenClaims = { provider: string; email?: string }
+type TokenOptions = NonNullable<Parameters<RulesTestEnvironment['authenticatedContext']>[1]>
+/** A `sign_in_provider` value: 'google.com', 'password', 'anonymous', ... */
+export type SignInProvider = NonNullable<NonNullable<TokenOptions['firebase']>['sign_in_provider']>
+/** Token claims: the sign-in provider and an optional email. */
+type TokenClaims = { provider: SignInProvider; email?: string }
 
 const contextFor = (uid: string, { provider, email }: TokenClaims): Firestore =>
   current()
@@ -53,7 +56,7 @@ export const emailOf = (uid: string): string => `${uid}@example.com`
 export const asUser = (uid: string): Firestore => contextFor(uid, { provider: 'google.com', email: emailOf(uid) })
 
 /** Same uid/email as asUser, but another sign-in provider (negative tests). Pass `email: null` to omit it. */
-export const asUserWithProvider = (uid: string, provider: string, email: string | null = emailOf(uid)): Firestore =>
+export const asUserWithProvider = (uid: string, provider: SignInProvider, email: string | null = emailOf(uid)): Firestore =>
   contextFor(uid, { provider, email: email ?? undefined })
 
 /** The admin signs in with email/password; the rules trust the UID alone. */
