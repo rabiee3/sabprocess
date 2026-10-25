@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import {
+  classifySubmitError,
   loadFactoryForEdit,
   newFactoryId,
   resubmitFactory,
@@ -64,6 +65,33 @@ describe('submitFactory', () => {
     )
     expect(err).not.toBeNull()
     expect(toSurveyError(err)).toBe('accessOff')
+  })
+})
+
+describe('classifySubmitError', () => {
+  const deniedFor = (uid: string, over: Partial<FactoryInput> = {}) => {
+    const fs = asUser(uid)
+    return submitFactory(uid, newFactoryId(fs), input(over), fs).then(
+      () => {
+        throw new Error('expected a denied write')
+      },
+      (e: unknown) => ({ e, fs }),
+    )
+  }
+
+  it('an inactive surveyor maps to accessOff', async () => {
+    const { e, fs } = await deniedFor('off')
+    expect(await classifySubmitError(e, 'off', fs)).toBe('accessOff')
+  })
+
+  it('an active surveyor with an invalid payload maps to rejected', async () => {
+    const { e, fs } = await deniedFor('s1', { name: { en: 'x'.repeat(121) } })
+    expect(await classifySubmitError(e, 's1', fs)).toBe('rejected')
+  })
+
+  it('a client (not a surveyor) maps to accessOff', async () => {
+    const { e, fs } = await deniedFor('c1')
+    expect(await classifySubmitError(e, 'c1', fs)).toBe('accessOff')
   })
 })
 

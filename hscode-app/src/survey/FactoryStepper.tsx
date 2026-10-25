@@ -20,7 +20,15 @@ import {
   type StepId,
 } from './draft'
 import { outbox } from './outbox'
-import { loadFactoryForEdit, newFactoryId, resubmitFactory, submitFactory, toSurveyError, type SurveyErrorCode } from './repo'
+import {
+  classifySubmitError,
+  loadFactoryForEdit,
+  newFactoryId,
+  resubmitFactory,
+  submitFactory,
+  toSurveyError,
+  type SurveyErrorCode,
+} from './repo'
 import { StepBasics } from './steps/StepBasics'
 import { StepContacts } from './steps/StepContacts'
 import { StepLocation } from './steps/StepLocation'
@@ -77,7 +85,8 @@ function Form({ uid, initial, mode }: { uid: string; initial: Draft; mode: 'new'
     submitted.current = true
     outbox.add(uid, draft.fid)
     clearDraft(uid, draft.fid)
-    commit.catch((e: unknown) => outbox.markFailed(uid, draft.fid, toSurveyError(e)))
+    const fid = draft.fid
+    commit.catch((e: unknown) => classifySubmitError(e, uid).then((code) => outbox.markFailed(uid, fid, code)))
     navigate(LIST)
   }
 

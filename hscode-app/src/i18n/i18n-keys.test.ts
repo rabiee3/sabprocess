@@ -23,7 +23,7 @@ const REQUIRED: Record<string, string[]> = {
   'survey.contacts': ['intro', 'phone', 'whatsapp', 'sameAsPhone', 'website', 'facebook', 'person'],
   'survey.photos': ['intro', 'camera', 'gallery', 'failed', 'remove'],
   'survey.review': ['title', 'offlineBanner', 'pinNotMoved', 'weakGps', 'submit', 'saveOnPhone', 'edit'],
-  errors: ['offline', 'accessOff', 'quota', 'generic'],
+  errors: ['offline', 'accessOff', 'rejected', 'quota', 'generic'],
 }
 
 const E = flatten(en)

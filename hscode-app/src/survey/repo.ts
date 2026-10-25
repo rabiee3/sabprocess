@@ -18,7 +18,7 @@ import { db } from '../firebase'
 import type { Factory } from '../lib/types'
 import type { ContactDraft, FactoryInput, PhotoData } from './types'
 
-export type SurveyErrorCode = 'offline' | 'accessOff' | 'quota' | 'generic'
+export type SurveyErrorCode = 'offline' | 'accessOff' | 'rejected' | 'quota' | 'generic'
 export type SubmissionItem = { factory: Factory; pendingWrite: boolean }
 
 export function toSurveyError(e: unknown): SurveyErrorCode {
@@ -35,6 +35,22 @@ export function toSurveyError(e: unknown): SurveyErrorCode {
       return 'quota'
     default:
       return 'generic'
+  }
+}
+
+/**
+ * Like toSurveyError, but a denied write is blamed on the account only when the account really is off:
+ * `users/{uid}` (always readable by its owner) says inactive or not a surveyor. Otherwise the rules
+ * rejected the data itself ('rejected'), and so does an unreadable user doc (we can't tell).
+ */
+export async function classifySubmitError(e: unknown, uid: string, fs: Firestore = db): Promise<SurveyErrorCode> {
+  const code = toSurveyError(e)
+  if (code !== 'accessOff') return code
+  try {
+    const u = (await getDoc(doc(fs, `users/${uid}`))).data()
+    return !u || u.active === false || u.role !== 'surveyor' ? 'accessOff' : 'rejected'
+  } catch {
+    return 'rejected'
   }
 }
 

@@ -157,6 +157,7 @@
   "errors": {
     "offline": "You're offline — connect to continue",
     "accessOff": "Your surveyor access was turned off",
+    "rejected": "This factory couldn't be saved — open it and check the details.",
     "quota": "HSCode is busy right now — please try again later",
     "generic": "Something went wrong. Please try again."
   }

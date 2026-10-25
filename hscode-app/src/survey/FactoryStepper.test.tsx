@@ -17,6 +17,7 @@ vi.mock('./repo', async (orig) => ({
   submitFactory: vi.fn(() => Promise.resolve()),
   resubmitFactory: vi.fn(() => Promise.resolve()),
   loadFactoryForEdit: vi.fn(),
+  classifySubmitError: vi.fn(() => Promise.resolve('rejected')),
 }))
 const pickerProps: { current: { value?: unknown } } = { current: {} }
 let pickerStatus = 'ok'
@@ -196,12 +197,15 @@ describe('FactoryStepper', () => {
     expect(await screen.findByText(en.errors.offline)).toBeInTheDocument()
   })
 
-  it('a permission-denied commit marks the outbox entry accessOff', async () => {
-    vi.mocked(repo.submitFactory).mockImplementation(() => Promise.reject({ code: 'permission-denied' }))
+  it('a rejected commit is classified by classifySubmitError and marks the outbox entry', async () => {
+    const denied = { code: 'permission-denied' }
+    vi.mocked(repo.submitFactory).mockImplementation(() => Promise.reject(denied))
+    vi.mocked(repo.classifySubmitError).mockResolvedValue('rejected')
     saveDraft('u1', fullDraft())
     renderAt('/survey/new?step=review')
     await user.click(screen.getByRole('button', { name: en.survey.review.submit }))
-    await waitFor(() => expect(outbox.list('u1')).toMatchObject([{ fid: 'fnew', state: 'failed', error: 'accessOff' }]))
+    await waitFor(() => expect(outbox.list('u1')).toMatchObject([{ fid: 'fnew', state: 'failed', error: 'rejected' }]))
+    expect(repo.classifySubmitError).toHaveBeenCalledWith(denied, 'u1')
   })
 
   it('a synchronous throw while online keeps the form and shows the error', async () => {
