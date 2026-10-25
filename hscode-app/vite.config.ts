@@ -7,9 +7,29 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: { outDir: '../hscode', emptyOutDir: true },
   test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: ['src/test-setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          globals: true,
+          environment: 'jsdom',
+          setupFiles: ['src/test-setup.ts'],
+          include: ['src/**/*.test.{ts,tsx}'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'rules',
+          globals: true,
+          environment: 'node',
+          include: ['tests/rules/**/*.rules.test.ts'],
+          fileParallelism: false,
+          testTimeout: 20000,
+          hookTimeout: 30000,
+        },
+      },
+    ],
   },
 })
