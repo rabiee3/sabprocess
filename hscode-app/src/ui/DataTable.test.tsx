@@ -25,22 +25,23 @@ afterEach(() => {
 describe('DataTable', () => {
   it('renders a semantic table at wide widths', () => {
     mockWidth(false)
-    render(<DataTable columns={columns} rows={rows} rowKey={(r) => r.id} />)
-    expect(screen.getByRole('table')).toBeInTheDocument()
+    render(<DataTable columns={columns} rows={rows} rowKey={(r) => r.id} label="Things" />)
+    expect(screen.getByRole('table', { name: 'Things' })).toBeInTheDocument()
     expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Alpha', 'Beta'])
     expect(screen.getByText('y!')).toBeInTheDocument()
   })
   it('renders header: value cards at 375px', () => {
     mockWidth(true)
-    render(<DataTable columns={columns} rows={rows} rowKey={(r) => r.id} />)
+    render(<DataTable columns={columns} rows={rows} rowKey={(r) => r.id} label="Things" />)
     expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.getByRole('list', { name: 'Things' })).toBeInTheDocument()
     expect(screen.getByText('Alpha')).toBeInTheDocument()
     expect(screen.getByText('y!')).toBeInTheDocument()
     expect(screen.getAllByRole('listitem')).toHaveLength(1)
   })
   it('shows the empty node when there are no rows', () => {
     mockWidth(false)
-    render(<DataTable columns={columns} rows={[]} rowKey={(r) => r.id} empty="Nothing" />)
+    render(<DataTable columns={columns} rows={[]} rowKey={(r) => r.id} empty="Nothing" label="Things" />)
     expect(screen.getByText('Nothing')).toBeInTheDocument()
   })
 })

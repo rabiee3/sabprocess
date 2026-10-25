@@ -8,6 +8,8 @@ export type Column<T> = {
 }
 
 type Props<T> = {
+  /** Accessible name of the table / card list. */
+  label: string
   columns: Column<T>[]
   rows: T[]
   rowKey: (row: T) => string
@@ -41,7 +43,7 @@ function cell<T>(c: Column<T>, row: T): ReactNode {
 const HIGHLIGHT = 'bg-brand-50'
 
 /** A semantic table (sticky header, scrolls sideways) at >= 640px; stacked "header: value" cards below. */
-export function DataTable<T>({ columns, rows, rowKey, empty, highlight }: Props<T>) {
+export function DataTable<T>({ columns, rows, rowKey, empty, highlight, label }: Props<T>) {
   const narrow = useIsNarrow()
 
   if (rows.length === 0 && empty != null) {
@@ -50,7 +52,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, highlight }: Props<
 
   if (narrow) {
     return (
-      <ul className="flex flex-col gap-3">
+      <ul aria-label={label} className="flex flex-col gap-3">
         {rows.map((row) => {
           const hl = highlight?.(row) === true
           return (
@@ -75,6 +77,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, highlight }: Props<
   return (
     <div className="max-h-[70vh] overflow-x-auto overflow-y-auto rounded border border-line bg-surface">
       <table className="w-full border-collapse text-start text-sm">
+        <caption className="sr-only">{label}</caption>
         <thead>
           <tr>
             {columns.map((c) => (

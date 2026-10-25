@@ -49,6 +49,7 @@ describe('SurveyorsPage', () => {
     expect(await screen.findByText('1 pending · 5 approved · 2 rejected')).toBeInTheDocument()
     expect(await screen.findAllByText('—')).not.toHaveLength(0)
     expect(screen.getByText('222222')).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: 'Surveyors' })).toBeInTheDocument()
   })
 
   it('deactivating asks for confirmation first', async () => {

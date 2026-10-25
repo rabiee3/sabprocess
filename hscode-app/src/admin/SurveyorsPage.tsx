@@ -98,6 +98,7 @@ export function SurveyorsPage() {
       {error && <Banner tone="danger" onClose={() => setError(null)}>{error}</Banner>}
       <DataTable
         columns={columns}
+        label={t('admin.nav.surveyors')}
         rows={rows ?? []}
         rowKey={(s) => s.uid}
         empty={rows ? t('admin.surveyors.empty') : t('common.loading')}

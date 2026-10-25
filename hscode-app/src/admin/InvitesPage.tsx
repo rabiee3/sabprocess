@@ -124,11 +124,18 @@ export function InvitesPage() {
       key: 'code',
       header: t('admin.invites.colCode'),
       render: (i) => (
-        <span
-          dir="ltr"
-          className={`font-mono font-semibold tracking-wider text-ink-strong ${i.cancelled ? 'line-through' : ''}`}
-        >
-          {i.code}
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <span
+            dir="ltr"
+            className={`font-mono font-semibold tracking-wider text-ink-strong ${i.cancelled ? 'line-through' : ''}`}
+          >
+            {i.code}
+          </span>
+          {i.code === fresh && (
+            <span data-new-badge className="rounded bg-brand-500 px-2 py-0.5 text-xs font-semibold text-ink-strong">
+              {t('admin.invites.newHighlight')}
+            </span>
+          )}
         </span>
       ),
     },
@@ -231,6 +238,7 @@ export function InvitesPage() {
       <div ref={wrapRef}>
         <DataTable
           columns={columns}
+          label={t('admin.nav.invites')}
           rows={invites ?? []}
           rowKey={(i) => i.code}
           highlight={(i) => i.code === fresh}

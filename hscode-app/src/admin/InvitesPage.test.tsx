@@ -75,6 +75,8 @@ describe('InvitesPage', () => {
     expect(writeText).toHaveBeenCalledWith('111111')
     expect(await within(banner).findByText('Copied')).toBeInTheDocument()
     expect(document.querySelector('[data-highlight="true"]')?.textContent).toContain('111111')
+    expect(document.querySelector('[data-highlight="true"]')?.textContent).toContain('New')
+    expect(screen.getByRole('table', { name: 'Invitation codes' })).toBeInTheDocument()
   })
 
   it('shows an error when generation fails', async () => {
