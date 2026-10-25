@@ -21,5 +21,115 @@
     "client": "Client",
     "surveyor": "Surveyor",
     "admin": "Admin"
+  },
+  "survey": {
+    "gate": {
+      "signInTitle": "Map the factories of Egypt",
+      "signInBody": "Add what each factory makes and needs, right from the field. Sign in with Google to start.",
+      "continueGoogle": "Continue with Google",
+      "offTitle": "Surveyor access is off",
+      "offBody": "Your account can't submit factories right now. Ask your supervisor to turn surveyor access back on."
+    },
+    "invite": {
+      "title": "Enter your invitation code",
+      "body": "Your supervisor gave you a 6-digit code. You only need it once.",
+      "unlock": "Unlock surveying",
+      "invalid": "This code isn't valid or was already used. Check the 6 digits with your supervisor.",
+      "offline": "You're offline — connect to unlock surveying",
+      "signedInAs": "Signed in as {{email}}"
+    },
+    "list": {
+      "title": "My submissions",
+      "add": "Add factory",
+      "empty": "No factories yet. Tap Add factory to submit your first one.",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "savedOnPhone": "Saved on phone",
+      "uploadFailed": "Upload failed — we'll keep trying",
+      "adminReason": "Admin's reason",
+      "fixResubmit": "Fix and resubmit"
+    },
+    "step": {
+      "counter": "Step {{n}} of {{total}}",
+      "back": "Back",
+      "next": "Next",
+      "location": "Location",
+      "basics": "Basics",
+      "products": "Products",
+      "contacts": "Contacts",
+      "photos": "Photos",
+      "review": "Review"
+    },
+    "location": {
+      "title": "Where is the factory?",
+      "hint": "Drag the pin onto the factory gate.",
+      "gpsOff": "Location is off. The pin starts at the centre of the selected area. Move it onto the factory before saving.",
+      "weak": "GPS signal is weak. Move the pin onto the gate by hand.",
+      "myLocation": "My location",
+      "accuracy": "GPS ±{{m}} m"
+    },
+    "basics": {
+      "nameEn": "Factory name (English)",
+      "nameAr": "Factory name (Arabic)",
+      "nameRequired": "At least one name is required.",
+      "area": "Industrial area",
+      "areaOther": "Other area",
+      "sector": "Sector",
+      "address": "Address or landmark"
+    },
+    "products": {
+      "made": "Products made",
+      "needed": "Products needed",
+      "name": "Product name",
+      "hsOptional": "HS code (optional)",
+      "add": "Add product",
+      "remove": "Remove product"
+    },
+    "contacts": {
+      "intro": "Optional — skip anything the factory prefers not to share.",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "sameAsPhone": "Same as phone",
+      "website": "Website",
+      "facebook": "Facebook page",
+      "person": "Contact person"
+    },
+    "photos": {
+      "intro": "Up to 3 photos. The gate and signboard help the admin approve faster.",
+      "camera": "Camera",
+      "gallery": "Gallery",
+      "failed": "This photo couldn't be added — try another",
+      "remove": "Remove photo"
+    },
+    "review": {
+      "title": "Check before you send",
+      "offlineBanner": "You're offline. Saved on this phone, will upload when you're back online.",
+      "pinNotMoved": "The pin wasn't moved from your GPS position — the admin will double-check.",
+      "weakGps": "GPS was weak. The admin may double-check the location.",
+      "submit": "Submit factory",
+      "saveOnPhone": "Save on this phone",
+      "edit": "Edit"
+    }
+  },
+  "hs": {
+    "title": "HS code",
+    "for": "For: {{name}}",
+    "heading": "Heading (4 digits)",
+    "moreDetail": "More detail — subheading (optional)",
+    "tariff": "Full tariff code (optional)",
+    "tariffHint": "Enter the full 10-digit code only if you know it.",
+    "use": "Use {{code}}",
+    "skip": "Skip, the admin will fill it",
+    "searchPlaceholder": "Search by product name or code",
+    "browseChapters": "Browse chapters",
+    "enoughHint": "That's enough — tap Use. The full tariff code is optional.",
+    "tariffInvalid": "Enter digits only, starting with the 6-digit code you picked."
+  },
+  "errors": {
+    "offline": "You're offline — connect to continue",
+    "accessOff": "Your surveyor access was turned off",
+    "quota": "HSCode is busy right now — please try again later",
+    "generic": "Something went wrong. Please try again."
   }
 }

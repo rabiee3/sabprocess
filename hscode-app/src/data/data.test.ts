@@ -31,4 +31,17 @@ describe('bundled data', () => {
     expect(ids).toHaveLength(11);
     expect(sectors().every((s) => s.en && s.ar)).toBe(true);
   });
+  it('has Arabic for heading 2309 and every heading in chapter 23', () => {
+    const h = headings();
+    expect(h.find((x) => x.code === '2309')?.ar).toBeTruthy();
+    const ch23 = h.filter((x) => x.code.startsWith('23'));
+    expect(ch23.length).toBeGreaterThan(0);
+    expect(ch23.every((x) => x.ar && x.ar.length > 0)).toBe(true);
+  });
+  it('applies the English override to subheading 230990', async () => {
+    const subs = await loadSubheadings('2309');
+    expect(subs.find((s) => s.code === '230990')?.en).toBe(
+      'Other preparations of a kind used in animal feeding',
+    );
+  });
 });
