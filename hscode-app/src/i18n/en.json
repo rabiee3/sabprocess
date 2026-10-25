@@ -164,5 +164,32 @@
     "generic": "Something went wrong. Please try again.",
     "tooLong": "Too long — use at most {{max}} characters.",
     "storageFull": "This phone is out of storage for drafts — submit or delete old drafts."
+  },
+  "admin": {
+    "title": "Superadmin",
+    "menu": "Menu",
+    "navLabel": "Admin navigation",
+    "account": "Account",
+    "nav": {
+      "review": "Review queue",
+      "factories": "All factories",
+      "invites": "Invitation codes",
+      "surveyors": "Surveyors",
+      "dashboard": "Dashboard"
+    },
+    "pending": "{{count}} pending",
+    "signIn": {
+      "title": "Admin sign in",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "invalid": "Incorrect email or password.",
+      "tooMany": "Too many attempts. Wait a few minutes and try again."
+    },
+    "notAdmin": {
+      "title": "This account isn't an admin",
+      "body": "Sign out and use the admin email and password, or continue to the survey.",
+      "survey": "Go to the survey"
+    }
   }
 }
