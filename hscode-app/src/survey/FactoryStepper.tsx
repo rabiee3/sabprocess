@@ -209,7 +209,7 @@ function NewLoader({ uid }: { uid: string }) {
     }
     if (!saved) open(false)
     else if (hint) open(true)
-    else void factoryDocExists(resume).then(open, () => open(false))
+    else void factoryDocExists(resume).then(open, () => open(true))
     return () => {
       live = false
     }

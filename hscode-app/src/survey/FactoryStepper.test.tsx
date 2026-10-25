@@ -378,6 +378,15 @@ describe('FactoryStepper', () => {
       expect(loadDraft('u1', 'fold')).not.toBeNull()
     })
 
+    it('a resume whose existence check cannot be answered (offline) is reissued too, content kept', async () => {
+      vi.mocked(repo.factoryDocExists).mockRejectedValue({ code: 'unavailable' })
+      saveDraft('u1', fullDraft({ fid: 'fold', name: { en: 'Resumed', ar: '' } }))
+      renderAt('/survey/new?resume=fold&step=review')
+      await user.click(await screen.findByRole('button', { name: en.survey.review.submit }))
+      expect(repo.submitFactory).toHaveBeenCalledWith('u1', 'fnew', expect.objectContaining({ name: { en: 'Resumed' } }))
+      expect(loadDraft('u1', 'fold')).toBeNull()
+    })
+
     it('a typed resume URL (no router state) for a doc-existing fid gets a new fid, content kept', async () => {
       vi.mocked(repo.factoryDocExists).mockResolvedValue(true)
       saveDraft('u1', fullDraft({ fid: 'fold', name: { en: 'Resumed', ar: '' } }))

@@ -55,14 +55,14 @@ export async function classifySubmitError(e: unknown, uid: string, fs: Firestore
 }
 
 /**
- * Whether factories/<fid> exists (from cache when offline). An unreadable doc counts as existing: it exists,
- * and a create over it would be rejected just the same. Anything else unknown (offline, no cache) is false.
+ * Whether factories/<fid> may already exist. Only a read that succeeds and finds nothing is false; any error
+ * (offline with no cache, permission-denied, anything else) is true. A duplicate factory is acceptable, a lost draft is not.
  */
 export async function factoryDocExists(fid: string, fs: Firestore = db): Promise<boolean> {
   try {
     return (await getDoc(doc(fs, `factories/${fid}`))).exists()
-  } catch (e) {
-    return toSurveyError(e) === 'accessOff'
+  } catch {
+    return true
   }
 }
 
