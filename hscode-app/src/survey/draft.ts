@@ -94,7 +94,7 @@ export type DraftAction =
   | { type: 'updateProduct'; list: ProductList; key: string; patch: Partial<Omit<ProductDraft, 'key'>> }
   | { type: 'removeProduct'; list: ProductList; key: string }
   | { type: 'setContact'; contact: ContactDraft }
-  | { type: 'setPhotos'; photos: PhotoData[]; thumb?: string }
+  | { type: 'setPhotos'; photos: PhotoData[]; thumb?: string | null }
 
 export function draftReducer(d: Draft, a: DraftAction): Draft {
   switch (a.type) {
@@ -115,6 +115,8 @@ export function draftReducer(d: Draft, a: DraftAction): Draft {
     case 'setContact':
       return { ...d, contact: a.contact }
     case 'setPhotos': {
+      // thumb: undefined = unchanged, null = clear, string = new
+      if (a.thumb === undefined) return { ...d, photos: a.photos }
       const { thumb: _old, ...rest } = d
       void _old
       return { ...rest, photos: a.photos, ...(a.thumb ? { thumb: a.thumb } : {}) }

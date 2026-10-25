@@ -1,0 +1,166 @@
+import { useEffect, useReducer, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useAuth } from '../auth/useAuth'
+import { Banner } from '../ui/Banner'
+import { Stepper } from '../ui/Stepper'
+import { useOnline } from '../ui/useOnline'
+import {
+  STEPS,
+  clearDraft,
+  draftFromFactory,
+  draftReducer,
+  emptyDraft,
+  latestNewDraft,
+  loadDraft,
+  saveDraft,
+  stepErrors,
+  toFactoryInput,
+  type Draft,
+  type StepId,
+} from './draft'
+import { outbox } from './outbox'
+import { loadFactoryForEdit, newFactoryId, resubmitFactory, submitFactory, toSurveyError, type SurveyErrorCode } from './repo'
+import { StepBasics } from './steps/StepBasics'
+import { StepContacts } from './steps/StepContacts'
+import { StepLocation } from './steps/StepLocation'
+import { StepPhotos } from './steps/StepPhotos'
+import { StepProducts } from './steps/StepProducts'
+import { StepReview } from './steps/StepReview'
+
+const LIST = '/survey'
+
+function Form({ initial, mode }: { initial: Draft; mode: 'new' | 'edit' }) {
+  const { t } = useTranslation()
+  const { user } = useAuth()
+  const online = useOnline()
+  const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
+  const [draft, dispatch] = useReducer(draftReducer, initial)
+  const [tried, setTried] = useState<ReadonlySet<StepId>>(new Set())
+  const [submitError, setSubmitError] = useState<SurveyErrorCode | null>(null)
+  const submitted = useRef(false)
+
+  useEffect(() => {
+    if (draft !== initial && !submitted.current) saveDraft(draft)
+  }, [draft, initial])
+
+  const param = params.get('step')
+  const step: StepId = STEPS.find((s) => s === param) ?? 'location'
+  const index = STEPS.indexOf(step)
+  const goTo = (s: StepId) => setParams({ step: s })
+  const markTried = (s: StepId) => setTried((prev) => new Set(prev).add(s))
+  const errors = tried.has(step) ? stepErrors(draft, step) : []
+
+  function next() {
+    if (stepErrors(draft, step).length > 0) return markTried(step)
+    goTo(STEPS[index + 1])
+  }
+
+  function submit() {
+    for (const s of STEPS) {
+      if (stepErrors(draft, s).length > 0) {
+        markTried(s)
+        goTo(s)
+        return
+      }
+    }
+    let commit: Promise<void>
+    try {
+      const input = toFactoryInput(draft)
+      // Not awaited: offline, the write is queued locally and the promise settles only on reconnect.
+      commit = mode === 'edit' ? resubmitFactory(user?.uid ?? '', draft.fid, input, draft.previousPhotoIds) : submitFactory(user?.uid ?? '', draft.fid, input)
+    } catch (e) {
+      setSubmitError(toSurveyError(e))
+      return
+    }
+    submitted.current = true
+    outbox.add(draft.fid)
+    clearDraft(draft.fid)
+    commit.catch((e: unknown) => outbox.markFailed(draft.fid, toSurveyError(e)))
+    navigate(LIST)
+  }
+
+  const props = { draft, dispatch, errors }
+  const body = {
+    location: <StepLocation {...props} />,
+    basics: <StepBasics {...props} />,
+    products: <StepProducts {...props} />,
+    contacts: <StepContacts {...props} />,
+    photos: <StepPhotos {...props} />,
+    review: <StepReview {...props} goTo={goTo} />,
+  }[step]
+  const last = step === 'review'
+
+  return (
+    <Stepper
+      step={index + 1}
+      total={STEPS.length}
+      title={t(`survey.step.${step}`)}
+      onClose={() => navigate(LIST)}
+      onBack={index === 0 ? () => navigate(LIST) : () => goTo(STEPS[index - 1])}
+      onNext={last ? submit : next}
+      nextLabel={last ? t(online ? 'survey.review.submit' : 'survey.review.saveOnPhone') : t('survey.step.next')}
+    >
+      {submitError && (
+        <div className="mb-3">
+          <Banner tone="danger" onClose={() => setSubmitError(null)}>
+            {t(`errors.${submitError}`)}
+          </Banner>
+        </div>
+      )}
+      {body}
+    </Stepper>
+  )
+}
+
+type Loaded = { status: 'loading' } | { status: 'ready'; draft: Draft } | { status: 'missing' } | { status: 'error'; code: SurveyErrorCode }
+
+function EditLoader() {
+  const { t } = useTranslation()
+  const { fid = '' } = useParams()
+  const [state, setState] = useState<{ fid: string; result: Loaded }>({ fid, result: { status: 'loading' } })
+
+  useEffect(() => {
+    let live = true
+    const done = (result: Loaded) => live && setState({ fid, result })
+    const saved = loadDraft(fid)
+    if (saved && saved.mode === 'edit') {
+      done({ status: 'ready', draft: saved })
+    } else {
+      loadFactoryForEdit(fid).then(
+        (r) => done(r ? { status: 'ready', draft: draftFromFactory(r.factory, r.contact, r.photos) } : { status: 'missing' }),
+        (e: unknown) => done({ status: 'error', code: toSurveyError(e) }),
+      )
+    }
+    return () => {
+      live = false
+    }
+  }, [fid])
+
+  const result: Loaded = state.fid === fid ? state.result : { status: 'loading' }
+  if (result.status === 'ready') return <Form key={fid} initial={result.draft} mode="edit" />
+  return (
+    <main className="mx-auto max-w-md p-4">
+      {result.status === 'loading' && (
+        <div role="status" aria-label={t('common.loading')} className="mx-auto size-8 animate-spin rounded-full border-4 border-line border-t-brand-600" />
+      )}
+      {result.status === 'error' && <Banner tone="danger">{t(`errors.${result.code}`)}</Banner>}
+      {result.status === 'missing' && <p className="text-body text-ink-subtle">{t('survey.edit.notFound')}</p>}
+      {result.status !== 'loading' && (
+        <Link to={LIST} className="mt-3 inline-flex min-h-touch items-center font-semibold text-blue-800 underline">
+          {t('survey.edit.back')}
+        </Link>
+      )}
+    </main>
+  )
+}
+
+function NewLoader() {
+  const [initial] = useState(() => latestNewDraft() ?? emptyDraft(newFactoryId()))
+  return <Form initial={initial} mode="new" />
+}
+
+export function FactoryStepper({ mode }: { mode: 'new' | 'edit' }) {
+  return mode === 'edit' ? <EditLoader /> : <NewLoader />
+}

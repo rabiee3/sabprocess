@@ -100,7 +100,9 @@
       "hsOptional": "HS code (optional)",
       "add": "Add product",
       "remove": "Remove product",
-      "nameRequired": "Enter a product name."
+      "nameRequired": "Enter a product name.",
+      "nameEn": "Product name (English)",
+      "nameAr": "Product name (Arabic)"
     },
     "contacts": {
       "intro": "Optional — skip anything the factory prefers not to share.",
@@ -126,6 +128,10 @@
       "submit": "Submit factory",
       "saveOnPhone": "Save on this phone",
       "edit": "Edit"
+    },
+    "edit": {
+      "notFound": "This factory could not be found.",
+      "back": "Back to my submissions"
     }
   },
   "hs": {

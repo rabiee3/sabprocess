@@ -47,6 +47,16 @@ describe('reducer', () => {
     d = draftReducer(d, { type: 'removeProduct', list: 'productsMade', key })
     expect(d.productsMade).toHaveLength(0)
   })
+  it('setPhotos thumb: undefined keeps, null clears, string replaces', () => {
+    let d = draftReducer(emptyDraft('f1'), { type: 'setPhotos', photos: [{ id: 'p1', data: 'd' }], thumb: 't1' })
+    d = draftReducer(d, { type: 'setPhotos', photos: [{ id: 'p1', data: 'd' }, { id: 'p2', data: 'e' }] })
+    expect(d.thumb).toBe('t1')
+    d = draftReducer(d, { type: 'setPhotos', photos: [{ id: 'p1', data: 'd' }], thumb: 't2' })
+    expect(d.thumb).toBe('t2')
+    d = draftReducer(d, { type: 'setPhotos', photos: [], thumb: null })
+    expect(d.thumb).toBeUndefined()
+    expect('thumb' in d).toBe(false)
+  })
   it('product keys are unique', () => {
     expect(productKey()).not.toBe(productKey())
   })
