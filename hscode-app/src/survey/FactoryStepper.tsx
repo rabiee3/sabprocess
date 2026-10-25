@@ -23,6 +23,7 @@ import { outbox } from './outbox'
 import { useDraftAutosave } from './useDraftAutosave'
 import {
   classifySubmitError,
+  factoryDocExists,
   loadFactoryForEdit,
   newFactoryId,
   resubmitFactory,
@@ -185,17 +186,42 @@ function reissueDraft(uid: string, old: Draft): Draft {
 }
 
 function NewLoader({ uid }: { uid: string }) {
+  const { t } = useTranslation()
   const [params] = useSearchParams()
-  const docExists = (useLocation().state as { docExists?: boolean } | null)?.docExists === true
-  const [initial] = useState(() => {
-    // ?resume=<fid>: reopen that draft (a failed upload from My submissions).
-    const resume = params.get('resume')
-    const saved = resume ? loadDraft(uid, resume) : null
-    // The doc already exists on the server: submitting under its fid would be an update the rules reject.
-    // Keep the content, move it to a fresh fid and drop the old draft and outbox row.
-    if (saved && docExists) return reissueDraft(uid, saved)
-    return (saved?.mode === 'new' ? saved : null) ?? latestNewDraft(uid) ?? emptyDraft(newFactoryId())
+  const hint = (useLocation().state as { docExists?: boolean } | null)?.docExists === true
+  const resume = params.get('resume')
+  const [initial, setInitial] = useState<Draft | null>(() => {
+    // No resume: the newest unfinished draft, or a blank one.
+    if (resume) return null
+    return latestNewDraft(uid) ?? emptyDraft(newFactoryId())
   })
+
+  useEffect(() => {
+    if (!resume) return
+    let live = true
+    const saved = loadDraft(uid, resume)
+    const open = (exists: boolean) => {
+      if (!live) return
+      // The doc already exists: submitting under its fid is an update the rules reject. Keep the content
+      // under a fresh fid and drop the old draft and outbox row.
+      if (saved && exists) return setInitial(reissueDraft(uid, saved))
+      setInitial((saved?.mode === 'new' ? saved : null) ?? latestNewDraft(uid) ?? emptyDraft(newFactoryId()))
+    }
+    if (!saved) open(false)
+    else if (hint) open(true)
+    else void factoryDocExists(resume).then(open, () => open(false))
+    return () => {
+      live = false
+    }
+  }, [uid, resume, hint])
+
+  if (!initial) {
+    return (
+      <main className="mx-auto flex max-w-md justify-center p-4">
+        <div role="status" aria-label={t('common.loading')} className="size-8 animate-spin rounded-full border-4 border-line border-t-brand-600" />
+      </main>
+    )
+  }
   return <Form uid={uid} initial={initial} mode="new" />
 }
 

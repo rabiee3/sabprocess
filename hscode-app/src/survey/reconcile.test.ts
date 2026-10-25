@@ -61,6 +61,20 @@ describe('reconcile', () => {
     expect(reconcile('u1', [item('a', T)], false)).toEqual([])
   })
 
+  it('a failed NEW entry stays (and keeps its draft) even though its doc exists', () => {
+    saveDraft('u1', emptyDraft('a'))
+    submittedAt('a', T, 'new')
+    outbox.markFailed('u1', 'a', 'rejected')
+    expect(reconcile('u1', [item('a', T + 1000)], false)).toMatchObject([{ fid: 'a', state: 'failed', error: 'rejected' }])
+    expect(loadDraft('u1', 'a')).not.toBeNull()
+  })
+
+  it('a kind-less entry whose stored draft is an edit keeps the clock check', () => {
+    saveDraft('u1', { ...emptyDraft('a'), mode: 'edit' })
+    localStorage.setItem('hscode.outbox.u1', JSON.stringify([{ fid: 'a', savedAt: T, submittedAt: T, state: 'saved' }]))
+    expect(reconcile('u1', [item('a', T - 10 * MIN)], false)).toMatchObject([{ fid: 'a', state: 'failed', error: 'rejected' }])
+  })
+
   it('a doc still pending locally changes nothing', () => {
     submittedAt('a', T)
     expect(reconcile('u1', [item('a', T - 10 * MIN, true)], true)).toMatchObject([{ fid: 'a', state: 'saved' }])

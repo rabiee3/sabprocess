@@ -133,12 +133,12 @@ describe('MySubmissions', () => {
     expect(screen.getByText(en.survey.list.empty)).toBeInTheDocument()
   })
 
-  it('a failed entry whose doc arrives on a server snapshot is removed', () => {
+  it('a failed entry whose doc arrives on a server snapshot is kept for the user to resume', () => {
     seedOutbox([{ fid: 'a', savedAt: 1, state: 'failed', error: 'generic', submittedAt: 1 }])
     setup()
     act(() => emit([item(fac('a', 'pending'), false)], { fromCache: false }))
-    expect(state()).toEqual([])
-    expect(screen.queryByText(en.survey.list.uploadFailed)).toBeNull()
+    expect(state()).toEqual([{ fid: 'a', state: 'failed', error: 'generic' }])
+    expect(screen.getByText(en.survey.list.uploadFailed, { selector: '[data-chip]' })).toBeInTheDocument()
   })
 
   it('a resubmit whose server doc is still the old version shows upload failed, not Pending', () => {

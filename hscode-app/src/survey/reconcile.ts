@@ -1,4 +1,4 @@
-import { clearDraft } from './draft'
+import { clearDraft, loadDraft } from './draft'
 import { outbox, type OutboxEntry } from './outbox'
 import type { SubmissionItem } from './repo'
 
@@ -17,9 +17,14 @@ export function reconcile(uid: string, items: SubmissionItem[], fromCache: boole
   const byId = new Map(items.map((i) => [i.factory.id, i]))
   for (const e of outbox.list(uid)) {
     const hit = byId.get(e.fid)
+    // Entries from before kinds existed may be edits: the stored draft says which.
+    const kind = e.kind ?? (loadDraft(uid, e.fid)?.mode === 'edit' ? 'edit' : 'new')
     if (hit && !hit.pendingWrite) {
       // A new factory is proven by its doc alone (no clock involved); only an edit needs the clock check.
-      if (e.kind === 'new' || hit.factory.updatedAt.getTime() >= e.submittedAt - SKEW_MS) {
+      // A failed new entry is never auto-confirmed: its doc is an earlier, rejected attempt, and the user
+      // still has a draft to resume.
+      if (kind === 'new' && e.state === 'failed') continue
+      if (kind === 'new' || hit.factory.updatedAt.getTime() >= e.submittedAt - SKEW_MS) {
         outbox.remove(uid, e.fid)
         clearDraft(uid, e.fid)
       } else if (e.state === 'saved') {
