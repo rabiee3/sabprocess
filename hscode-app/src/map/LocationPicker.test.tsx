@@ -144,6 +144,27 @@ describe('LocationPicker', () => {
     expect(last()[0].accuracyM).toBeNull()
   })
 
+  it('value-backed: My location snapshots the fix; later fixes do not change the emitted record', async () => {
+    const value = { lat: 28, lng: 30, accuracyM: 7, pinMoved: false }
+    geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
+    const { rerender } = render(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('button', { name: 'My location' }))
+    geo.mockReturnValue({ status: 'ok', coords: { lat: 29.8, lng: 31.3 }, accuracyM: 3, retry })
+    rerender(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
+    expect(last()[0]).toEqual({ lat: 29.9, lng: 31.2, accuracyM: 12, pinMoved: true })
+  })
+
+  it('value-backed: My location with no fix changes nothing that is emitted', async () => {
+    const value = { lat: 28, lng: 30, accuracyM: 7, pinMoved: false }
+    geo.mockReturnValue({ status: 'pending', retry })
+    const { rerender } = render(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('button', { name: 'My location' }))
+    expect(retry).toHaveBeenCalled()
+    geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 12, retry })
+    rerender(<LocationPicker areaCenter={area} value={value} onChange={onChange} />)
+    expect(last()[0]).toEqual({ lat: 28, lng: 30, accuracyM: 7, pinMoved: false })
+  })
+
   it('uses value as initial pin', () => {
     geo.mockReturnValue({ status: 'denied', retry })
     render(

@@ -58,6 +58,7 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
   const [fixed] = useState(!!value)
   // Value-backed mode: where the emitted accuracy comes from (stored value, a deliberate GPS fix, or a manual move).
   const [accSrc, setAccSrc] = useState<'stored' | 'fix' | 'manual'>('stored')
+  const [fixAcc, setFixAcc] = useState<number | null>(null) // accuracy snapshot taken at the My location tap
   const [moved, setMoved] = useState(value?.pinMoved ?? false)
   const onChangeRef = useRef(onChange)
   useEffect(() => {
@@ -72,7 +73,7 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
     : accSrc === 'stored'
       ? (value?.accuracyM ?? null)
       : accSrc === 'fix'
-        ? (gps.accuracyM ?? null)
+        ? fixAcc
         : null
 
   // The pin follows the GPS fix until the surveyor moves it (or the saved value was moved).
@@ -106,6 +107,7 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
       setPin({ lat: gps.coords.lat, lng: gps.coords.lng })
       setMoved(fixed)
       setAccSrc('fix')
+      setFixAcc(gps.accuracyM ?? null)
     }
     gps.retry()
   }
