@@ -8,6 +8,7 @@ import { db } from '../firebase'
 import { LangToggle } from '../ui/LangToggle'
 import { Logo } from '../ui/Logo'
 import { AdminContext } from './AdminContext'
+import { useIsDesktop } from './useIsDesktop'
 
 const NAV = [
   { key: 'review', badge: true },
@@ -31,21 +32,6 @@ function usePendingCount() {
     return () => window.removeEventListener('focus', refresh)
   }, [refresh])
   return { pending: count, refreshPending: refresh }
-}
-
-const DESKTOP = '(min-width: 1024px)'
-
-/** True at the sidebar breakpoint. Without matchMedia (tests) it is false, i.e. the drawer layout. */
-function useIsDesktop(): boolean {
-  const [on, setOn] = useState(() => typeof window.matchMedia === 'function' && window.matchMedia(DESKTOP).matches)
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return
-    const mq = window.matchMedia(DESKTOP)
-    const onChange = () => setOn(mq.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-  return on
 }
 
 export function AdminLayout() {

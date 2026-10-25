@@ -5,6 +5,7 @@ import { useAuth } from '../auth/useAuth'
 import { AdminLayout } from './AdminLayout'
 import { AdminSignIn } from './AdminSignIn'
 import { InvitesPage } from './InvitesPage'
+import { ReviewQueue } from './ReviewQueue'
 import { SurveyorsPage } from './SurveyorsPage'
 
 /** Stands in until the page's own task lands. The layout supplies the h1. */
@@ -61,8 +62,7 @@ export function Component() {
     <Routes>
       <Route element={<AdminLayout />}>
         <Route index element={<Navigate to="review" replace />} />
-        <Route path="review" element={<PagePlaceholder />} />
-        <Route path="review/:fid" element={<PagePlaceholder />} />
+        <Route path="review/:fid?" element={<ReviewQueue />} />
         <Route path="factories" element={<PagePlaceholder />} />
         <Route path="factories/new" element={<PagePlaceholder />} />
         <Route path="factories/:fid" element={<PagePlaceholder />} />
