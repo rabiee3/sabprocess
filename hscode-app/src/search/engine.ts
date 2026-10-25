@@ -1,8 +1,8 @@
 import MiniSearch from 'minisearch';
 import { areas, sectors } from '../data';
-import { normalizeArabic } from '../lib/arabic';
-import { normalizeHs } from '../lib/hs';
+import { isHsQuery, normalizeHs } from '../lib/hs';
 import type { IndexEntry } from '../lib/types';
+import { indexTerms, queryTerm } from './terms';
 
 export type SearchFilters = { area?: string; sector?: string; hs?: string };
 export type Engine = {
@@ -12,14 +12,6 @@ export type Engine = {
 };
 
 type Doc = { id: string; name: string; made: string; sector: string; area: string };
-
-const DIGIT_ONLY = /^[\d.\s-]+$/;
-
-// Normalize Arabic variants and drop the definite article so "العلف" ~ "علف".
-export function processTerm(term: string): string {
-  const t = normalizeArabic(term);
-  return t.length > 4 && t.startsWith('ال') ? t.slice(2) : t;
-}
 
 const byAt = (a: IndexEntry, b: IndexEntry) =>
   (b.at ?? 0) - (a.at ?? 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
@@ -58,8 +50,9 @@ export function createEngine(entries: IndexEntry[], _lang: 'en' | 'ar'): Engine 
   const mini = new MiniSearch<Doc>({
     fields: ['name', 'made', 'sector', 'area'],
     idField: 'id',
-    processTerm,
+    processTerm: indexTerms,
     searchOptions: {
+      processTerm: queryTerm,
       prefix: true,
       fuzzy: (term) => (term.length >= 4 ? 0.2 : false),
       boost: { name: 2, made: 2 },
@@ -111,7 +104,7 @@ export function createEngine(entries: IndexEntry[], _lang: 'en' | 'ar'): Engine 
       let out: IndexEntry[];
       const digits = normalizeHs(query);
       if (!query) out = [...entries].sort(byAt);
-      else if (DIGIT_ONLY.test(query) && digits.length >= 2) out = digitSearch(digits);
+      else if (isHsQuery(query)) out = digitSearch(digits);
       else out = textSearch(query);
       return out.filter((e) => passes(e, f));
     },

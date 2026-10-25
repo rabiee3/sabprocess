@@ -48,6 +48,7 @@ async function fetchIndex(fs: Firestore): Promise<IndexLoad> {
   } catch (serverErr) {
     try {
       snap = await getDocFromCache(ref);
+      if (!snap.exists()) throw serverErr;
       fromCache = true;
     } catch {
       throw new IndexError(classifyError(serverErr), (serverErr as Error)?.message);
@@ -62,9 +63,14 @@ export function loadIndex(fs: Firestore = db): Promise<IndexLoad> {
     const p = fetchIndex(fs);
     memo = p;
     // A failure must not stick: let the next call retry.
-    p.catch(() => {
-      if (memo === p) memo = null;
-    });
+    p.then(
+      (r) => {
+        if (r.fromCache && memo === p) memo = null;
+      },
+      () => {
+        if (memo === p) memo = null;
+      },
+    );
   }
   return memo;
 }

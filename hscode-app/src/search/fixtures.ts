@@ -2,7 +2,7 @@ import type { IndexEntry } from '../lib/types';
 
 export const feedMill: IndexEntry = {
   id: 'f1',
-  n: { en: 'Delta Feed Mill', ar: 'مصنع العلف الذهبي' },
+  n: { en: 'Delta Feed Mill', ar: 'مطاحن الدلتا للأعلاف' },
   lat: 30, lng: 31, a: 'oct6-zone-1', s: 'animal-feed',
   m: [{ n: { en: 'Poultry feed', ar: 'أعلاف دواجن' }, h: '230990' }],
   d: [{ n: { en: 'Maize', ar: 'ذرة' }, h: '1005' }],
@@ -22,4 +22,9 @@ export const fixtures: IndexEntry[] = [
   mk('f6', 'Steel One', 50, { s: 'metals', m: [{ n: { en: 'Steel bars' }, h: '7214' }] }),
   mk('f7', 'Steel Two', 50, { s: 'metals', m: [{ n: { en: 'Steel wire' }, h: '7217' }] }),
   mk('f8', 'No Codes', 10),
+  // Arabic-only singular form, no plural anywhere.
+  { id: 'f9', n: { ar: 'مصنع علف' }, lat: 30, lng: 31, a: 'oct6-zone-1', m: [], d: [], at: 5 },
+  // HS-only: no feed text, so digit tests cannot pass through text matching.
+  mk('f10', 'Zeta Trading', 450, { m: [{ n: { en: 'Misc goods' }, h: '2309' }] }),
+  mk('f11', 'Aluminium Profiles', 3, { n: { en: 'Aluminium Profiles', ar: 'الومنيوم' }, m: [{ n: { ar: 'الحديد' } }] }),
 ];

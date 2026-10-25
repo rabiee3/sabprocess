@@ -37,4 +37,9 @@ describe('searchHeadings', () => {
     const firstSub = hits.findIndex((h) => !/\bcable/.test(h.en.toLowerCase()) && h.en.toLowerCase().includes('cable'));
     if (firstSub !== -1) expect(firstWord).toBeLessThan(firstSub);
   });
+
+  it('treats Arabic-Indic digits as an HS query', () => {
+    expect(searchHeadings('٢٣٠٩', 5).map((h) => h.code)).toEqual(searchHeadings('2309', 5).map((h) => h.code));
+    expect(searchHeadings('٢٣٠٩', 5).length).toBeGreaterThan(0);
+  });
 });

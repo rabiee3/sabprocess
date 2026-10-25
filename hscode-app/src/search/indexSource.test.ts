@@ -60,6 +60,22 @@ describe('loadIndex', () => {
     expect((await loadIndex(fs).catch((e) => e)).code).toBe('denied');
   });
 
+  it('throws the mapped error when the cache has no doc after a server failure', async () => {
+    server.mockRejectedValue(fsErr('permission-denied'));
+    cache.mockResolvedValue(snap());
+    const err = await loadIndex(fs).catch((e) => e);
+    expect(err).toBeInstanceOf(IndexError);
+    expect(err.code).toBe('denied');
+  });
+
+  it('does not memoise a cache-only result', async () => {
+    server.mockRejectedValueOnce(fsErr('unavailable')).mockResolvedValueOnce(snap([{ id: 'b' }]));
+    cache.mockResolvedValue(snap([{ id: 'a' }]));
+    expect((await loadIndex(fs)).fromCache).toBe(true);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(await loadIndex(fs)).toEqual({ entries: [{ id: 'b' }], fromCache: false });
+  });
+
   it('is memoised across calls', async () => {
     server.mockResolvedValue(snap([]));
     await loadIndex(fs);

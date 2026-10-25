@@ -1,6 +1,6 @@
 import { headings } from '../data';
 import { normalizeArabic } from '../lib/arabic';
-import { normalizeHs } from '../lib/hs';
+import { isHsQuery, normalizeHs } from '../lib/hs';
 
 export type HsHit = { code: string; en: string; ar?: string; chapter: string };
 
@@ -18,8 +18,6 @@ function entries(): Entry[] {
   return cache;
 }
 
-const DIGIT_ONLY = /^[\d.\s-]+$/;
-
 function wordStart(hay: string, token: string): boolean {
   let i = hay.indexOf(token);
   while (i !== -1) {
@@ -36,7 +34,7 @@ export function searchHeadings(query: string, limit = 30): HsHit[] {
   const out: HsHit[] = [];
 
   const digits = normalizeHs(q);
-  if (DIGIT_ONLY.test(q) && digits.length >= 2) {
+  if (isHsQuery(q)) {
     for (const e of all) {
       if (e.hit.code.startsWith(digits)) out.push(e.hit);
     }

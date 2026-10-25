@@ -1,5 +1,7 @@
 import { areas, sectors } from '../data';
 import { normalizeArabic } from '../lib/arabic';
+import { indexTerms, queryTerm } from './terms';
+import { isHsQuery, normalizeHs } from '../lib/hs';
 import { searchHeadings } from '../hs/search';
 import type { Engine } from './engine';
 import { hsRelated } from './engine';
@@ -13,10 +15,15 @@ export type Suggestions = {
 
 const MAX = 5;
 
+// Product text plus its stripped/singular variants, space separated.
+const productHay = (n: { en?: string; ar?: string }) =>
+  `${n.en ?? ''} ${n.ar ?? ''}`.split(/\s+/).flatMap(indexTerms).join(' ');
+
 export function suggest(engine: Engine, q: string, lang: 'en' | 'ar'): Suggestions {
   const out: Suggestions = { products: [], hs: [], sectors: [], areas: [] };
   const needle = normalizeArabic(q);
   if (!needle) return out;
+  const pneedle = needle.split(' ').map(queryTerm).join(' ');
   const pick = (en?: string, ar?: string) => (lang === 'ar' ? ar || en : en || ar) ?? '';
 
   const seen = new Set<string>();
@@ -29,7 +36,7 @@ export function suggest(engine: Engine, q: string, lang: 'en' | 'ar'): Suggestio
       if (
         out.products.length < MAX &&
         !seen.has(key) &&
-        normalizeArabic(`${p.n.en ?? ''} ${p.n.ar ?? ''}`).includes(needle)
+        productHay(p.n).includes(pneedle)
       ) {
         seen.add(key);
         out.products.push({ label, q: label });
@@ -37,7 +44,7 @@ export function suggest(engine: Engine, q: string, lang: 'en' | 'ar'): Suggestio
     }
   }
 
-  for (const h of searchHeadings(q, 200)) {
+  for (const h of searchHeadings(isHsQuery(q) ? normalizeHs(q).slice(0, 4) : q, 200)) {
     if (out.hs.length >= MAX) break;
     if ([...codes].some((c) => hsRelated(c, h.code))) {
       out.hs.push({ code: h.code, label: pick(h.en, h.ar) });

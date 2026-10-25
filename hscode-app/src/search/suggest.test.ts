@@ -6,12 +6,20 @@ import { suggest } from './suggest';
 
 describe('suggest', () => {
   it('suggests products and only indexed HS headings', () => {
-    const s = suggest(createEngine(fixtures, 'en'), 'feed', 'en');
-    expect(s.products.map((p) => p.label)).toContain('Poultry feed');
-    expect(s.hs.every((h) => ['2309'].includes(h.code) || h.code.length === 4)).toBe(true);
-    const s2 = suggest(createEngine(fixtures, 'en'), '2309', 'en');
-    expect(s2.hs.map((h) => h.code)).toEqual(['2309']);
-    expect(suggest(createEngine(fixtures, 'en'), '0101', 'en').hs).toEqual([]);
+    const e = createEngine(fixtures, 'en');
+    expect(suggest(e, 'feed', 'en').products.map((p) => p.label)).toContain('Poultry feed');
+    expect(suggest(e, '2309', 'en').hs.map((h) => h.code)).toEqual(['2309']);
+    expect(suggest(e, '230990', 'en').hs.map((h) => h.code)).toEqual(['2309']);
+    expect(suggest(e, '0101', 'en').hs).toEqual([]);
+    const indexed = new Set(['2309', '1005', '1108', '3923', '7214', '7217']);
+    const s = suggest(e, 'animal', 'en');
+    expect(s.hs.length).toBeGreaterThan(0);
+    expect(s.hs.every((h) => indexed.has(h.code))).toBe(true);
+  });
+
+  it('finds Arabic products by singular or plural', () => {
+    const e = createEngine(fixtures, 'ar');
+    expect(suggest(e, 'علف', 'ar').products.map((p) => p.label)).toContain('أعلاف دواجن');
   });
 
   it('matches sectors and areas', () => {
@@ -27,8 +35,14 @@ describe('suggest', () => {
     }));
     const s = suggest(createEngine(many, 'en'), 'widget', 'en');
     expect(s.products).toHaveLength(5);
-    const h = suggest(createEngine(many, 'en'), '23', 'en');
-    expect(h.hs.length).toBeLessThanOrEqual(5);
+    const codes = Array.from({ length: 9 }, (_, i) => `230${i + 1}`);
+    const hsMany = createEngine(
+      codes.map((c) => ({ id: c, n: { en: c }, lat: 30, lng: 31, a: 'oct6-zone-1', m: [{ n: { en: 'x' }, h: c }], d: [] })),
+      'en',
+    );
+    expect(suggest(hsMany, '23', 'en').hs).toHaveLength(5);
+    expect(suggest(hsMany, 'a', 'en').sectors).toHaveLength(5);
+    expect(suggest(hsMany, 'a', 'en').areas).toHaveLength(5);
   });
 
   it('returns empty groups for an empty query', () => {
