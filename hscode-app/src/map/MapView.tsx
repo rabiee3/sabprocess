@@ -13,7 +13,7 @@ type Props = {
 export function MapView({ center, zoom, children, className }: Props) {
   return (
     <div dir="ltr" className={className}>
-      <MapContainer center={[center.lat, center.lng]} zoom={zoom} className="size-full" scrollWheelZoom>
+      <MapContainer center={[center.lat, center.lng]} zoom={zoom} className="size-full" scrollWheelZoom zoomControl={false}>
         <TileLayer
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

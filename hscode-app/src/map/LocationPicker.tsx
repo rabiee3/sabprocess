@@ -117,11 +117,6 @@ export function LocationPicker({ value, areaCenter, onChange }: Props) {
 
   return (
     <section className="flex flex-col gap-3">
-      <div>
-        <h2 className="text-lg font-semibold text-ink-strong">{t('survey.location.title')}</h2>
-        <p className="text-sm text-ink">{t('survey.location.hint')}</p>
-      </div>
-
       {gpsOff && <Banner tone="warning">{t('survey.location.gpsOff')}</Banner>}
       {weak && <Banner tone="warning">{t('survey.location.weak')}</Banner>}
 

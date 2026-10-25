@@ -11,6 +11,7 @@ type SnapCb = (s: { data: () => unknown; metadata?: { hasPendingWrites: boolean 
 const h = vi.hoisted(() => ({
   authCb: null as null | ((u: unknown) => void),
   authUnsub: vi.fn(),
+  opts: [] as unknown[],
   snaps: [] as { uid: string; ok: SnapCb; unsub: ReturnType<typeof vi.fn> }[],
 }))
 
@@ -24,7 +25,8 @@ vi.mock('firebase/auth', () => ({
 }))
 vi.mock('firebase/firestore', () => ({
   doc: (_d: unknown, _c: string, uid: string) => ({ uid }),
-  onSnapshot: (ref: { uid: string }, _opts: unknown, ok: SnapCb) => {
+  onSnapshot: (ref: { uid: string }, opts: unknown, ok: SnapCb) => {
+    h.opts.push(opts)
     const unsub = vi.fn()
     h.snaps.push({ uid: ref.uid, ok, unsub })
     return unsub
@@ -47,6 +49,7 @@ const snap = (data: unknown, hasPendingWrites = false) => ({ data: () => data, m
 beforeEach(() => {
   h.authCb = null
   h.snaps.length = 0
+  h.opts.length = 0
   h.authUnsub.mockClear()
   vi.mocked(ensureUserDoc).mockReset().mockResolvedValue(undefined)
 })
@@ -75,11 +78,22 @@ describe('AuthProvider', () => {
     mount()
     await fire({ uid: 'u1' })
     await flush()
+    expect(h.opts[0]).toEqual({ includeMetadataChanges: true })
     act(() => h.snaps[0].ok(snap({ role: 'client', active: true })))
     act(() => h.snaps[0].ok(snap({ role: 'surveyor', active: true }, true)))
     expect(latest).toMatchObject({ role: 'client' })
     act(() => h.snaps[0].ok(snap({ role: 'surveyor', active: true })))
     expect(latest).toMatchObject({ role: 'surveyor' })
+  })
+
+  it('a pending surveyor claim as the very first snapshot resolves to the client view, not a spinner', async () => {
+    mount()
+    await fire({ uid: 'u1' })
+    await flush()
+    act(() => h.snaps[0].ok(snap({ role: 'surveyor', active: true }, true)))
+    expect(latest).toMatchObject({ role: 'client', loading: false })
+    act(() => h.snaps[0].ok(snap({ role: 'surveyor', active: true })))
+    expect(latest).toMatchObject({ role: 'surveyor', loading: false })
   })
 
   it('(b) re-fire before ensureUserDoc resolves does not attach the stale listener', async () => {

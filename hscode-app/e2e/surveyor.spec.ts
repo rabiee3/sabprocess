@@ -128,7 +128,7 @@ test('(c) offline submit is saved on the phone, survives a reload, then uploads 
 
   await page.reload() // still offline
   await expect(page.getByRole('heading', { level: 1, name: en.survey.list.title })).toBeVisible()
-  await expect(row(page, en.survey.list.savedOnPhone).first()).toBeVisible()
+  await expect(row(page, 'E2E Offline Works').getByText(en.survey.list.savedOnPhone, { exact: true })).toBeVisible()
 
   await goOnline(page)
   await expect(row(page, 'E2E Offline Works').getByText(en.survey.list.pending, { exact: true })).toBeVisible({
@@ -170,6 +170,8 @@ test('(e) the Arabic run is RTL with no horizontal scroll', async ({ page }) => 
   const noOverflow = async () =>
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
   await expect(page.getByText(/GPS .*15/)).toBeVisible()
+  await expect(page.locator('.leaflet-control-zoom')).toHaveCount(0) // it used to sit under "My location"
+  await expect(page.getByRole('button', { name: ar.survey.location.myLocation })).toBeVisible()
   await noOverflow()
   await page.getByRole('button', { name: ar.survey.step.next, exact: true }).click()
   await onStep(page, 'basics')

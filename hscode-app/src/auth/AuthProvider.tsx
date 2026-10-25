@@ -44,7 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = snap.data()
             // A claim's optimistic local write would flip the UI to surveyor before the server decides; a rejected
             // claim would then bounce back and wipe the invalid-code message. Wait for the server's verdict.
-            if (snap.metadata?.hasPendingWrites && data?.role === 'surveyor') return
+            if (snap.metadata?.hasPendingWrites && data?.role === 'surveyor') {
+              // Still loading (e.g. an offline reopen with an unconfirmed claim): show the client view, never a spinner.
+              setState((prev) =>
+                prev.user?.uid === user.uid && prev.loading ? { user, role: 'client', active: data.active === true, loading: false } : prev,
+              )
+              return
+            }
             const role = ROLES.includes(data?.role) ? (data?.role as Role) : 'client'
             setState({ user, role, active: data?.active === true, loading: false })
           },
