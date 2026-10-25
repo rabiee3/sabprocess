@@ -72,6 +72,7 @@
     "location": {
       "title": "Where is the factory?",
       "hint": "Tap the map where the factory is",
+      "manual": "Placed by hand",
       "gpsOff": "Location is off. The pin starts at the centre of the selected area. Move it onto the factory before saving.",
       "weak": "GPS signal is weak. Move the pin onto the gate by hand.",
       "myLocation": "My location",

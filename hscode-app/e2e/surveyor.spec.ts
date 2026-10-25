@@ -59,6 +59,7 @@ async function fillLocation(page: Page) {
   const before = await coords.textContent()
   await page.locator('.leaflet-container').click({ position: { x: 40, y: 40 } }) // tap-to-place
   await expect(coords).not.toHaveText(before!)
+  await expect(page.getByText(en.survey.location.manual)).toBeVisible()
   await next(page)
   await onStep(page, 'basics')
 }

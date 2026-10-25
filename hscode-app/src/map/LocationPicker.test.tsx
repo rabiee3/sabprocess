@@ -72,6 +72,18 @@ describe('LocationPicker', () => {
     expect(screen.getByTestId('marker')).toHaveAttribute('data-lat', '30.5')
   })
 
+  it('new mode: after a tap there is no live GPS circle, label or weak banner, only "Placed by hand"', () => {
+    geo.mockReturnValue({ status: 'ok', coords: { lat: 29.9, lng: 31.2 }, accuracyM: 80, retry })
+    render(<LocationPicker areaCenter={area} onChange={onChange} />)
+    expect(screen.getByTestId('circle')).toBeInTheDocument()
+    expect(screen.getByText(/signal is weak/)).toBeInTheDocument()
+    fireClick(30.5, 31.5)
+    expect(screen.queryByTestId('circle')).toBeNull()
+    expect(screen.queryByText(/GPS ±/)).toBeNull()
+    expect(screen.queryByText(/signal is weak/)).toBeNull()
+    expect(screen.getByText('Placed by hand')).toBeInTheDocument()
+  })
+
   it('the marker is not draggable', () => {
     render(<LocationPicker areaCenter={area} onChange={onChange} />)
     expect(screen.getByTestId('marker')).toHaveAttribute('data-draggable', 'false')

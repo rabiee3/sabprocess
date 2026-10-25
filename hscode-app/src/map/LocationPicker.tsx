@@ -75,7 +75,8 @@ export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = 
 
   const storedPin = fixed && accSrc === 'stored'
   const storedAcc = storedPin ? (value?.accuracyM ?? null) : null
-  const hasFix = gpsEnabled && !storedPin && gps.status === 'ok' && !!gps.coords
+  const manual = accSrc === 'manual'
+  const hasFix = gpsEnabled && !manual && !storedPin && gps.status === 'ok' && !!gps.coords
   const liveAccuracyM = gps.status === 'ok' && gps.accuracyM !== undefined ? gps.accuracyM : (value?.accuracyM ?? null)
   const accuracyM = liveAccuracyM // display only: banner, circle, label
   const emitAccuracyM =
@@ -135,15 +136,15 @@ export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = 
           <Marker position={[pin.lat, pin.lng]} icon={icon} title={t('survey.location.hint')} />
         </MapView>
         {gpsEnabled && (
-        <button
-          type="button"
-          onClick={myLocation}
-          aria-label={t('survey.location.myLocation')}
-          className="absolute end-2 top-2 z-[1000] flex min-h-touch items-center gap-2 rounded bg-white px-3 text-sm font-medium text-ink-strong shadow"
-        >
-          <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: locateIcon }} />
-          {t('survey.location.myLocation')}
-        </button>
+          <button
+            type="button"
+            onClick={myLocation}
+            aria-label={t('survey.location.myLocation')}
+            className="absolute end-2 top-2 z-[1000] flex min-h-touch items-center gap-2 rounded bg-white px-3 text-sm font-medium text-ink-strong shadow"
+          >
+            <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: locateIcon }} />
+            {t('survey.location.myLocation')}
+          </button>
         )}
       </div>
 
@@ -151,6 +152,7 @@ export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = 
         <div dir="ltr" className="font-mono text-sm text-ink-strong">
           {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
         </div>
+        {manual && <div className="text-sm text-ink">{t('survey.location.manual')}</div>}
         {(storedAcc ?? (hasFix ? accuracyM : null)) !== null && (
           <div dir="ltr" className="text-sm text-ink">
             {t('survey.location.accuracy', { m: Math.round((storedAcc ?? accuracyM)!) })}
