@@ -9,7 +9,8 @@ export function MiniMap({ lat, lng }: { lat: number; lng: number }) {
   return (
     <section aria-labelledby="loc-h" className="flex flex-col gap-2">
       <h2 id="loc-h" className="text-body-sm font-semibold text-ink-strong">{t('factory.location')}</h2>
-      <div role="img" aria-label={t('factory.mapLabel')} className="relative z-0 h-44 overflow-hidden rounded-lg border border-line">
+      {/* A group, not an img: the map keeps focusable OSM attribution links, which an img may not contain. */}
+      <div role="group" aria-label={t('factory.mapLabel')} className="relative z-0 h-44 overflow-hidden rounded-lg border border-line">
         <MapView center={{ lat, lng }} zoom={15} interactive={false} className="size-full">
           <Marker position={[lat, lng]} icon={pinIcon('selected')} interactive={false} keyboard={false} />
         </MapView>
