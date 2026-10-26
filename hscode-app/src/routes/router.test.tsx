@@ -42,4 +42,18 @@ describe('basename', () => {
     expect(withBaseSlash({ pathname: '/hscode/', search: '?q=x', hash: '' })).toBeNull()
     expect(withBaseSlash({ pathname: '/hscode/f/a', search: '', hash: '' })).toBeNull()
   })
+
+  it('rewrites a hard load of /hscode to /hscode/ before the router reads the URL, keeping query, hash and state', async () => {
+    window.history.replaceState({ keep: 1 }, '', '/hscode?q=feed#h')
+    try {
+      vi.resetModules()
+      await import('./router')
+      expect(window.location.pathname).toBe('/hscode/')
+      expect(window.location.search).toBe('?q=feed')
+      expect(window.location.hash).toBe('#h')
+      expect(window.history.state).toMatchObject({ keep: 1 })
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+  })
 })

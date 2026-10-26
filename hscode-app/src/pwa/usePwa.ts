@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { registerSW } from 'virtual:pwa-register'
-import { APP_CHUNKS_CACHE } from './cacheNames'
+import { APP_CHUNKS_CACHE, APP_CHUNKS_MAX, isCacheableAsset } from './cacheNames'
 
 /** Chromium's install prompt event (not in lib.dom). */
 type InstallPromptEvent = Event & {
@@ -20,9 +20,11 @@ export type Pwa = PwaState & {
 /**
  * iPhone/iPad Safari, where "Add to Home Screen" is manual (no beforeinstallprompt). Other iOS browsers
  * (Chrome, Firefox, Edge) cannot add web apps the same way, so they get no hint; nor does the installed app.
+ * iPadOS 13+ Safari sends a desktop Mac UA: it is told apart from a Mac by platform MacIntel plus touch.
  */
-export function isIosSafari(ua: string, standalone = false): boolean {
-  return /iPhone|iPad|iPod/.test(ua) && /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua) && !standalone
+export function isIosSafari(ua: string, standalone = false, platform = '', maxTouchPoints = 0): boolean {
+  const ios = /iPhone|iPad|iPod/.test(ua) || (platform === 'MacIntel' && maxTouchPoints > 1)
+  return ios && /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua) && !standalone
 }
 
 // Module-level singleton: one registration and one captured install prompt, shared by every caller
@@ -48,8 +50,19 @@ async function cacheLoadedChunks() {
   const urls = [...new Set(performance.getEntriesByType('resource').map((e) => e.name))].filter((u) => u.startsWith(prefix))
   const cache = await caches.open(APP_CHUNKS_CACHE)
   for (const url of urls) {
-    if (!(await caches.match(url, { ignoreVary: true }))) await cache.add(url).catch(() => undefined)
+    if (await caches.match(url, { ignoreVary: true })) continue
+    try {
+      const res = await fetch(url)
+      // Never HTML under a chunk URL (an SPA rewrite of a missing chunk), only the right type.
+      if (isCacheableAsset(new URL(url).pathname, res.status, res.headers.get('content-type'))) await cache.put(url, res)
+    } catch {
+      // offline or blocked: the next visit fills it through the service worker
+    }
   }
+  // These writes bypass the service worker's ExpirationPlugin: keep the same 60-entry bound here,
+  // dropping the oldest (Cache Storage keys are in insertion order).
+  const keys = await cache.keys()
+  for (const old of keys.slice(0, Math.max(0, keys.length - APP_CHUNKS_MAX))) await cache.delete(old)
 }
 
 if (typeof window !== 'undefined') {
@@ -94,7 +107,12 @@ async function install() {
 
 const iosSafari = () =>
   typeof navigator !== 'undefined' &&
-  isIosSafari(navigator.userAgent, (navigator as Navigator & { standalone?: boolean }).standalone === true)
+  isIosSafari(
+    navigator.userAgent,
+    (navigator as Navigator & { standalone?: boolean }).standalone === true,
+    navigator.platform,
+    navigator.maxTouchPoints ?? 0,
+  )
 
 export function usePwa(): Pwa {
   const s = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)

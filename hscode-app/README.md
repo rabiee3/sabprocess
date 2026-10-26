@@ -13,7 +13,8 @@ Stack: Vite, React 19, Tailwind 4, react-router, Firebase (Auth, Firestore), i18
 | `npm run seed:emu` | Seeds the running emulators: sample factories, invites `482913` (unused) and `012345`, users `s1` and `c1`, a rejected factory, two pending factories, and the admin sign-in `admin@example.test` / `emulator-only-123` (emulator only). Standalone `seed:emu` needs both `FIRESTORE_EMULATOR_HOST` and `FIREBASE_AUTH_EMULATOR_HOST` set (or just use `npm run e2e`). |
 | `npm test` | Unit tests (Vitest, jsdom). |
 | `npm run test:rules` | Firestore rules tests, run inside the emulator. |
-| `npm run e2e` | Playwright (mobile and desktop) against the emulators; starts and stops them itself. |
+| `npm run e2e` | Playwright (mobile and desktop) against the emulators; starts and stops them itself. The desktop project needs the full Chromium: run `npx playwright install chromium` once. |
+| `npm run e2e:pwa` | Playwright against `vite preview` of a production build in `.pwa-preview/` (port 4174): manifest, service worker, offline, update banner. No emulator; every Google/Firebase request is aborted. |
 | `npm run lint`, `npm run typecheck` | Oxlint, and `tsc -b` over `src`, `tests`, `e2e` and `seed`. |
 | `npm run build` | Type-checks and builds into `../hscode` (served by Vercel). |
 | `npm run check:build` | Verifies the build output. |

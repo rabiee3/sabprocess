@@ -1,4 +1,4 @@
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { expect, test, type BrowserContext, type Request } from '@playwright/test'
 import en from '../src/i18n/en.json' with { type: 'json' }
@@ -11,6 +11,7 @@ import en from '../src/i18n/en.json' with { type: 'json' }
  */
 
 const SW_FILE = fileURLToPath(new URL('../.pwa-preview/sw.js', import.meta.url))
+const ASSETS_DIR = fileURLToPath(new URL('../.pwa-preview/assets', import.meta.url))
 // A 1x1 transparent PNG for OpenStreetMap tiles.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
 
@@ -123,6 +124,32 @@ test('after the first load, an offline reload still renders the app shell; Fires
   expect(servedBySw).toEqual([])
   // The SW never re-issues a Firestore request on the page's behalf (no fetch handler matched it).
   expect(firestore.filter((r) => r.serviceWorker() !== null).map((r) => r.url())).toEqual([])
+})
+
+test('app-chunks caches a real lazy chunk but never HTML served under a chunk URL (an SPA rewrite of a missing chunk)', async ({
+  context,
+  page,
+}) => {
+  // A chunk the map never loads, so only this test's fetch can cache it.
+  const real = `/hscode/assets/${readdirSync(ASSETS_DIR).find((f) => /^AdminRoute-.+\.js$/.test(f))}`
+  const gone = '/hscode/assets/Gone-OLDHASH.js'
+  // What the old vercel.json did for a chunk a new deploy no longer has: 200 text/html (index.html).
+  await context.route(`**${gone}`, (r) => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: '<!doctype html><title>HSCode</title>' }))
+
+  await page.goto('./')
+  await page.evaluate(swReady)
+  await page.reload() // controlled from here, so fetches go through the runtime route
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true)
+
+  const types = await page.evaluate(
+    (urls) => Promise.all(urls.map((u) => fetch(u).then((r) => r.headers.get('content-type')))),
+    [real, gone],
+  )
+  expect(types[0]).toContain('javascript')
+  expect(types[1]).toContain('text/html')
+  const cached = (u: string) => page.evaluate((x) => caches.open('app-chunks').then((c) => c.match(x, { ignoreVary: true })).then(Boolean), u)
+  await expect.poll(() => cached(real)).toBe(true)
+  expect(await cached(gone)).toBe(false)
 })
 
 test('a new deploy while the tab is open shows the Update banner, never a forced reload; Reload switches', async ({ page }) => {

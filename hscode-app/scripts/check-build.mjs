@@ -79,12 +79,22 @@ for (const icon of manifestIcons) {
 const swPath = resolve(outDir, 'sw.js')
 if (!existsSync(swPath)) fail(`${out}/sw.js does not exist`)
 const sw = readFileSync(swPath, 'utf8')
-for (const s of ['firestore.googleapis.com', 'identitytoolkit', 'securetoken']) {
-  if (sw.includes(s)) fail(`${out}/sw.js mentions "${s}": the service worker must never route Firestore or Google auth`)
+// Global constraints: never Firestore, Google auth (identitytoolkit, securetoken, /__/auth/), reCAPTCHA or Analytics.
+const SW_FORBIDDEN = ['firestore.googleapis.com', 'identitytoolkit', 'securetoken', '__/auth', 'recaptcha', 'google-analytics', 'googletagmanager']
+for (const s of SW_FORBIDDEN) {
+  if (sw.includes(s)) fail(`${out}/sw.js mentions "${s}": the service worker must never route Firestore, Google auth, reCAPTCHA or Analytics`)
 }
-// The registration (virtual:pwa-register) asks for /hscode/sw.js with scope /hscode/.
+// Scope /hscode/, asserted directly: the registration (virtual:pwa-register) is
+// new Workbox('/hscode/sw.js', { scope: '/hscode/' }) (the quote style varies with minification), and
+// navigations fall back to the shell only under /hscode/.
 const appJs = readdirSync(assetsDir).filter((n) => n.endsWith('.js')).map((f) => readFileSync(resolve(assetsDir, f), 'utf8')).join('\n')
-if (!appJs.includes('/hscode/sw.js')) fail('no JS asset registers /hscode/sw.js')
+const REGISTER = /["'`]\/hscode\/sw\.js["'`]\s*,\s*\{\s*scope\s*:\s*["'`]\/hscode\/["'`]/
+if (!REGISTER.test(appJs)) fail('no JS asset registers /hscode/sw.js with scope "/hscode/"')
+if (!sw.includes('allowlist:[/^\\/hscode\\//]')) fail(`${out}/sw.js navigation fallback is not limited to /hscode/`)
+// The root site must never get a service worker (it would control all of sabprocess.com).
+for (const f of ['sw.js', 'service-worker.js']) {
+  if (existsSync(resolve(rootDir, f))) fail(`${f} exists at the site root: only /hscode/sw.js is allowed`)
+}
 // Precache = the app shell only (spec §7): every precached assets/*.js is one index.html loads; lazy route
 // chunks are runtime-cached instead.
 const precached = [...sw.matchAll(/url:"([^"]+)"/g)].map((m) => m[1])

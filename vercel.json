@@ -1,6 +1,9 @@
 {
+  "redirects": [
+    { "source": "/hscode", "destination": "/hscode/", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/__/auth/:path*", "destination": "https://hscode-egypt.firebaseapp.com/__/auth/:path*" },
-    { "source": "/hscode/:path*", "destination": "/hscode/index.html" }
+    { "source": "/hscode/:path((?!assets/).*)", "destination": "/hscode/index.html" }
   ]
 }
