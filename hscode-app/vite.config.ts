@@ -137,7 +137,7 @@ export default defineConfig(({ mode }) => {
         devOptions: { enabled: false },
       }),
     ],
-    build: { outDir: '../hscode', emptyOutDir: true },
+    build: { outDir: '../hscode', emptyOutDir: true, manifest: true },
     test: {
       alias: { 'virtual:pwa-register': 'vite-plugin-pwa/dist/client/dev/register.js' },
       // Every test run (unit and rules) targets the emulators / demo-hscode, never production.

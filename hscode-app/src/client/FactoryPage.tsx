@@ -7,6 +7,7 @@ import type { PhotoData } from '../survey/types'
 import { ClientHeader } from './ClientHeader'
 import { ContactsPanel } from './ContactsPanel'
 import { FactoryProducts } from './FactoryProducts'
+import { getCached, setCached, type LoadedFactory } from './factoryCache'
 import { isFromMap } from './isFromMap'
 import { MiniMap } from './MiniMap'
 import { PhotoCarousel } from './PhotoCarousel'
@@ -35,22 +36,40 @@ export function Component() {
   const from = (location.state as { from?: unknown } | null)?.from
   const navigate = useNavigate()
   const fromMap = isFromMap(from)
-  const [state, setState] = useState<State>({ status: 'loading' })
-  const [photos, setPhotos] = useState<PhotoData[] | null>(null)
+  // A factory already seen this session renders at once from the session cache (spec §8).
+  const hit = getCached(id)
+  const [state, setState] = useState<State>(hit ? { status: 'ready', factory: hit.factory } : { status: 'loading' })
+  const [photos, setPhotos] = useState<PhotoData[] | null>(hit?.photos ?? null)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let live = true
-    setState({ status: 'loading' })
-    setPhotos(null)
-    loadPublicFactory(id).then(
-      (factory) => {
-        if (!live) return
-        setState(factory ? { status: 'ready', factory } : { status: 'missing' })
-        if (factory) loadPhotos(id).then((p) => live && setPhotos(p), () => live && setPhotos([]))
-      },
-      () => live && setState({ status: 'error' }),
-    )
+    const fetchPhotos = (factory: LoadedFactory) =>
+      loadPhotos(id).then(
+        (p) => {
+          setCached(id, { factory, photos: p })
+          if (live) setPhotos(p)
+        },
+        () => live && setPhotos([]),
+      )
+    const cached = getCached(id)
+    if (cached) {
+      setState({ status: 'ready', factory: cached.factory })
+      setPhotos(cached.photos)
+      if (!cached.photos) void fetchPhotos(cached.factory)
+    } else {
+      setState({ status: 'loading' })
+      setPhotos(null)
+      loadPublicFactory(id).then(
+        (factory) => {
+          if (factory) setCached(id, { factory, photos: null })
+          if (!live) return
+          setState(factory ? { status: 'ready', factory } : { status: 'missing' })
+          if (factory) void fetchPhotos(factory)
+        },
+        () => live && setState({ status: 'error' }),
+      )
+    }
     return () => {
       live = false
     }

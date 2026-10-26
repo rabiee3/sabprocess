@@ -11,14 +11,97 @@ vi.mock('firebase/firestore', () => ({
 
 import { IndexError, loadIndex, resetIndexCache } from './indexSource';
 
-const snap = (entries?: unknown[]) => ({ exists: () => !!entries, data: () => ({ entries }) });
+const snap = (entries?: unknown[], version = 1) => ({ exists: () => !!entries, data: () => ({ entries, version }) });
 const fsErr = (code: string, message = code) => Object.assign(new Error(message), { code });
 const fs = {} as never;
 
 beforeEach(() => {
   resetIndexCache();
   server.mockReset();
-  cache.mockReset();
+  // Default: nothing in the persistent cache (getDocFromCache throws on a miss).
+  cache.mockReset().mockRejectedValue(fsErr('unavailable', 'Failed to get document from cache'));
+});
+
+const deferred = <T,>() => {
+  let resolve!: (v: T) => void;
+  let reject!: (e: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+};
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+describe('loadIndex, cache first (stale-while-revalidate)', () => {
+  it('resolves from the cache before the server responds', async () => {
+    const pending = deferred<unknown>();
+    server.mockReturnValue(pending.promise);
+    cache.mockResolvedValue(snap([{ id: 'a' }], 1));
+    expect(await loadIndex(fs)).toEqual({ entries: [{ id: 'a' }], fromCache: true });
+    expect(server).toHaveBeenCalledTimes(1);
+    pending.resolve(snap([{ id: 'a' }], 1));
+  });
+
+  it('calls onUpdate once with the server entries when the version differs', async () => {
+    const pending = deferred<unknown>();
+    server.mockReturnValue(pending.promise);
+    cache.mockResolvedValue(snap([{ id: 'a' }], 1));
+    const onUpdate = vi.fn();
+    await loadIndex(fs, onUpdate);
+    expect(onUpdate).not.toHaveBeenCalled();
+    pending.resolve(snap([{ id: 'a' }, { id: 'b' }], 2));
+    await flush();
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledWith({ entries: [{ id: 'a' }, { id: 'b' }], fromCache: false });
+    // The memo now holds the fresh index: a remount gets it without another read.
+    expect(await loadIndex(fs)).toEqual({ entries: [{ id: 'a' }, { id: 'b' }], fromCache: false });
+    expect(server).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onUpdate when the server has the same version', async () => {
+    server.mockResolvedValue(snap([{ id: 'a' }], 3));
+    cache.mockResolvedValue(snap([{ id: 'a' }], 3));
+    const onUpdate = vi.fn();
+    const first = await loadIndex(fs, onUpdate);
+    await flush();
+    expect(onUpdate).not.toHaveBeenCalled();
+    // Revalidated: the same entries (same array, so the engine is reused), no longer flagged as cached.
+    const again = await loadIndex(fs);
+    expect(again.entries).toBe(first.entries);
+    expect(again.fromCache).toBe(false);
+  });
+
+  it('falls back to the server on a cache miss (no doc in the cache)', async () => {
+    cache.mockResolvedValue(snap());
+    server.mockResolvedValue(snap([{ id: 'a' }]));
+    expect(await loadIndex(fs)).toEqual({ entries: [{ id: 'a' }], fromCache: false });
+  });
+
+  it('makes exactly one server read per session', async () => {
+    server.mockResolvedValue(snap([{ id: 'a' }], 2));
+    cache.mockResolvedValue(snap([{ id: 'a' }], 1));
+    const onUpdate = vi.fn();
+    await loadIndex(fs, onUpdate);
+    await loadIndex(fs, onUpdate);
+    await flush();
+    await loadIndex(fs, onUpdate);
+    await flush();
+    expect(server).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the cached index and retries on the next call when the background read fails', async () => {
+    server.mockRejectedValueOnce(fsErr('unavailable')).mockResolvedValueOnce(snap([{ id: 'b' }], 2));
+    cache.mockResolvedValue(snap([{ id: 'a' }], 1));
+    const onUpdate = vi.fn();
+    expect(await loadIndex(fs, onUpdate)).toEqual({ entries: [{ id: 'a' }], fromCache: true });
+    await flush();
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect((await loadIndex(fs)).fromCache).toBe(true);
+    await flush();
+    expect(server).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('loadIndex', () => {
@@ -66,14 +149,6 @@ describe('loadIndex', () => {
     const err = await loadIndex(fs).catch((e) => e);
     expect(err).toBeInstanceOf(IndexError);
     expect(err.code).toBe('denied');
-  });
-
-  it('does not memoise a cache-only result', async () => {
-    server.mockRejectedValueOnce(fsErr('unavailable')).mockResolvedValueOnce(snap([{ id: 'b' }]));
-    cache.mockResolvedValue(snap([{ id: 'a' }]));
-    expect((await loadIndex(fs)).fromCache).toBe(true);
-    await new Promise((r) => setTimeout(r, 0));
-    expect(await loadIndex(fs)).toEqual({ entries: [{ id: 'b' }], fromCache: false });
   });
 
   it('is memoised across calls', async () => {

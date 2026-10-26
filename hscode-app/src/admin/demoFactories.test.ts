@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { areas, headings, sectors } from '../data'
+import { areas, sectors } from '../data'
+import { headings } from '../data/hsTable'
 import { validateFactoryFields } from '../lib/factoryValidation'
 import { insideEgypt } from '../lib/geo'
 import { validateHs } from '../lib/hs'

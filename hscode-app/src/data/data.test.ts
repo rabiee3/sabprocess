@@ -1,4 +1,5 @@
-import { chapters, headings, loadSubheadings, areas, sectors } from './index';
+import { loadSubheadings, areas, sectors } from './index';
+import { chapters, headings } from './hsTable';
 
 describe('bundled data', () => {
   it('has 96 chapters, each with en and ar, chapter 77 absent', () => {

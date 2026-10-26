@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { IndexEntry } from '../lib/types';
 import { createEngine } from './engine';
 import { fixtures } from './fixtures';
-import { suggest } from './suggest';
+import { searchHeadings } from '../hs/search';
+import { suggest as suggestWith } from './suggest';
+
+const suggest = (...a: Parameters<typeof suggestWith>) => suggestWith(a[0], a[1], a[2], searchHeadings);
 
 describe('suggest', () => {
   it('suggests products and only indexed HS headings', () => {
@@ -43,6 +46,12 @@ describe('suggest', () => {
     expect(suggest(hsMany, '23', 'en').hs).toHaveLength(5);
     expect(suggest(hsMany, 'a', 'en').sectors).toHaveLength(5);
     expect(suggest(hsMany, 'a', 'en').areas).toHaveLength(5);
+  });
+
+  it('has no HS group until the HS table is passed in (it loads lazily)', () => {
+    const e = createEngine(fixtures, 'en');
+    expect(suggestWith(e, '2309', 'en').hs).toEqual([]);
+    expect(suggestWith(e, 'feed', 'en').products.map((p) => p.label)).toContain('Poultry feed');
   });
 
   it('returns empty groups for an empty query', () => {

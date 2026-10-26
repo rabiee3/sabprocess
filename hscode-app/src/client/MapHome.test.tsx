@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router'
 import { initI18n } from '../i18n'
@@ -13,7 +13,7 @@ vi.mock('firebase/firestore', () => ({ doc: () => ({}), getDoc: vi.fn().mockReso
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
 
 const loadIndex = vi.fn()
-vi.mock('../search/indexSource', () => ({ loadIndex: () => loadIndex() }))
+vi.mock('../search/indexSource', () => ({ loadIndex: (...a: unknown[]) => loadIndex(...a) }))
 
 const near = { status: 'idle' as string, pos: undefined as { lat: number; lng: number } | undefined, request: vi.fn() }
 vi.mock('./useNearMe', () => ({ useNearMe: () => near }))
@@ -162,12 +162,24 @@ describe('MapHome', () => {
     expect(screen.queryByRole('article')).toBeNull()
   })
 
-  it('shows the Demo badge for sample factories and the saved-results note from cache', async () => {
+  it('shows the Demo badge for sample factories and the saved-results note from cache while offline', async () => {
+    loadIndex.mockResolvedValue({ entries: ENTRIES, fromCache: true })
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    try {
+      setup()
+      await screen.findAllByRole('article')
+      expect(screen.getAllByText('Demo')).toHaveLength(1)
+      expect(screen.getByText('Showing saved results')).toBeInTheDocument()
+    } finally {
+      online.mockRestore()
+    }
+  })
+
+  it('a cached index shown while online has no saved-results note (it is being revalidated)', async () => {
     loadIndex.mockResolvedValue({ entries: ENTRIES, fromCache: true })
     setup()
     await screen.findAllByRole('article')
-    expect(screen.getAllByText('Demo')).toHaveLength(1)
-    expect(screen.getByText('Showing saved results')).toBeInTheDocument()
+    expect(screen.queryByText('Showing saved results')).toBeNull()
   })
 
   it('loads the index once and does not reload on typing', async () => {
@@ -232,10 +244,47 @@ describe('MapHome', () => {
     createEngineSpy.mockClear()
     const a = render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <MapHome /> }], { initialEntries: ['/'] })} />)
     await screen.findAllByRole('article')
+    // The engine is built when the browser is idle; wait for it before unmounting.
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Search a product, HS code, or industry…'))
     a.unmount()
     render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <MapHome /> }], { initialEntries: ['/'] })} />)
     await screen.findAllByRole('article')
+    // Ready at once on the remount: no "Preparing search…" and no second build.
+    expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Search a product, HS code, or industry…')
     expect(createEngineSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders pins and cards from the entries before the search engine is built', async () => {
+    const w = window as unknown as { requestIdleCallback?: unknown; cancelIdleCallback?: unknown }
+    w.requestIdleCallback = vi.fn(() => 1) // the browser never gets idle in this test
+    w.cancelIdleCallback = vi.fn()
+    try {
+      loadIndex.mockResolvedValue({ entries: [...ENTRIES], fromCache: false })
+      setup()
+      expect(await screen.findByTestId('pin-f1')).toBeInTheDocument()
+      expect(screen.getByTestId('pin-f3')).toBeInTheDocument()
+      expect(screen.getAllByRole('article')).toHaveLength(3)
+      expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Preparing search…')
+    } finally {
+      delete w.requestIdleCallback
+      delete w.cancelIdleCallback
+    }
+  })
+
+  it('a newer index from the server replaces the cached one and keeps the search and selection', async () => {
+    let onUpdate: ((l: { entries: IndexEntry[]; fromCache: boolean }) => void) | undefined
+    loadIndex.mockImplementation((_fs: unknown, cb: typeof onUpdate) => {
+      onUpdate = cb
+      return Promise.resolve({ entries: [...ENTRIES], fromCache: true })
+    })
+    setup('/?q=feed&sel=f1')
+    await screen.findAllByRole('article')
+    const fresh = [...ENTRIES, entry('f4', 'Cairo Feed Co', 30.2, 400, { m: [{ n: { en: 'Fish feed' }, h: '2309' }] })]
+    await act(async () => onUpdate?.({ entries: fresh, fromCache: false }))
+    await waitFor(() => expect(names()).toContain('Cairo Feed Co'))
+    expect(names()).not.toContain('Maize Growers')
+    expect(screen.getByTestId('loc').textContent).toBe('?q=feed&sel=f1')
+    expect(screen.getByRole('combobox')).toHaveValue('feed')
   })
 })
 

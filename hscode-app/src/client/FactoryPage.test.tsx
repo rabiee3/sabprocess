@@ -31,6 +31,7 @@ vi.mock('./publicRepo', () => ({
 }))
 
 import { Component as FactoryPage } from './FactoryPage'
+import { clearFactoryCache } from './factoryCache'
 
 const IMG = 'data:image/png;base64,AAAA'
 const factory: Factory = {
@@ -52,6 +53,7 @@ function setup(entry: string | { pathname: string; state?: unknown } = '/f/f1') 
 }
 
 beforeEach(() => {
+  clearFactoryCache()
   initI18n()
   setLanguage('en')
   auth.user = null
@@ -240,5 +242,32 @@ describe('FactoryPage', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Second Mill' })).toBeInTheDocument()
     await act(async () => resolveOld(factory))
     expect(screen.getByRole('heading', { level: 1, name: 'Second Mill' })).toBeInTheDocument()
+  })
+
+  it('a second visit to the same factory in this session reads nothing again (session cache)', async () => {
+    const router = setup()
+    await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })
+    await waitFor(() => expect(screen.getAllByRole('img', { name: /Al-Nour Feed Mills/ }).length).toBeGreaterThan(0))
+    await act(() => router.navigate('/'))
+    await act(() => router.navigate('/f/f1'))
+    expect(screen.getByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })).toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: /Al-Nour Feed Mills/ }).length).toBeGreaterThan(0)
+    expect(loadPublicFactory).toHaveBeenCalledTimes(1)
+    expect(loadPhotos).toHaveBeenCalledTimes(1)
+  })
+
+  it('a missing factory or a failed photo read is not cached', async () => {
+    loadPublicFactory.mockResolvedValueOnce(null)
+    const router = setup()
+    await screen.findByRole('heading', { level: 1, name: 'Factory not found' })
+    loadPhotos.mockRejectedValueOnce(new Error('offline'))
+    await act(() => router.navigate('/'))
+    await act(() => router.navigate('/f/f1'))
+    await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })
+    await act(() => router.navigate('/'))
+    await act(() => router.navigate('/f/f1'))
+    await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })
+    expect(loadPublicFactory).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(loadPhotos).toHaveBeenCalledTimes(2))
   })
 })

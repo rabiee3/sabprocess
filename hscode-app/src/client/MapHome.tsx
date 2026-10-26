@@ -5,8 +5,10 @@ import { ResultsMap } from '../map/ResultsMap'
 import { distanceKm } from '../lib/geo'
 import { formatHs } from '../lib/hs'
 import type { IndexEntry } from '../lib/types'
-import { getEngine } from '../search/engine'
+import { filterEntries } from '../search/engine'
 import { loadIndex, type IndexErrorCode } from '../search/indexSource'
+import { useEngine } from '../search/useEngine'
+import { useOnline } from '../ui/useOnline'
 import { Banner } from '../ui/Banner'
 import { useIsDesktop } from '../admin/useIsDesktop'
 import { ClientHeader } from './ClientHeader'
@@ -50,8 +52,12 @@ export function Component() {
   useEffect(() => {
     let live = true
     setLoad({ status: 'loading' })
-    loadIndex().then(
-      (r) => live && setLoad({ status: 'ready', entries: r.entries, fromCache: r.fromCache }),
+    // Cache first (spec §8): a newer index from the server swaps in later; the query, filters and selection live
+    // in the URL, so they stay.
+    const ready = (r: { entries: IndexEntry[]; fromCache: boolean }) =>
+      live && setLoad({ status: 'ready', entries: r.entries, fromCache: r.fromCache })
+    loadIndex(undefined, ready).then(
+      ready,
       (e: unknown) => {
         const c = (e as { code?: IndexErrorCode })?.code
         if (live) setLoad({ status: 'error', code: c && CODES.includes(c) ? c : 'generic' })
@@ -63,18 +69,25 @@ export function Component() {
   }, [attempt])
 
   const entries = load.status === 'ready' ? load.entries : null
-  // Matching does not depend on the language: built once per loaded index (cached across mounts), never per keystroke.
-  const engine = useMemo(() => (entries ? getEngine(entries) : null), [entries])
+  // Matching does not depend on the language: built once per loaded index (cached across mounts), never per
+  // keystroke, and only when the browser is idle, so the pins paint first.
+  const engine = useEngine(entries)
+  const online = useOnline()
+  // The saved-results note is for an offline visit; online, a cached index is being checked against the server.
+  const fromCache = load.status === 'ready' && load.fromCache && !online
+  // Until the engine is ready, a text query cannot run yet: the list waits (loading) instead of showing everything.
+  const waiting = !!entries && !engine && !!q.trim()
 
   const nearOk = wantNear && nearMe.status === 'ok' && !!nearMe.pos
   const { results, distances } = useMemo(() => {
-    if (!engine) return { results: [] as IndexEntry[], distances: undefined }
-    const found = engine.search(q, { area, sector, hs })
+    if (!entries) return { results: [] as IndexEntry[], distances: undefined }
+    // Pins render straight from the entries while the engine builds; filters need no engine.
+    const found = engine ? engine.search(q, { area, sector, hs }) : q.trim() ? [] : filterEntries(entries, { area, sector, hs })
     if (!nearOk || !nearMe.pos) return { results: found, distances: undefined }
     const pos = nearMe.pos
     const d = new Map(found.map((e) => [e.id, distanceKm(pos, e)]))
     return { results: [...found].sort((a, b) => d.get(a.id)! - d.get(b.id)!), distances: d }
-  }, [engine, q, area, sector, hs, nearOk, nearMe.pos])
+  }, [entries, engine, q, area, sector, hs, nearOk, nearMe.pos])
 
   // Denied / unavailable: untoggle and say why.
   useEffect(() => {
@@ -151,14 +164,14 @@ export function Component() {
           {!desktop && (
             <ResultsSheet
               entries={results}
-              loading={load.status === 'loading'}
+              loading={load.status === 'loading' || waiting}
               error={load.status === 'error'}
               lang={lang}
               desktop={false}
               selectedId={sel}
               distances={distances}
               hsFilter={hs ? formatHs(hs) : undefined}
-              fromCache={load.status === 'ready' && load.fromCache}
+              fromCache={fromCache}
               onSelect={select}
               onTry={(w) => set({ q: w, hs: '' }, { push: true })}
             />
@@ -167,14 +180,14 @@ export function Component() {
         {desktop && (
           <ResultsSheet
             entries={results}
-            loading={load.status === 'loading'}
+            loading={load.status === 'loading' || waiting}
               error={load.status === 'error'}
             lang={lang}
             desktop
             selectedId={sel}
             distances={distances}
             hsFilter={hs ? formatHs(hs) : undefined}
-            fromCache={load.status === 'ready' && load.fromCache}
+            fromCache={fromCache}
             onSelect={select}
             onTry={(w) => set({ q: w, hs: '' }, { push: true })}
           />

@@ -157,7 +157,8 @@
     "noResults": "No matching heading. Try another word or a code.",
     "back": "Back",
     "chapter": "Chapter {{code}}",
-    "needsConnection": "More detail needs a connection"
+    "needsConnection": "More detail needs a connection",
+    "listNeedsConnection": "The HS code list needs a connection. You can skip this step for now."
   },
   "errors": {
     "offline": "You're offline — connect to continue",
@@ -427,6 +428,7 @@
     "title": "Factory map",
     "searchLabel": "Search factories",
     "searchPlaceholder": "Search a product, HS code, or industry…",
+    "preparingSearch": "Preparing search…",
     "clear": "Clear search",
     "searchFor": "Search for “{{q}}”",
     "sugProducts": "Products",
