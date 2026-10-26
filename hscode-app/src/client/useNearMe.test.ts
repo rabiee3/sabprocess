@@ -92,4 +92,15 @@ describe('useNearMe cache', () => {
     expect(result.current.status).toBe('idle')
     expect(result.current.pos).toBeUndefined()
   })
+
+  it('a later failed request forgets the cached fix', () => {
+    fix()
+    getCurrentPosition.mockImplementation((_ok, err) => err({ code: 1 }))
+    const second = renderHook(() => useNearMe())
+    act(() => second.result.current.request())
+    second.unmount()
+    const { result } = renderHook(() => useNearMe())
+    expect(result.current.status).toBe('idle')
+    expect(result.current.pos).toBeUndefined()
+  })
 })

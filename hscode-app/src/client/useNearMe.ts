@@ -39,6 +39,8 @@ export function useNearMe() {
         if (alive.current) setState({ status: 'ok', pos })
       },
       (e) => {
+        // Permission revoked or no fix: do not restore the old position later.
+        lastFix = null
         if (alive.current) setState({ status: e.code === 1 ? 'denied' : 'unavailable' })
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
