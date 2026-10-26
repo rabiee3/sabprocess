@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { areas } from '../data'
 import { LocationPicker } from '../map/LocationPicker'
-import { draftReducer, type Draft, type DraftAction } from '../survey/draft'
+import type { Draft, DraftAction } from '../survey/draft'
 import { FieldError } from '../survey/steps/shared'
 import { StepBasics } from '../survey/steps/StepBasics'
 import { StepProducts } from '../survey/steps/StepProducts'
@@ -10,7 +10,11 @@ const DEFAULT_CENTER = { lat: 29.9227638, lng: 30.9129223 }
 
 type Props = {
   value: Draft
-  onChange: (next: Draft) => void
+  /**
+   * Applies an edit. The parent must reduce it onto its latest draft (a functional update), never onto `value`:
+   * the location picker emits from effects, and an emit applied to an older render's draft would undo edits.
+   */
+  dispatch: (a: DraftAction) => void
   /** Validation errors to show (from `formErrors(value)` in reviewForm.ts), or [] until the admin has tried to approve. */
   errors: string[]
   /** Remounts the location picker when it changes (used to re-centre an unplaced pin). */
@@ -21,9 +25,8 @@ type Props = {
  * Controlled editor for the admin-editable fields. It reuses the surveyor's basics and products steps
  * (same limits and checks) and the location picker, with the stored pin as the starting point.
  */
-export function AdminFactoryForm({ value, onChange, errors, pickerKey }: Props) {
+export function AdminFactoryForm({ value, dispatch, errors, pickerKey }: Props) {
   const { t } = useTranslation()
-  const dispatch = (a: DraftAction) => onChange(draftReducer(value, a))
   const center = areas().find((a) => a.id === value.area)?.center ?? value.location ?? DEFAULT_CENTER
   return (
     <div className="flex flex-col gap-6">

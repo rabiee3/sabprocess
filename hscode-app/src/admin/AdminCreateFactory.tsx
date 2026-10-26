@@ -74,9 +74,9 @@ export function AdminCreateFactory() {
       {error && <Banner tone="danger">{t(ERROR_KEY[error])}</Banner>}
       {errors.length > 0 && <Banner tone="danger">{t('admin.factories.detail.fixErrors')}</Banner>}
       <AdminFactoryForm value={draft} errors={errors} pickerKey={frozenArea ?? draft.area}
-        onChange={(next) => {
-          if (next.location?.pinMoved && !draft.location?.pinMoved) setFrozenArea(draft.area)
-          setDraft(next)
+        dispatch={(a) => {
+          if (a.type === 'setLocation' && a.location.pinMoved && !draft.location?.pinMoved) setFrozenArea(draft.area)
+          dispatch(a)
         }} />
       <section>
         <h3 className="mb-2 text-title font-semibold text-ink-strong">{t('admin.create.contact')}</h3>

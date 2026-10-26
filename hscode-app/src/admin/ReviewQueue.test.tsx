@@ -137,8 +137,8 @@ describe('ReviewQueue', () => {
     expect(screen.getByText(/GPS accuracy was ±85 m/)).toBeInTheDocument()
     const name = screen.getByLabelText('Factory name (English)')
     await user.clear(name)
-    // Guard, not a fix: under heavy CPU load the controlled input once kept its old value after clear().
-    // The app re-seeds nothing (see the mid-edit snapshot test), so only the test needed to wait for the commit.
+    // Under load this once read the old name: a late location-picker emit was applied to the first render's
+    // draft and undid the clear. Fixed in the app (edits reduce onto the latest draft; see ReviewDetail.test).
     await waitFor(() => expect(name).toHaveValue(''))
     await user.type(name, 'Nile Pipes')
     await waitFor(() => expect(name).toHaveValue('Nile Pipes'))

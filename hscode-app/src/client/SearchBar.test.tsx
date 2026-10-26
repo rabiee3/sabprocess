@@ -38,6 +38,8 @@ describe('SearchBar', () => {
     render(<SearchBar engine={createEngine(fixtures, 'en')} {...props} />)
     await userEvent.type(screen.getByRole('combobox'), '2309')
     const list = await screen.findByRole('listbox')
-    expect(await within(list).findByRole('option', { name: /2309/ })).toBeInTheDocument()
+    // The heading's name, not /2309/: that also matches the always-present "Search for “2309”" option.
+    const heading = await within(list).findByRole('option', { name: /animal feeding/i }, { timeout: 5000 })
+    expect(heading).toHaveTextContent('2309')
   })
 })

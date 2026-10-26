@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Timestamp } from 'firebase/firestore'
 import type { Factory } from '../lib/types'
-import { draftFromFactory, type Draft } from '../survey/draft'
+import { draftFromFactory, draftReducer, type Draft, type DraftAction } from '../survey/draft'
 import type { ContactDraft, PhotoData } from '../survey/types'
 import { loadForReview } from './repo'
 
@@ -37,6 +37,7 @@ export function useFactoryLoad(fid: string) {
       setState({ kind: 'loading' })
       setAttempt((n) => n + 1)
     },
-    setDraft: (data: Loaded, draft: Draft) => setState({ kind: 'ready', data, draft }),
+    /** Applies an edit to the latest draft (a functional update, so an emit from an older render keeps newer edits). */
+    dispatch: (a: DraftAction) => setState((s) => (s.kind === 'ready' ? { ...s, draft: draftReducer(s.draft, a) } : s)),
   }
 }
