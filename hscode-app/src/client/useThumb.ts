@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
-import { isSafeImage } from '../admin/safeImage'
+import { isSafeImage } from '../lib/safeImage'
 
 // One factory-doc read per id per session, shared by every card.
 const cache = new Map<string, Promise<string | null>>()

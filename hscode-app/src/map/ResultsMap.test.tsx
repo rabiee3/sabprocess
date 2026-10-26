@@ -13,8 +13,8 @@ vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: ReactNode }) => <div data-testid="map">{children}</div>,
   TileLayer: () => null,
   useMap: () => map,
-  Marker: ({ position, icon }: { position: [number, number]; icon?: { options: { html?: string } } }) => (
-    <div data-testid="rl-marker" data-lat={position[0]} data-html={icon?.options.html ?? ''} />
+  Marker: ({ position, icon, title }: { position: [number, number]; icon?: { options: { html?: string } }; title?: string }) => (
+    <div data-testid="rl-marker" title={title} data-lat={position[0]} data-html={icon?.options.html ?? ''} />
   ),
 }))
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
@@ -114,6 +114,11 @@ describe('ClusterLayer', () => {
     expect(sel.getAttribute('data-html')).toContain('<svg')
     // the pin differs from the default pin used inside the group
     expect(sel.getAttribute('data-html')).not.toBe(group.layers[0].icon.options.html)
+  })
+
+  it('the selected marker carries the factory name as its title', () => {
+    render(<ClusterLayer points={[{ id: 'a', lat: 1, lng: 1, label: 'Delta Mill' }]} selectedId="a" onSelect={() => {}} />)
+    expect(screen.getByTestId('rl-marker')).toHaveAttribute('title', 'Delta Mill')
   })
 
   it('flagged points use the flagged pin', () => {

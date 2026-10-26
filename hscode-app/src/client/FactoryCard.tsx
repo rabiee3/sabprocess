@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { HsBadge } from '../hs/HsBadge'
 import type { IndexEntry } from '../lib/types'
@@ -22,6 +22,7 @@ type Props = {
 
 export function FactoryCard({ entry: e, lang, selected, distanceKm, showNeeds, onSelect }: Props) {
   const { t } = useTranslation()
+  const loc = useLocation()
   const { ref, src } = useThumb<HTMLDivElement>(e.id)
   const name = pickName(e.n, lang) || t('map.noName')
   const meta = [areaLabel(e.a, lang), sectorLabel(e.s, lang)].filter(Boolean).join(' · ')
@@ -81,6 +82,7 @@ export function FactoryCard({ entry: e, lang, selected, distanceKm, showNeeds, o
       )}
       <Link
         to={`/f/${e.id}`}
+        state={{ from: `${loc.pathname}${loc.search}` }}
         className="relative z-10 mt-2 inline-flex min-h-touch w-full items-center justify-center rounded bg-brand-500 px-4 text-sm font-semibold text-ink-strong"
       >
         {t('map.viewFactory')}

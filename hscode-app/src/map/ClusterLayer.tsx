@@ -74,6 +74,7 @@ export function ClusterLayer({ points, selectedId, onSelect }: Props) {
       position={[sel.lat, sel.lng]}
       icon={pinIcon('selected')}
       zIndexOffset={1000}
+      title={sel.label}
       eventHandlers={{ click: () => onSelectRef.current(sel.id) }}
     />
   ) : null

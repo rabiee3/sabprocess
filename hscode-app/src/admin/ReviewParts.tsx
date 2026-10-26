@@ -4,8 +4,8 @@ import { normalizeDigits } from '../survey/draft'
 import type { ContactDraft, PhotoData } from '../survey/types'
 import { BottomSheet } from '../ui/BottomSheet'
 import { FieldError } from '../survey/steps/shared'
-import { isSafeImage } from './safeImage'
-import { safeUrl, whatsappHref } from './contactLinks'
+import { isSafeImage } from '../lib/safeImage'
+import { safeUrl, whatsappHref } from '../lib/contactLinks'
 
 export function PhotoStrip({ photos }: { photos: PhotoData[] }) {
   const { t } = useTranslation()
