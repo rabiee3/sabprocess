@@ -1,7 +1,13 @@
 import type { Auth } from 'firebase/auth'
 import type { Firestore } from 'firebase/firestore'
 
-export type SignOutDeps = { db: Firestore; auth: Auth; reload: () => void }
+export type SignOutDeps = {
+  db: Firestore
+  auth: Auth
+  reload: () => void
+  /** Runs right after signOut, on every path (wiped or kept), before terminate and reload. */
+  onSignedOut?: () => void
+}
 
 /** How long queued writes (a surveyor's offline submissions) get to reach the server before sign-out. */
 export const PENDING_WRITES_TIMEOUT_MS = 5000
@@ -34,6 +40,7 @@ export async function signOutAndWipe(deps: Partial<SignOutDeps> = {}): Promise<'
   clearTimeout(timer)
 
   await signOut(auth)
+  deps.onSignedOut?.()
   if (!synced) return 'kept'
 
   try {

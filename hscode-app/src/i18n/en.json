@@ -16,6 +16,7 @@
     "surveyors": "Surveyors",
     "signIn": "Sign in",
     "signOut": "Sign out",
+    "signingOut": "Signing out…",
     "admin": "Admin",
     "backToMap": "Back to the map",
     "signOutKeptData": "Signed out. Some survey changes are still waiting to upload, so this phone keeps its saved data until they sync."

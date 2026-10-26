@@ -74,6 +74,21 @@ describe('signOutAndWipe', () => {
     expect(clearIndexedDbPersistence).not.toHaveBeenCalled()
   })
 
+  it('onSignedOut runs right after signOut, before terminate and reload (wiped)', async () => {
+    const onSignedOut = vi.fn(() => {
+      calls.push('onSignedOut')
+    })
+    await signOutAndWipe({ ...deps(), onSignedOut })
+    expect(calls).toEqual(['waitForPendingWrites', 'signOut', 'onSignedOut', 'terminate', 'clear', 'reload'])
+  })
+
+  it('onSignedOut runs on a kept sign-out too', async () => {
+    waitForPendingWrites.mockRejectedValue(new Error('x'))
+    const onSignedOut = vi.fn()
+    expect(await signOutAndWipe({ ...deps(), onSignedOut })).toBe('kept')
+    expect(onSignedOut).toHaveBeenCalledTimes(1)
+  })
+
   it('a clear failure (memory cache, another tab open) still reloads', async () => {
     clearIndexedDbPersistence.mockRejectedValue({ code: 'failed-precondition' })
     expect(await signOutAndWipe(deps())).toBe('wiped')

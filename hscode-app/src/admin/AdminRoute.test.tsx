@@ -78,6 +78,18 @@ describe('AdminRoute', () => {
     await userEvent.click(screen.getByRole('button', { name: en.nav.signOut }))
     expect(signOutAndWipe).toHaveBeenCalled()
   })
+  it('admin Sign out is disabled and busy while it runs', async () => {
+    let done: (v: string) => void = () => {}
+    signOutAndWipe.mockImplementation(() => new Promise((r) => { done = r }))
+    auth = { user, role: 'admin', active: true, loading: false }
+    renderAt()
+    await userEvent.click(screen.getByRole('button', { name: en.nav.signOut }))
+    const btn = screen.getByRole('button', { name: en.nav.signingOut })
+    expect(btn).toBeDisabled()
+    expect(btn).toHaveAttribute('aria-busy', 'true')
+    await act(async () => done('wiped'))
+    expect(screen.getByRole('button', { name: en.nav.signOut })).toBeEnabled()
+  })
   it('admin sign-out with writes still pending: the kept-data note survives the switch to the sign-in form', async () => {
     signOutAndWipe.mockResolvedValue('kept')
     auth = { user, role: 'admin', active: true, loading: false }

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import userEvent from '@testing-library/user-event'
 import { initI18n } from '../i18n'
@@ -71,5 +71,17 @@ describe('AppHeader sign-in', () => {
     expect(msg.closest('.fixed')).not.toBeNull()
     await userEvent.click(screen.getByRole('button', { name: en.common.close }))
     expect(screen.queryByText(en.nav.signOutKeptData)).toBeNull()
+  })
+  it('while signing out the button is disabled and busy, labelled Signing out…', async () => {
+    let done: (v: string) => void = () => {}
+    signOutAndWipe.mockImplementation(() => new Promise((r) => { done = r }))
+    auth.user = { displayName: 'Mona', email: 'm@example.com' }
+    render(<MemoryRouter><AppHeader /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('button', { name: en.nav.signOut }))
+    const btn = screen.getByRole('button', { name: en.nav.signingOut })
+    expect(btn).toBeDisabled()
+    expect(btn).toHaveAttribute('aria-busy', 'true')
+    await act(async () => done('wiped'))
+    expect(screen.getByRole('button', { name: en.nav.signOut })).toBeEnabled()
   })
 })

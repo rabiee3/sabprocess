@@ -15,7 +15,7 @@ import { SurveyorsPage } from './SurveyorsPage'
 
 function NotAdmin() {
   const { t } = useTranslation()
-  const { signOut } = useSignOut()
+  const { signOut, busy } = useSignOut()
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-alt p-6 text-center">
       <h1 className="text-xl font-semibold text-ink-strong">{t('admin.notAdmin.title')}</h1>
@@ -23,10 +23,12 @@ function NotAdmin() {
       <div className="flex flex-wrap justify-center gap-3">
         <button
           type="button"
+          disabled={busy}
+          aria-busy={busy || undefined}
           onClick={() => void signOut()}
-          className="min-h-cta rounded bg-brand-500 px-4 text-body font-semibold text-ink-strong"
+          className="min-h-cta rounded bg-brand-500 px-4 text-body font-semibold text-ink-strong disabled:opacity-60"
         >
-          {t('nav.signOut')}
+          {t(busy ? 'nav.signingOut' : 'nav.signOut')}
         </button>
         <Link
           to="/survey"

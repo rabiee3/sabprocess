@@ -1,36 +1,41 @@
 import { useCallback, useSyncExternalStore } from 'react'
+import { clearFactoryCache } from '../client/factoryCache'
 import { signOutAndWipe } from './signOutAndWipe'
 
-// Whether the last sign-out kept this phone's saved data (writes still queued). Module state, so the note
-// outlives the component that signed out (the admin layout unmounts as soon as the user is gone).
-let kept = false
-let busy = false
+// Sign-out state as module state: `kept` (the last sign-out kept this phone's saved data, writes still queued)
+// outlives the component that signed out (the admin layout unmounts as soon as the user is gone), and `busy`
+// is shared by every Sign out button while the wait of up to 5 s runs.
+type State = { kept: boolean; busy: boolean }
+let state: State = { kept: false, busy: false }
 const listeners = new Set<() => void>()
-const setKept = (v: boolean) => {
-  kept = v
+const update = (patch: Partial<State>) => {
+  state = { ...state, ...patch }
   for (const l of listeners) l()
 }
 const subscribe = (l: () => void) => {
   listeners.add(l)
   return () => listeners.delete(l)
 }
-const getKept = () => kept
+const getState = () => state
 
-/** Sign out through signOutAndWipe; `kept` drives the `nav.signOutKeptData` info banner. */
+/**
+ * Sign out through signOutAndWipe. The session factory cache is emptied on every sign-out, so the next user of
+ * this tab never sees a cached factory (one that is not public) without a rules check. `kept` drives the
+ * `nav.signOutKeptData` banner; `busy` disables the Sign out buttons.
+ */
 export function useSignOut() {
-  const isKept = useSyncExternalStore(subscribe, getKept, getKept)
+  const { kept, busy } = useSyncExternalStore(subscribe, getState, getState)
   const signOut = useCallback(async () => {
-    if (busy) return
-    busy = true
-    setKept(false)
+    if (state.busy) return
+    update({ busy: true, kept: false })
     try {
-      if ((await signOutAndWipe()) === 'kept') setKept(true)
+      if ((await signOutAndWipe({ onSignedOut: clearFactoryCache })) === 'kept') update({ kept: true })
     } catch {
-      // Sign-out itself failed: still signed in, and the Sign out button is still there to try again.
+      // Sign-out itself failed: still signed in, and the Sign out button is there to try again.
     } finally {
-      busy = false
+      update({ busy: false })
     }
   }, [])
-  const dismiss = useCallback(() => setKept(false), [])
-  return { signOut, kept: isKept, dismiss }
+  const dismiss = useCallback(() => update({ kept: false }), [])
+  return { signOut, kept, busy, dismiss }
 }

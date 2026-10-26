@@ -19,7 +19,7 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
   const { t } = useTranslation()
   const { user, loading } = useAuth()
   const { signIn, failed, clearError } = useGoogleSignIn()
-  const { signOut } = useSignOut()
+  const { signOut, busy } = useSignOut()
   return (
     <>
     <header className="flex h-14 items-center gap-2 border-b border-line bg-surface ps-3 pe-3">
@@ -39,9 +39,15 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
                 {user.displayName ?? user.email}
               </span>
               {/* Below 640px only the icon, so logo · tag · LangToggle · Sign out fit a 360px phone in Arabic. */}
-              <button type="button" className={`${BTN} inline-flex min-w-11 items-center justify-center`} onClick={() => void signOut()}>
+              <button
+                type="button"
+                className={`${BTN} inline-flex min-w-11 items-center justify-center disabled:opacity-60`}
+                disabled={busy}
+                aria-busy={busy || undefined}
+                onClick={() => void signOut()}
+              >
                 <Icon svg={logoutIcon} className="size-5 sm:hidden rtl:-scale-x-100" />
-                <span className="max-sm:sr-only">{t('nav.signOut')}</span>
+                <span className="max-sm:sr-only">{t(busy ? 'nav.signingOut' : 'nav.signOut')}</span>
               </button>
             </>
           ) : (
