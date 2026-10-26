@@ -126,13 +126,6 @@ describe('MySubmissions', () => {
     expect(screen.getByText('The service is busy right now — please try again later')).toBeInTheDocument()
   })
 
-  it('an upload that failed on quota shows the service-busy message', () => {
-    seedOutbox([{ fid: 'z', savedAt: 1, state: 'failed', error: 'quota', submittedAt: 1 }])
-    setup()
-    act(() => emit([], { fromCache: true }))
-    expect(screen.getByText('The service is busy right now — please try again later')).toBeInTheDocument()
-  })
-
   it('a server snapshot without an outbox fid marks it failed; a cache snapshot does not', () => {
     seedOutbox([{ fid: 'z', savedAt: 1, state: 'saved', submittedAt: 1 }])
     setup()

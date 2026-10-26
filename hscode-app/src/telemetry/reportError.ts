@@ -4,24 +4,40 @@ import { loadAnalytics, useEmulator } from '../firebase/app'
 const MAX_PER_SESSION = 10
 
 const EMAIL = /[^\s@<>()[\]"',;:]+@[^\s@<>()[\]"',;:]+\.[^\s@<>()[\]"',;:]+/g
-// Phone numbers and similar ids. HS codes (4 to 10 digits) are not personal, but a 6+ digit run may be a phone.
-const LONG_DIGITS = /\d{6,}/g
-// A URL's query string can carry tokens or search text.
-const URL_QUERY = /(\b[a-z][a-z\d+.-]*:\/\/[^\s?#]*)[?#][^\s]*/gi
+// Phone numbers: 6+ digits (ASCII, Arabic-Indic or Eastern Arabic-Indic), allowing one space, dash or dot between
+// them (010 1234 5678, +20 10-1234-5678, ٠١٠١٢٣٤٥٦٧٨). HS headings and codes (4 or 5 digits) stay readable.
+const PHONE = /(?:[0-9٠-٩۰-۹][\s.-]?){5,}[0-9٠-٩۰-۹]/g
+// A URL's query string or hash (absolute or relative) can carry tokens or search text.
+const URL_QUERY = /([^\s?#]*\/[^\s?#]*)[?#]\S*/g
+// Firestore document paths name a factory or a user.
+const DOC_PATH = /\b(factories|users|invites|photos|private|searchIndex|contacts)\/[^\s/?#]+/g
+// Document ids, uids and tokens.
+const LONG_TOKEN = /\b[A-Za-z0-9]{20,}\b/g
 
 const seen = new Set<string>()
 let installed = false
 
 function messageOf(err: unknown): string {
   if (typeof err === 'string') return err
-  const m = (err as { message?: unknown } | null | undefined)?.message
-  if (typeof m === 'string' && m) return m
-  return err == null ? 'unknown' : String(err)
+  if (err == null) return 'unknown'
+  if (typeof err !== 'object') return String(err)
+  const o = err as { message?: unknown; name?: unknown; status?: unknown; statusText?: unknown }
+  if (typeof o.message === 'string' && o.message) return o.message
+  // A router ErrorResponse (a 404 or a thrown Response): its status says what happened.
+  if (typeof o.status === 'number') return `${o.status} ${typeof o.statusText === 'string' ? o.statusText : ''}`.trim()
+  if (typeof o.name === 'string' && o.name) return o.name
+  const ctor = (err as { constructor?: { name?: string } }).constructor?.name
+  return ctor && ctor !== 'Object' ? ctor : 'non-error object'
 }
 
-/** `where: message`, with no personal data (emails, long digit runs, URL query strings), at most 100 chars. */
+/** `where: message` with no personal data (emails, phones, ids, document paths, URL queries), at most 100 chars. */
 export function describeError(err: unknown, where: string): string {
-  const clean = messageOf(err).replace(URL_QUERY, '$1').replace(EMAIL, '[email]').replace(LONG_DIGITS, '[n]')
+  const clean = messageOf(err)
+    .replace(URL_QUERY, '$1')
+    .replace(EMAIL, '[email]')
+    .replace(DOC_PATH, '$1/[id]')
+    .replace(LONG_TOKEN, '[id]')
+    .replace(PHONE, '[n]')
   return `${where}: ${clean}`.slice(0, 100)
 }
 

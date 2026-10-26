@@ -62,12 +62,15 @@ async function mount() {
   render(<AuthProvider><Probe /></AuthProvider>)
 }
 const fire = (u: unknown) => act(async () => { h.authCb!(u) })
-// Lets the chunk arrive, then waits until the provider has acted on it (or a settle period passes).
-const arrive = (done: () => boolean) =>
+// Lets the chunk arrive: awaits the same pending module the provider waits for, then one macrotask for the
+// provider's continuation (ensureUserDoc, the watcher). No polling, no real waits.
+const arrive = (fail = false) =>
   act(async () => {
     release()
-    await vi.waitFor(() => expect(done()).toBe(true), { timeout: 2000 }).catch(() => {})
-    await new Promise((r) => setTimeout(r, 20))
+    await import('./roleWatcher').catch((e: unknown) => {
+      if (!fail) throw e
+    })
+    await new Promise((r) => setTimeout(r, 0))
   })
 
 beforeEach(() => {
@@ -87,7 +90,7 @@ describe('AuthProvider while the role watcher chunk loads', () => {
     await fire({ uid: 'u1' })
     expect(latest).toMatchObject({ role: 'visitor', loading: true })
     await fire(null)
-    await arrive(() => h.watched.length > 0)
+    await arrive()
     expect(h.ensureCalls).toBe(0)
     expect(h.watched).toEqual([])
     expect(latest).toMatchObject({ user: null, role: 'visitor', loading: false })
@@ -98,7 +101,7 @@ describe('AuthProvider while the role watcher chunk loads', () => {
     await mount()
     await fire({ uid: 'A' })
     await fire({ uid: 'B' })
-    await arrive(() => h.watched.includes('B'))
+    await arrive()
     expect(h.watched).toEqual(['B'])
     expect(latest.user).toMatchObject({ uid: 'B' })
     expect(latest).toMatchObject({ role: 'surveyor', loading: false })
@@ -109,7 +112,7 @@ describe('AuthProvider while the role watcher chunk loads', () => {
     await mount()
     await fire({ uid: 'u1' })
     expect(latest.loading).toBe(true)
-    await arrive(() => !latest.loading)
+    await arrive(true)
     expect(h.watched).toEqual([])
     expect(latest).toMatchObject({ user: { uid: 'u1' }, role: 'client', loading: false })
   })

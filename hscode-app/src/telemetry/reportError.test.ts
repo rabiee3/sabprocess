@@ -37,7 +37,46 @@ describe('describeError', () => {
 
   it('strips digit runs of 6 or more (phone numbers) but keeps HS codes of 4 or 5 digits', () => {
     expect(mod.describeError(new Error('call 01012345678 about 8471 and 39172'), 'r')).toBe('r: call [n] about 8471 and 39172')
-    expect(mod.describeError(new Error('+20 1012345678'), 'r')).toBe('r: +20 [n]')
+    expect(mod.describeError(new Error('+20 1012345678'), 'r')).toBe('r: +[n]')
+  })
+
+  it.each([
+    ['spaces', 'bad phone 010 1234 5678 here', 'r: bad phone [n] here'],
+    ['dashes', 'bad phone 010-1234-5678 here', 'r: bad phone [n] here'],
+    ['country code', 'bad phone +20 10 1234 5678', 'r: bad phone +[n]'],
+    ['Arabic-Indic digits', 'رقم ٠١٠١٢٣٤٥٦٧٨ خطأ', 'r: رقم [n] خطأ'],
+    ['Eastern Arabic-Indic digits', 'رقم ۰۱۰۱۲۳۴۵۶۷۸ خطأ', 'r: رقم [n] خطأ'],
+    ['Arabic digits with spaces', 'رقم ٠١٠ ١٢٣٤ ٥٦٧٨', 'r: رقم [n]'],
+  ])('strips phone numbers written with %s', (_, msg, out) => {
+    expect(mod.describeError(new Error(msg), 'r')).toBe(out)
+  })
+
+  it('keeps HS headings and codes readable', () => {
+    expect(mod.describeError(new Error('no heading 2309 in chapter 23 (code 39172)'), 'r')).toBe(
+      'r: no heading 2309 in chapter 23 (code 39172)',
+    )
+  })
+
+  it('strips Firestore document paths and long ids', () => {
+    expect(mod.describeError(new Error('No document to update: factories/f1abc for users/u9'), 'r')).toBe(
+      'r: No document to update: factories/[id] for users/[id]',
+    )
+    expect(mod.describeError(new Error('bad token AbCdEf0123456789XyZaBc end'), 'r')).toBe('r: bad token [id] end')
+  })
+
+  it('strips query strings on relative URLs too', () => {
+    expect(mod.describeError(new Error('GET /hscode/assets/x.js?v=me&q=feed failed'), 'r')).toBe(
+      'r: GET /hscode/assets/x.js failed',
+    )
+    expect(mod.describeError(new Error('at /?q=secret'), 'r')).toBe('r: at /')
+  })
+
+  it('describes router error responses and other objects usefully, never [object Object]', () => {
+    expect(mod.describeError({ status: 404, statusText: 'Not Found', internal: true, data: 'x' }, 'route')).toBe(
+      'route: 404 Not Found',
+    )
+    expect(mod.describeError({ foo: 1 }, 'promise')).not.toContain('[object')
+    expect(mod.describeError(Object.assign(new Error(''), { name: 'TypeError' }), 'w')).toBe('w: TypeError')
   })
 
   it('strips URL query strings', () => {
@@ -47,9 +86,9 @@ describe('describeError', () => {
   })
 
   it('truncates to 100 characters', () => {
-    const d = mod.describeError(new Error('x'.repeat(300)), 'route')
+    const d = mod.describeError(new Error('xx '.repeat(100)), 'route')
     expect(d).toHaveLength(100)
-    expect(d.startsWith('route: xxx')).toBe(true)
+    expect(d.startsWith('route: xx xx')).toBe(true)
   })
 })
 
