@@ -62,16 +62,29 @@ describe('useEngine', () => {
     expect(idle.pending()).toBe(0)
   })
 
-  it('new entries cancel the old build and return null until the new engine is ready', () => {
+  it('new entries keep the previous engine until the new one is ready (no blank results on an index swap)', () => {
     const idle = fakeIdle()
     const { result, rerender } = renderHook(({ e }: { e: IndexEntry[] }) => useEngine(e), { initialProps: { e: fixtures } })
     idle.run()
     const first = result.current
+    expect(first).not.toBeNull()
     const next = fixtures.slice(0, 2)
     rerender({ e: next })
-    expect(result.current).toBeNull()
+    expect(result.current).toBe(first)
     idle.run()
     expect(result.current).not.toBe(first)
+    expect(result.current?.all()).toHaveLength(2)
+  })
+
+  it('new entries cancel a build that is still pending', () => {
+    const idle = fakeIdle()
+    const { result, rerender } = renderHook(({ e }: { e: IndexEntry[] }) => useEngine(e), { initialProps: { e: fixtures } })
+    const next = fixtures.slice(0, 2)
+    rerender({ e: next })
+    expect(idle.cic).toHaveBeenCalledTimes(1)
+    expect(idle.pending()).toBe(1)
+    expect(result.current).toBeNull()
+    idle.run()
     expect(result.current?.all()).toHaveLength(2)
   })
 

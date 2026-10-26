@@ -1,25 +1,12 @@
 import { useEffect, useState } from 'react'
+import { whenIdle } from '../lib/idle'
 import type { IndexEntry } from '../lib/types'
 import { getEngine, peekEngine, type Engine } from './engine'
 
-type Idle = (cb: () => void, opts?: { timeout?: number }) => number
-type IdleWindow = { requestIdleCallback?: Idle; cancelIdleCallback?: (h: number) => void }
-
-/** Runs `cb` when the main thread is idle, at the latest after 1.5 s; returns a cancel function. */
-function whenIdle(cb: () => void): () => void {
-  const w = (typeof window === 'undefined' ? {} : window) as IdleWindow
-  if (w.requestIdleCallback && w.cancelIdleCallback) {
-    const cancel = w.cancelIdleCallback
-    const h = w.requestIdleCallback(cb, { timeout: 1500 })
-    return () => cancel(h)
-  }
-  const h = setTimeout(cb, 1)
-  return () => clearTimeout(h)
-}
-
 /**
  * The search engine for `entries`, built when the main thread is idle (spec §8) so the map can paint its pins
- * first. Null until it is ready; an engine already built for the same entries (a remount) is returned at once.
+ * first. Null until the first one is ready; while a newer index builds, the previous engine is kept. An engine
+ * already built for the same entries (a remount) is returned at once.
  */
 export function useEngine(entries: IndexEntry[] | null): Engine | null {
   const [built, setBuilt] = useState<{ entries: IndexEntry[]; engine: Engine } | null>(null)
@@ -31,5 +18,7 @@ export function useEngine(entries: IndexEntry[] | null): Engine | null {
 
   if (!entries) return null
   if (built?.entries === entries) return built.engine
-  return peekEngine(entries) ?? null
+  // A newer index (cache, then server): keep searching with the previous engine until this one is built, so the
+  // results and pins don't blank out in between.
+  return peekEngine(entries) ?? built?.engine ?? null
 }

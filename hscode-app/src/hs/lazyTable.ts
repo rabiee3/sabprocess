@@ -35,3 +35,4 @@ export function useHsTable(enabled = true): { table: HsTable | null; failed: boo
   }, [enabled, state.table])
   return { table: state.table ?? loaded, failed: state.failed && !loaded }
 }
+

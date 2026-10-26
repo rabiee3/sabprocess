@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { initI18n } from '../i18n'
 import en from '../i18n/en.json'
@@ -7,6 +7,11 @@ import en from '../i18n/en.json'
 let auth: Record<string, unknown> = {}
 vi.mock('../auth/useAuth', () => ({ useAuth: () => auth }))
 vi.mock('../auth/api', () => ({ claimInvite: vi.fn(), signInWithGoogle: vi.fn(), signOutUser: vi.fn() }))
+const loadHsTable = vi.fn(() => Promise.resolve({}))
+vi.mock('../hs/lazyTable', async (orig) => ({
+  ...(await orig<typeof import('../hs/lazyTable')>()),
+  loadHsTable: () => loadHsTable(),
+}))
 
 import { Component as SurveyRoute } from './SurveyRoute'
 
@@ -21,6 +26,14 @@ function renderAt(path = '/survey') {
 
 describe('SurveyRoute', () => {
   beforeEach(() => initI18n())
+
+  it('warms the HS table chunk when idle, so the picker works offline later in the field', async () => {
+    loadHsTable.mockClear()
+    auth = { user, role: 'surveyor', active: true, loading: false }
+    renderAt()
+    expect(loadHsTable).not.toHaveBeenCalled() // not before first paint
+    await waitFor(() => expect(loadHsTable).toHaveBeenCalledTimes(1))
+  })
 
   it('loading shows a spinner', () => {
     auth = { user: null, role: 'visitor', active: false, loading: true }

@@ -21,3 +21,22 @@ describe('firstLoadFiles', () => {
     expect(() => firstLoadFiles(manifest, 'src/nope.tsx')).toThrow(/nope/)
   })
 })
+
+describe('takeViteManifest', () => {
+  it('returns the manifest and deletes <outDir>/.vite so it never ships; null on a second run', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const { tmpdir } = await import('node:os')
+    const { takeViteManifest } = await import('./first-load.mjs')
+    const out = mkdtempSync(join(tmpdir(), 'hscode-check-'))
+    try {
+      mkdirSync(join(out, '.vite'))
+      writeFileSync(join(out, '.vite', 'manifest.json'), JSON.stringify(manifest))
+      expect(takeViteManifest(out)).toEqual(manifest)
+      expect(existsSync(join(out, '.vite'))).toBe(false)
+      expect(takeViteManifest(out)).toBeNull()
+    } finally {
+      rmSync(out, { recursive: true, force: true })
+    }
+  })
+})

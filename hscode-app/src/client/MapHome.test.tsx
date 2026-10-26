@@ -15,6 +15,17 @@ vi.mock('leaflet/dist/leaflet.css', () => ({}))
 const loadIndex = vi.fn()
 vi.mock('../search/indexSource', () => ({ loadIndex: (...a: unknown[]) => loadIndex(...a) }))
 
+// The HS table: who asks for it (SearchBar asks only once someone types).
+const loadHsTable = vi.fn(() => new Promise(() => {}))
+const hsWanted = vi.fn()
+vi.mock('../hs/lazyTable', () => ({
+  loadHsTable: () => loadHsTable(),
+  useHsTable: (enabled = true) => {
+    if (enabled) hsWanted()
+    return { table: null, failed: false }
+  },
+}))
+
 const near = { status: 'idle' as string, pos: undefined as { lat: number; lng: number } | undefined, request: vi.fn() }
 vi.mock('./useNearMe', () => ({ useNearMe: () => near }))
 
@@ -254,6 +265,19 @@ describe('MapHome', () => {
     expect(createEngineSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('never preloads the HS table on the map (only typing in search fetches it)', async () => {
+    loadHsTable.mockClear()
+    hsWanted.mockClear()
+    setup()
+    await screen.findAllByRole('article')
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Search a product, HS code, or industry…'))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(loadHsTable).not.toHaveBeenCalled()
+    expect(hsWanted).not.toHaveBeenCalled()
+    await userEvent.type(screen.getByRole('combobox'), 'f')
+    expect(hsWanted).toHaveBeenCalled()
+  })
+
   it('renders pins and cards from the entries before the search engine is built', async () => {
     const w = window as unknown as { requestIdleCallback?: unknown; cancelIdleCallback?: unknown }
     w.requestIdleCallback = vi.fn(() => 1) // the browser never gets idle in this test
@@ -265,6 +289,29 @@ describe('MapHome', () => {
       expect(screen.getByTestId('pin-f3')).toBeInTheDocument()
       expect(screen.getAllByRole('article')).toHaveLength(3)
       expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Preparing search…')
+    } finally {
+      delete w.requestIdleCallback
+      delete w.cancelIdleCallback
+    }
+  })
+
+  it('while the engine for a newer index builds, the previous results stay (no blank map)', async () => {
+    let onUpdate: ((l: { entries: IndexEntry[]; fromCache: boolean }) => void) | undefined
+    loadIndex.mockImplementation((_fs: unknown, cb: typeof onUpdate) => {
+      onUpdate = cb
+      return Promise.resolve({ entries: [...ENTRIES], fromCache: true })
+    })
+    setup('/?q=feed&sel=f1')
+    await waitFor(() => expect(names()).toContain('Delta Feed Mill'))
+    const w = window as unknown as { requestIdleCallback?: unknown; cancelIdleCallback?: unknown }
+    w.requestIdleCallback = vi.fn(() => 1) // the new engine never gets built in this test
+    w.cancelIdleCallback = vi.fn()
+    try {
+      const fresh = [...ENTRIES, entry('f4', 'Cairo Feed Co', 30.2, 400, { m: [{ n: { en: 'Fish feed' }, h: '2309' }] })]
+      await act(async () => onUpdate?.({ entries: fresh, fromCache: false }))
+      expect(w.requestIdleCallback).toHaveBeenCalled()
+      expect(names()).toContain('Delta Feed Mill')
+      expect(screen.getByTestId('pin-f1')).toBeInTheDocument()
     } finally {
       delete w.requestIdleCallback
       delete w.cancelIdleCallback

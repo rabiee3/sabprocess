@@ -1,3 +1,6 @@
+import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 // The JS a first visit to a route downloads: the entry chunk and the route's lazy chunk, each with its static
 // imports followed recursively, from the Vite manifest (build.manifest). Dynamic imports are left out: they load
 // on demand, after first paint.
@@ -18,4 +21,14 @@ export function firstLoadFiles(manifest, route) {
   visit(entry)
   visit(route)
   return files
+}
+
+// Reads <outDir>/.vite/manifest.json and deletes <outDir>/.vite: the manifest is only for this report and must never
+// ship (it would be committed with ../hscode and served publicly). Null when it is already gone (a second run).
+export function takeViteManifest(outDir) {
+  const dir = resolve(outDir, '.vite')
+  const file = resolve(dir, 'manifest.json')
+  const manifest = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null
+  rmSync(dir, { recursive: true, force: true })
+  return manifest
 }
