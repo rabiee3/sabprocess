@@ -71,6 +71,26 @@ describe('describeError', () => {
     expect(mod.describeError(new Error('at /?q=secret'), 'r')).toBe('r: at /')
   })
 
+  it('strips a query that follows a path token', () => {
+    expect(mod.describeError(new Error('/hscode/f/abc?x=1'), 'r')).toBe('r: /hscode/f/abc')
+  })
+
+  it('leaves a plain "and/or?" alone', () => {
+    expect(mod.describeError(new Error('and/or? maybe'), 'r')).toBe('r: and/or? maybe')
+  })
+
+  it('stays fast on a pathological message (no catastrophic backtracking)', () => {
+    const msg = 'a/'.repeat(2500)
+    const t0 = performance.now()
+    mod.describeError(new Error(msg), 'r')
+    mod.describeError(new Error(`${msg}?`), 'r')
+    expect(performance.now() - t0).toBeLessThan(50)
+  })
+
+  it('treats long tokens with dashes and underscores as ids', () => {
+    expect(mod.describeError(new Error('key ab_cd-ef_gh-ij_kl-mn_op end'), 'r')).toBe('r: key [id] end')
+  })
+
   it('describes router error responses and other objects usefully, never [object Object]', () => {
     expect(mod.describeError({ status: 404, statusText: 'Not Found', internal: true, data: 'x' }, 'route')).toBe(
       'route: 404 Not Found',

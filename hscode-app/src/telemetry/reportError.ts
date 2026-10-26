@@ -7,12 +7,17 @@ const EMAIL = /[^\s@<>()[\]"',;:]+@[^\s@<>()[\]"',;:]+\.[^\s@<>()[\]"',;:]+/g
 // Phone numbers: 6+ digits (ASCII, Arabic-Indic or Eastern Arabic-Indic), allowing one space, dash or dot between
 // them (010 1234 5678, +20 10-1234-5678, ٠١٠١٢٣٤٥٦٧٨). HS headings and codes (4 or 5 digits) stay readable.
 const PHONE = /(?:[0-9٠-٩۰-۹][\s.-]?){5,}[0-9٠-٩۰-۹]/g
-// A URL's query string or hash (absolute or relative) can carry tokens or search text.
-const URL_QUERY = /([^\s?#]*\/[^\s?#]*)[?#]\S*/g
+// A URL's query string or hash can carry tokens or search text: an absolute URL's, or a path token's (one that
+// starts with "/"), so "and/or?" stays. Each has a single quantifier before the "?", so matching stays linear,
+// and no lookbehind (older Safari cannot parse it).
+const ABS_URL_QUERY = /(\b[a-z][a-z\d+.-]*:\/\/[^\s?#]*)[?#]\S*/gi
+const PATH_QUERY = /(^|[\s(])(\/[^\s?#]*)[?#]\S*/g
 // Firestore document paths name a factory or a user.
 const DOC_PATH = /\b(factories|users|invites|photos|private|searchIndex|contacts)\/[^\s/?#]+/g
-// Document ids, uids and tokens.
-const LONG_TOKEN = /\b[A-Za-z0-9]{20,}\b/g
+// Document ids, uids and tokens (letters, digits, dashes, underscores).
+const LONG_TOKEN = /(^|[^\w-])[\w-]{20,}(?=[^\w-]|$)/g
+// Regexes only ever see this much of a message, however long it is.
+const MAX_INPUT = 500
 
 const seen = new Set<string>()
 let installed = false
@@ -32,11 +37,13 @@ function messageOf(err: unknown): string {
 
 /** `where: message` with no personal data (emails, phones, ids, document paths, URL queries), at most 100 chars. */
 export function describeError(err: unknown, where: string): string {
-  const clean = messageOf(err)
-    .replace(URL_QUERY, '$1')
+  const clean = String(messageOf(err))
+    .slice(0, MAX_INPUT)
+    .replace(ABS_URL_QUERY, '$1')
+    .replace(PATH_QUERY, '$1$2')
     .replace(EMAIL, '[email]')
     .replace(DOC_PATH, '$1/[id]')
-    .replace(LONG_TOKEN, '[id]')
+    .replace(LONG_TOKEN, '$1[id]')
     .replace(PHONE, '[n]')
   return `${where}: ${clean}`.slice(0, 100)
 }
