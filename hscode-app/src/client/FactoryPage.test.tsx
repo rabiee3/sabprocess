@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import type { ReactNode } from 'react'
@@ -163,5 +163,52 @@ describe('FactoryPage', () => {
   it('back link defaults to /map', async () => {
     setup()
     await waitFor(() => expect(screen.getByRole('link', { name: 'Back to the map' })).toHaveAttribute('href', '/map'))
+  })
+  it('signed in but contact read denied: neutral message, no sign-in prompt', async () => {
+    auth.user = { uid: 'u1' }
+    loadContact.mockResolvedValue(null)
+    setup()
+    expect(await screen.findByText("Contact details aren't available to your account.")).toBeInTheDocument()
+    expect(screen.queryByText('Sign in to see contacts')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Continue with Google' })).toBeNull()
+  })
+
+  it('signing out removes the previous contact data from the DOM', async () => {
+    auth.user = { uid: 'u1' }
+    const router = setup()
+    expect(await screen.findByText('Hassan')).toBeInTheDocument()
+    auth.user = null
+    await act(() => router.navigate('/f/f1?r=1'))
+    expect(screen.queryByText('Hassan')).toBeNull()
+    expect(screen.getByText('Sign in to see contacts')).toBeInTheDocument()
+  })
+
+  it('no "No photos yet" text while photos load', async () => {
+    loadPhotos.mockReturnValue(new Promise(() => {}))
+    setup()
+    await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })
+    expect(screen.queryByAltText('No photos yet')).toBeNull()
+  })
+
+  it('loading and error states each have one h1; error retries', async () => {
+    loadPublicFactory.mockRejectedValueOnce(new Error('x'))
+    setup()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })).toBeInTheDocument()
+  })
+
+  it('a late response for the old id does not overwrite the new one', async () => {
+    let resolveOld: (f: Factory) => void = () => {}
+    loadPublicFactory.mockImplementation((id: string) =>
+      id === 'f1' ? new Promise((r) => { resolveOld = r }) : Promise.resolve({ ...factory, id: 'f2', name: { en: 'Second Mill' } }),
+    )
+    const router = setup()
+    await act(() => router.navigate('/f/f2'))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Second Mill' })).toBeInTheDocument()
+    await act(async () => resolveOld(factory))
+    expect(screen.getByRole('heading', { level: 1, name: 'Second Mill' })).toBeInTheDocument()
   })
 })

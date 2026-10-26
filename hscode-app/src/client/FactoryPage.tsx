@@ -33,18 +33,18 @@ export function Component() {
   const from = (location.state as { from?: unknown } | null)?.from
   const back = typeof from === 'string' && from.startsWith('/map') ? from : '/map'
   const [state, setState] = useState<State>({ status: 'loading' })
-  const [photos, setPhotos] = useState<PhotoData[]>([])
+  const [photos, setPhotos] = useState<PhotoData[] | null>(null)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let live = true
     setState({ status: 'loading' })
-    setPhotos([])
+    setPhotos(null)
     loadPublicFactory(id).then(
       (factory) => {
         if (!live) return
         setState(factory ? { status: 'ready', factory } : { status: 'missing' })
-        if (factory) loadPhotos(id).then((p) => live && setPhotos(p), () => {})
+        if (factory) loadPhotos(id).then((p) => live && setPhotos(p), () => live && setPhotos([]))
       },
       () => live && setState({ status: 'error' }),
     )
@@ -54,12 +54,13 @@ export function Component() {
   }, [id, attempt])
 
   if (state.status === 'loading') {
-    return <Page><p className={`${shell} pt-6 text-ink-muted`}>{t('factory.loading')}</p></Page>
+    return <Page><h1 className={`${shell} pt-6 text-base font-normal text-ink-muted`}>{t('factory.loading')}</h1></Page>
   }
   if (state.status === 'error') {
     return (
       <Page>
         <div className={`${shell} pt-6`}>
+          <h1 className="sr-only">{t('factory.loadError')}</h1>
           <Banner tone="danger">{t('factory.loadError')}</Banner>
           <button type="button" onClick={() => setAttempt((n) => n + 1)} className="inline-flex min-h-touch items-center justify-center rounded border-2 border-ink-strong px-4 text-sm font-semibold">
             {t('factory.retry')}

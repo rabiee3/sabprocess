@@ -496,6 +496,7 @@
     "whatsapp": "WhatsApp",
     "website": "Website",
     "facebook": "Facebook",
-    "noContacts": "No contact details shared"
+    "noContacts": "No contact details shared",
+    "contactsUnavailable": "Contact details aren't available to your account."
   }
 }

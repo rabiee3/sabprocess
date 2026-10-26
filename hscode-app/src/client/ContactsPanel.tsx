@@ -89,9 +89,13 @@ function Details({ c }: { c: ContactDraft }) {
 
 /** Contacts are read only after a Google sign-in; signed out there is no data in the DOM. */
 export function ContactsPanel({ factoryId }: { factoryId: string }) {
-  const { t } = useTranslation()
   const { user } = useAuth()
-  const uid = user?.uid
+  // Keyed by uid so one user's contact data never survives a sign-out or account switch.
+  return <ContactsInner key={user?.uid ?? ''} factoryId={factoryId} uid={user?.uid} />
+}
+
+function ContactsInner({ factoryId, uid }: { factoryId: string; uid?: string }) {
+  const { t } = useTranslation()
   const [state, setState] = useState<State>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
@@ -111,8 +115,10 @@ export function ContactsPanel({ factoryId }: { factoryId: string }) {
   return (
     <section aria-labelledby="contacts-h" className="rounded-lg border border-line p-3">
       <h2 id="contacts-h" className="mb-2 text-body-sm font-semibold text-ink-strong">{t('factory.contacts')}</h2>
-      {!uid || (state.status === 'ready' && !state.contact) ? (
+      {!uid ? (
         <Locked />
+      ) : state.status === 'ready' && !state.contact ? (
+        <p className="text-sm text-ink-muted">{t('factory.contactsUnavailable')}</p>
       ) : state.status === 'loading' ? (
         <p className="text-sm text-ink-muted">{t('common.loading')}</p>
       ) : state.status === 'error' ? (

@@ -11,19 +11,19 @@ const SWIPE_PX = 40
 const arrow =
   'absolute top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-surface/90 text-lg text-ink-strong shadow disabled:opacity-40'
 
-type Props = { photos: PhotoData[]; name: string; seed: string }
+type Props = { photos: PhotoData[] | null; name: string; seed: string }
 
 /** Up to 3 photos with arrows, dots and swipe. The strip is always LTR so swipe direction matches the arrows. */
 export function PhotoCarousel({ photos, name, seed }: Props) {
   const { t } = useTranslation()
-  const safe = photos.filter((p) => isSafeImage(p.data)).slice(0, 3)
+  const safe = (photos ?? []).filter((p) => isSafeImage(p.data)).slice(0, 3)
   const [i, setI] = useState(0)
   const startX = useRef<number | null>(null)
   const total = safe.length
 
   if (total === 0) {
     const art = PLACEHOLDERS[[...seed].reduce((s, c) => s + c.charCodeAt(0), 0) % PLACEHOLDERS.length]
-    return <img src={art} alt={t('factory.noPhotos')} className="aspect-[4/3] w-full bg-surface-alt object-cover" />
+    return <img src={art} alt={photos === null ? '' : t('factory.noPhotos')} className="aspect-[4/3] w-full bg-surface-alt object-cover" />
   }
 
   const go = (n: number) => setI(Math.min(total - 1, Math.max(0, n)))
