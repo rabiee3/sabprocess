@@ -9,6 +9,10 @@ const signInWithGoogle = vi.fn()
 vi.mock('../auth/api', () => ({ signInWithGoogle: () => signInWithGoogle(), signOutUser: vi.fn() }))
 const auth = { user: null as null | { displayName: string; email: string } }
 vi.mock('../auth/useAuth', () => ({ useAuth: () => auth }))
+const pwa = vi.hoisted(() => ({ canInstall: false, install: vi.fn(async () => {}) }))
+vi.mock('../pwa/usePwa', () => ({
+  usePwa: () => ({ ...pwa, needRefresh: false, update: vi.fn(), isIosSafari: false }),
+}))
 
 import { ClientHeader } from './ClientHeader'
 
@@ -17,6 +21,8 @@ describe('ClientHeader sign-in', () => {
     initI18n()
     signInWithGoogle.mockReset()
     auth.user = null
+    pwa.canInstall = false
+    pwa.install.mockClear()
   })
   it('has the G and shows an error banner on failure', async () => {
     signInWithGoogle.mockRejectedValue({ code: 'auth/network-request-failed' })
@@ -42,5 +48,18 @@ describe('ClientHeader sign-in', () => {
     expect(out.className).toContain('whitespace-nowrap')
     expect(out.className).toContain('min-w-11')
     expect(screen.getByText(en.nav.signOut)).toHaveClass('max-sm:sr-only')
+  })
+
+  it('the ☰ menu offers Install app only when the browser can install; it calls install()', async () => {
+    const { unmount } = render(<MemoryRouter><ClientHeader /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('button', { name: en.menu.open }))
+    expect(screen.queryByRole('menuitem', { name: en.menu.install })).toBeNull()
+    unmount()
+
+    pwa.canInstall = true
+    render(<MemoryRouter><ClientHeader /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('button', { name: en.menu.open }))
+    await userEvent.click(screen.getByRole('menuitem', { name: en.menu.install }))
+    expect(pwa.install).toHaveBeenCalledTimes(1)
   })
 })

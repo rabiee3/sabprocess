@@ -500,6 +500,12 @@
     "noContacts": "No contact details shared",
     "contactsUnavailable": "Contact details aren't available to your account."
   },
+  "pwa": {
+    "updateTitle": "Update available",
+    "reload": "Reload",
+    "install": "Install app",
+    "iosHint": "To install: tap Share, then Add to Home Screen."
+  },
   "menu": {
     "open": "Menu",
     "about": "About HSCode",

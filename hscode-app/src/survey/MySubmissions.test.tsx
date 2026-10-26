@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { initI18n } from '../i18n'
 import en from '../i18n/en.json'
@@ -14,6 +15,8 @@ let fail: (c: SurveyErrorCode) => void
 const seedOutbox = (list: (Omit<OutboxEntry, 'kind'> & { kind?: OutboxEntry['kind'] })[]) => localStorage.setItem('hscode.outbox.u1', JSON.stringify(list))
 const state = () => outbox.list('u1').map(({ fid, state, error }) => ({ fid, state, error }))
 
+const pwa = vi.hoisted(() => ({ canInstall: false, isIosSafari: false, install: vi.fn(async () => {}) }))
+vi.mock('../pwa/usePwa', () => ({ usePwa: () => ({ ...pwa, needRefresh: false, update: vi.fn() }) }))
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { uid: 'u1' } }) }))
 vi.mock('./repo', () => ({
   subscribeMySubmissions: (_uid: string, cb: Cb, onError: (c: SurveyErrorCode) => void) => {
@@ -41,6 +44,31 @@ describe('MySubmissions', () => {
   beforeEach(() => {
     initI18n()
     localStorage.clear()
+    pwa.canInstall = false
+    pwa.isIosSafari = false
+    pwa.install.mockClear()
+  })
+
+  it('offers no install button or iOS hint when the browser cannot install', () => {
+    setup()
+    expect(screen.queryByRole('button', { name: en.pwa.install })).toBeNull()
+    expect(screen.queryByText(en.pwa.iosHint)).toBeNull()
+  })
+
+  it('shows Install app when the browser can install; it calls install()', async () => {
+    pwa.canInstall = true
+    setup()
+    const btn = screen.getByRole('button', { name: en.pwa.install })
+    expect(btn.className).toContain('min-h-touch')
+    await userEvent.click(btn)
+    expect(pwa.install).toHaveBeenCalledTimes(1)
+  })
+
+  it('on iOS Safari shows the Add to Home Screen hint instead of a button', () => {
+    pwa.isIosSafari = true
+    setup()
+    expect(screen.getByText(en.pwa.iosHint)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: en.pwa.install })).toBeNull()
   })
 
   it('counts reflect the items', () => {

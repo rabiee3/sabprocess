@@ -12,6 +12,7 @@ import { ClientMenu } from '../ui/ClientMenu'
 import { Icon } from '../ui/Icon'
 import logoutIcon from '../assets/icons/logout.svg?raw'
 import { ABOUT_STATE } from './intro/useIntro'
+import { usePwa } from '../pwa/usePwa'
 
 const btn = 'inline-flex min-h-touch items-center justify-center px-2 text-sm font-semibold text-ink-strong'
 
@@ -24,6 +25,7 @@ export function ClientHeader({ onAbout }: { onAbout?: () => void } = {}) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { signIn, failed, clearError } = useGoogleSignIn()
+  const { canInstall, install } = usePwa()
   return (
     <>
     <header className="z-[1200] flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3">
@@ -46,7 +48,10 @@ export function ClientHeader({ onAbout }: { onAbout?: () => void } = {}) {
         ) : (
           <GoogleButton compact iconOnlyOnPhone onClick={signIn} label={t('nav.signIn')} />
         )}
-        <ClientMenu onAbout={onAbout ?? (() => void navigate('/', { state: ABOUT_STATE }))} />
+        <ClientMenu
+          onAbout={onAbout ?? (() => void navigate('/', { state: ABOUT_STATE }))}
+          onInstall={canInstall ? () => void install() : undefined}
+        />
       </div>
     </header>
     {failed && (

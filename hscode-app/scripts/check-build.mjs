@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { constants, gzipSync } from 'node:zlib'
-import { dirname, resolve } from 'node:path'
+import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -11,26 +11,33 @@ const fail = (msg) => {
   process.exit(1)
 }
 
-const indexPath = resolve(rootDir, 'hscode', 'index.html')
-if (!existsSync(indexPath)) fail('hscode/index.html does not exist - run "npm run build" first')
+// Optional `--dir <path>` (relative to hscode-app/) checks another build, e.g. the PWA e2e scratch
+// build in .pwa-preview; the default is the committed output, ../hscode.
+const dirArg = process.argv.indexOf('--dir')
+if (dirArg !== -1 && !process.argv[dirArg + 1]) fail('--dir needs a path')
+const outDir = dirArg === -1 ? resolve(rootDir, 'hscode') : resolve(appDir, process.argv[dirArg + 1])
+const out = relative(rootDir, outDir).replaceAll('\\', '/') || '.'
+
+const indexPath = resolve(outDir, 'index.html')
+if (!existsSync(indexPath)) fail(`${out}/index.html does not exist - run "npm run build" first`)
 if (!readFileSync(indexPath, 'utf8').includes('/hscode/assets/')) {
-  fail('hscode/index.html does not reference /hscode/assets/ (wrong Vite base?)')
+  fail(`${out}/index.html does not reference /hscode/assets/ (wrong Vite base?)`)
 }
 
-const assetsDir = resolve(rootDir, 'hscode', 'assets')
+const assetsDir = resolve(outDir, 'assets')
 
 // Every /hscode/assets/* file index.html references must exist on disk.
 const indexHtml = readFileSync(indexPath, 'utf8')
 const referenced = [...indexHtml.matchAll(/\/hscode\/assets\/([^"'\s)?#]+)/g)].map((m) => m[1])
 const missing = referenced.filter((f) => !existsSync(resolve(assetsDir, f)))
-if (missing.length) fail(`hscode/index.html references missing assets: ${missing.join(', ')}`)
+if (missing.length) fail(`${out}/index.html references missing assets: ${missing.join(', ')}`)
 
 // The production bundle must not carry emulator wiring (it would mean an emulator-mode build shipped).
 const FORBIDDEN = ['127.0.0.1:8080', '127.0.0.1:9099', 'demo-hscode']
 for (const f of readdirSync(assetsDir).filter((n) => n.endsWith('.js'))) {
   const js = readFileSync(resolve(assetsDir, f), 'utf8')
   const hit = FORBIDDEN.find((s) => js.includes(s))
-  if (hit) fail(`hscode/assets/${f} contains emulator string "${hit}"`)
+  if (hit) fail(`${out}/assets/${f} contains emulator string "${hit}"`)
 }
 const css = readdirSync(assetsDir).filter((f) => f.endsWith('.css')).map((f) => readFileSync(resolve(assetsDir, f), 'utf8')).join('')
 if (!/\.rounded\{border-radius:var\(--radius\)\}/.test(css) || !css.includes('--radius:8px')) {
@@ -41,7 +48,7 @@ if (!/\.rounded\{border-radius:var\(--radius\)\}/.test(css) || !css.includes('--
 // Firebase app/auth live in the entry; Firestore must stay in lazy chunks (src/firebase/db.ts).
 const ENTRY_BUDGET = 330 * 1024
 const entrySrc = indexHtml.match(/<script[^>]*\ssrc="\/hscode\/assets\/([^"]+\.js)"/)?.[1]
-if (!entrySrc) fail('hscode/index.html has no /hscode/assets/*.js entry script')
+if (!entrySrc) fail(`${out}/index.html has no /hscode/assets/*.js entry script`)
 const entryGzip = gzipSync(readFileSync(resolve(assetsDir, entrySrc)), { level: constants.Z_BEST_COMPRESSION }).length
 const kb = (n) => `${(n / 1024).toFixed(2)} KB`
 console.log(`check-build: entry ${entrySrc} is ${kb(entryGzip)} gzip (zlib level 9; budget ${kb(ENTRY_BUDGET)})`)
@@ -52,6 +59,32 @@ const FIRESTORE_MARKER = 'firestore.googleapis.com'
 if (readFileSync(resolve(assetsDir, entrySrc), 'utf8').includes(FIRESTORE_MARKER)) {
   fail(`entry chunk ${entrySrc} contains Firestore (found "${FIRESTORE_MARKER}"); keep it in lazy chunks (src/firebase/db.ts)`)
 }
+
+// PWA (spec §7): the manifest and the service worker exist and are scoped to /hscode/, every manifest
+// icon is on disk, and the service worker never routes Firestore or Google auth traffic.
+const manifestPath = resolve(outDir, 'manifest.webmanifest')
+if (!existsSync(manifestPath)) fail(`${out}/manifest.webmanifest does not exist`)
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+if (manifest.scope !== '/hscode/') fail(`manifest scope is ${JSON.stringify(manifest.scope)}, not "/hscode/"`)
+if (manifest.start_url !== '/hscode/') fail(`manifest start_url is ${JSON.stringify(manifest.start_url)}, not "/hscode/"`)
+if (!indexHtml.includes('href="/hscode/manifest.webmanifest"')) fail(`${out}/index.html does not link /hscode/manifest.webmanifest`)
+const ICONS = ['icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png']
+const manifestIcons = (manifest.icons ?? []).map((i) => i.src)
+for (const icon of ICONS) {
+  if (!manifestIcons.includes(icon)) fail(`manifest does not list ${icon}`)
+}
+for (const icon of manifestIcons) {
+  if (!existsSync(resolve(outDir, icon))) fail(`manifest icon ${out}/${icon} does not exist`)
+}
+const swPath = resolve(outDir, 'sw.js')
+if (!existsSync(swPath)) fail(`${out}/sw.js does not exist`)
+const sw = readFileSync(swPath, 'utf8')
+for (const s of ['firestore.googleapis.com', 'identitytoolkit', 'securetoken']) {
+  if (sw.includes(s)) fail(`${out}/sw.js mentions "${s}": the service worker must never route Firestore or Google auth`)
+}
+// The registration (virtual:pwa-register) asks for /hscode/sw.js with scope /hscode/.
+const appJs = readdirSync(assetsDir).filter((n) => n.endsWith('.js')).map((f) => readFileSync(resolve(assetsDir, f), 'utf8')).join('\n')
+if (!appJs.includes('/hscode/sw.js')) fail('no JS asset registers /hscode/sw.js')
 
 const protectedPaths = ['index.html', 'about.html', 'contact.html', 'css', 'images']
 const git = (args) => execFileSync('git', args, { cwd: rootDir, encoding: 'utf8' })
@@ -65,5 +98,5 @@ const status = git(['status', '--porcelain', '--', ...protectedPaths]).trim()
 if (status) fail(`root static site has changes:\n${status}`)
 
 console.log(
-  `check-build OK: hscode/index.html built (${referenced.length} assets present), no emulator strings in JS, entry ${kb(entryGzip)} gzip within budget and Firestore-free, root static site untouched`,
+  `check-build OK: ${out}/index.html built (${referenced.length} assets present), no emulator strings in JS, entry ${kb(entryGzip)} gzip within budget and Firestore-free, manifest + sw.js scoped to /hscode/ with ${manifestIcons.length} icons, root static site untouched`,
 )

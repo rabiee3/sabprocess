@@ -4,6 +4,7 @@ import './styles/index.css'
 import { initI18n } from './i18n'
 import { AuthProvider } from './auth/AuthProvider'
 import App from './App.tsx'
+import { UpdateBanner } from './pwa/UpdateBanner'
 
 initI18n()
 
@@ -12,5 +13,7 @@ createRoot(document.getElementById('root')!).render(
     <AuthProvider>
       <App />
     </AuthProvider>
+    {/* Outside the router: shown on every route, including error pages. */}
+    <UpdateBanner />
   </StrictMode>,
 )
