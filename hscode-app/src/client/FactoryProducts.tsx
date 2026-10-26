@@ -21,7 +21,7 @@ export function FactoryProducts({ id, title, products, variant, lang }: Props) {
             const name = pickName(p.name, lang)
             const hs = hsString(p.hs)
             const other = lang === 'ar' ? p.name.en : p.name.ar
-            const to = hs ? `/map?hs=${hs}` : `/map?q=${encodeURIComponent(name).replace(/%20/g, '+')}`
+            const to = hs ? `/?hs=${hs}` : `/?q=${encodeURIComponent(name).replace(/%20/g, '+')}`
             return (
               <li key={i} className="rounded-lg border border-line p-3">
                 <div className="flex items-start justify-between gap-2">

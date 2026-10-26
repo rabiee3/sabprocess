@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { Banner } from '../ui/Banner'
 import type { Factory } from '../lib/types'
@@ -14,6 +14,13 @@ import { loadPhotos, loadPublicFactory } from './publicRepo'
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'missing' } | { status: 'ready'; factory: Factory }
 
+/** True when the factory page was opened from the map (root or the legacy /map), so Back can use history. */
+// oxlint-disable-next-line react/only-export-components -- pure helper, tested directly
+export function isFromMap(from: unknown): from is string {
+  return typeof from === 'string' && /^(\/|\/map)(\?.*)?$/.test(from)
+}
+
+const BACK = 'inline-flex min-h-touch items-center gap-1 px-4 text-sm font-semibold text-ink-strong'
 const shell = 'mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-10'
 
 function Page({ children }: { children: React.ReactNode }) {
@@ -31,7 +38,8 @@ export function Component() {
   const { id = '' } = useParams()
   const location = useLocation()
   const from = (location.state as { from?: unknown } | null)?.from
-  const back = typeof from === 'string' && from.startsWith('/map') ? from : '/map'
+  const navigate = useNavigate()
+  const fromMap = isFromMap(from)
   const [state, setState] = useState<State>({ status: 'loading' })
   const [photos, setPhotos] = useState<PhotoData[] | null>(null)
   const [attempt, setAttempt] = useState(0)
@@ -75,7 +83,7 @@ export function Component() {
         <div className={`${shell} items-start pt-10`}>
           <h1 className="text-xl font-bold text-ink-strong">{t('factory.notFoundTitle')}</h1>
           <p className="text-ink-muted">{t('factory.notFoundBody')}</p>
-          <Link to="/map" className="inline-flex min-h-touch items-center justify-center rounded bg-brand-500 px-4 text-sm font-semibold text-ink-strong">
+          <Link to="/" className="inline-flex min-h-touch items-center justify-center rounded bg-brand-500 px-4 text-sm font-semibold text-ink-strong">
             {t('factory.backToMap')}
           </Link>
           <button type="button" onClick={() => setAttempt((n) => n + 1)} className="inline-flex min-h-touch items-center justify-center rounded border-2 border-ink-strong px-4 text-sm font-semibold">
@@ -97,10 +105,17 @@ export function Component() {
 
   return (
     <Page>
-      <Link to={back} className="inline-flex min-h-touch items-center gap-1 px-4 text-sm font-semibold text-ink-strong">
-        <span aria-hidden="true" className="rtl:rotate-180">&larr;</span>
-        {t('factory.back')}
-      </Link>
+      {fromMap ? (
+        <button type="button" onClick={() => void navigate(-1)} className={BACK}>
+          <span aria-hidden="true" className="rtl:rotate-180">&larr;</span>
+          {t('factory.back')}
+        </button>
+      ) : (
+        <Link to="/" className={BACK}>
+          <span aria-hidden="true" className="rtl:rotate-180">&larr;</span>
+          {t('factory.back')}
+        </Link>
+      )}
       <div className="mx-auto w-full max-w-2xl">
         <PhotoCarousel photos={photos} name={name} seed={f.id} />
       </div>

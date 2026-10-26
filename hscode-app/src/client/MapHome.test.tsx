@@ -53,9 +53,9 @@ const ENTRIES: IndexEntry[] = [
 function Probe() {
   return <output data-testid="loc">{useLocation().search}</output>
 }
-function setup(url = '/map') {
+function setup(url = '/') {
   const router = createMemoryRouter(
-    [{ path: '/map', element: (<><MapHome /><Probe /></>) }, { path: '*', element: <p>other</p> }],
+    [{ path: '/', element: (<><MapHome /><Probe /></>) }, { path: '*', element: <p>other</p> }],
     { initialEntries: [url] },
   )
   render(<RouterProvider router={router} />)
@@ -155,7 +155,7 @@ describe('MapHome', () => {
   })
 
   it('empty results show the empty state', async () => {
-    setup('/map?q=zzzzqq')
+    setup('/?q=zzzzqq')
     expect(await screen.findByText('No factories found')).toBeInTheDocument()
     expect(screen.queryByRole('article')).toBeNull()
   })
@@ -176,7 +176,7 @@ describe('MapHome', () => {
   })
 
   it('arriving with near=1 does not ask for location and drops the param', async () => {
-    setup('/map?near=1')
+    setup('/?near=1')
     await screen.findAllByRole('article')
     expect(near.request).not.toHaveBeenCalled()
     expect(screen.getByTestId('loc').textContent).not.toContain('near')
@@ -228,10 +228,10 @@ describe('MapHome', () => {
     const shared = [...ENTRIES]
     loadIndex.mockResolvedValue({ entries: shared, fromCache: false })
     createEngineSpy.mockClear()
-    const a = render(<RouterProvider router={createMemoryRouter([{ path: '/map', element: <MapHome /> }], { initialEntries: ['/map'] })} />)
+    const a = render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <MapHome /> }], { initialEntries: ['/'] })} />)
     await screen.findAllByRole('article')
     a.unmount()
-    render(<RouterProvider router={createMemoryRouter([{ path: '/map', element: <MapHome /> }], { initialEntries: ['/map'] })} />)
+    render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <MapHome /> }], { initialEntries: ['/'] })} />)
     await screen.findAllByRole('article')
     expect(createEngineSpy).toHaveBeenCalledTimes(1)
   })

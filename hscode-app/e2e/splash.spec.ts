@@ -1,7 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
-import en from '../src/i18n/en.json' with { type: 'json' }
-import ar from '../src/i18n/ar.json' with { type: 'json' }
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/tile.openstreetmap.org/**', (route) => route.fulfill({ status: 204, body: '' }))
@@ -11,37 +9,6 @@ test.beforeEach(async ({ page }) => {
 
 const noHScroll = (page: import('@playwright/test').Page) =>
   page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
-
-for (const size of [{ width: 360, height: 740 }, { width: 1280, height: 800 }]) {
-  for (const lang of ['en', 'ar'] as const) {
-    test(`splash ${size.width}x${size.height} ${lang}: no horizontal scroll, axe clean, Find factories -> /map`, async ({ page }) => {
-      await page.setViewportSize(size)
-      await page.goto('./')
-      const strings = lang === 'en' ? en : ar
-      if (lang === 'ar') await page.locator('button[lang="ar"]').click()
-      await expect(page.locator('html')).toHaveAttribute('lang', lang)
-      await expect(page.getByRole('heading', { level: 1, name: strings.home.headline })).toBeVisible()
-      expect(await noHScroll(page)).toBe(false)
-      const results = await new AxeBuilder({ page }).analyze()
-      expect(results.violations).toEqual([])
-      await page.getByRole('link', { name: strings.home.findFactories }).or(page.getByRole('button', { name: strings.home.findFactories })).filter({ visible: true }).first().click()
-      await expect(page).toHaveURL(/\/hscode\/map/)
-      await expect(page.getByRole('combobox', { name: strings.map.searchLabel })).toBeVisible()
-      expect(await noHScroll(page)).toBe(false)
-      const r2 = await new AxeBuilder({ page }).analyze()
-      expect(r2.violations).toEqual([])
-    })
-  }
-}
-
-test('desktop search goes to /map?q=', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 })
-  await page.goto('./')
-  await page.getByRole('searchbox', { name: en.home.searchLabel }).fill('8544')
-  await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/\/hscode\/map\?q=8544/)
-  await expect(page.getByRole('combobox', { name: en.map.searchLabel })).toHaveValue('8544')
-})
 
 test('admin sign-in: logo above the card, lang toggle clear of it, no scroll, axe clean', async ({ page }) => {
   for (const size of [{ width: 360, height: 740 }, { width: 1280, height: 800 }]) {

@@ -30,7 +30,7 @@ vi.mock('./publicRepo', () => ({
   loadContact: (...a: unknown[]) => loadContact(...a),
 }))
 
-import { Component as FactoryPage } from './FactoryPage'
+import { Component as FactoryPage, isFromMap } from './FactoryPage'
 
 const IMG = 'data:image/png;base64,AAAA'
 const factory: Factory = {
@@ -44,7 +44,7 @@ const factory: Factory = {
 
 function setup(entry: string | { pathname: string; state?: unknown } = '/f/f1') {
   const router = createMemoryRouter(
-    [{ path: '/f/:id', element: <FactoryPage /> }, { path: '/map', element: <p>map page</p> }],
+    [{ path: '/f/:id', element: <FactoryPage /> }, { path: '/', element: <p>map page</p> }],
     { initialEntries: [entry] },
   )
   render(<RouterProvider router={router} />)
@@ -78,8 +78,8 @@ describe('FactoryPage', () => {
     setup()
     await screen.findByRole('heading', { level: 1 })
     const links = screen.getAllByRole('link', { name: /Who supplies this/ })
-    expect(links[0]).toHaveAttribute('href', '/map?hs=1005')
-    expect(links[1]).toHaveAttribute('href', '/map?q=Soy+hulls')
+    expect(links[0]).toHaveAttribute('href', '/?hs=1005')
+    expect(links[1]).toHaveAttribute('href', '/?q=Soy+hulls')
   })
 
   it('signed out: locked contacts with no data, Google button, no contact read', async () => {
@@ -116,7 +116,7 @@ describe('FactoryPage', () => {
     loadPublicFactory.mockResolvedValue(null)
     setup()
     expect(await screen.findByRole('heading', { level: 1, name: 'Factory not found' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back to the map' })).toHaveAttribute('href', '/map')
+    expect(screen.getByRole('link', { name: 'Back to the map' })).toHaveAttribute('href', '/')
   })
 
   it('not found offers Try again, which re-runs the load', async () => {
@@ -180,15 +180,25 @@ describe('FactoryPage', () => {
     expect(await screen.findByAltText('No photos yet')).toBeInTheDocument()
   })
 
-  it('back link returns to the previous map url, else /map', async () => {
-    setup({ pathname: '/f/f1', state: { from: '/map?q=feed' } })
-    expect(await screen.findByRole('link', { name: 'Back to the map' })).toHaveAttribute('href', '/map?q=feed')
+  it('from the map, Back is a button that goes back in history', async () => {
+    const router = setup({ pathname: '/f/f1', state: { from: '/?q=a' } })
+    const spy = vi.spyOn(router, 'navigate')
+    const btn = await screen.findByRole('button', { name: 'Back to the map' })
+    await userEvent.click(btn)
+    expect(spy).toHaveBeenCalledWith(-1)
+    expect(screen.queryByRole('link', { name: 'Back to the map' })).toBeNull()
   })
 
-  it('back link defaults to /map', async () => {
+  it('without a map origin, Back is a link to /', async () => {
     setup()
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Back to the map' })).toHaveAttribute('href', '/map'))
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Back to the map' })).toHaveAttribute('href', '/'))
   })
+
+  it('isFromMap accepts the root and /map forms only', () => {
+    for (const ok of ['/', '/?q=a', '/map', '/map?q=a']) expect(isFromMap(ok)).toBe(true)
+    for (const no of ['/f/x', '/mapx', '', undefined, 5]) expect(isFromMap(no)).toBe(false)
+  })
+
   it('signed in but contact read denied: neutral message, no sign-in prompt', async () => {
     auth.user = { uid: 'u1' }
     loadContact.mockResolvedValue(null)
