@@ -30,7 +30,8 @@ describe('SurveyRoute', () => {
   it('visitor sees Continue with Google', () => {
     auth = { user: null, role: 'visitor', active: false, loading: false }
     renderAt()
-    expect(screen.getByRole('button', { name: en.survey.gate.continueGoogle })).toBeInTheDocument()
+    const btn = screen.getByRole('button', { name: en.auth.continueWithGoogle })
+    expect(btn.querySelectorAll('svg path')).toHaveLength(4)
   })
   it('client sees the invite screen', () => {
     auth = { user, role: 'client', active: false, loading: false }

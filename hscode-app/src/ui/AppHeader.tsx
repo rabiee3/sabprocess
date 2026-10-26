@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { signInWithGoogle, signOutUser } from '../auth/api'
+import { signOutUser } from '../auth/api'
+import { useGoogleSignIn } from '../auth/useGoogleSignIn'
+import { GoogleButton } from './GoogleButton'
+import { Banner } from './Banner'
 import { useAuth, type Role } from '../auth/useAuth'
 import { LangToggle } from './LangToggle'
 import { Logo } from './Logo'
@@ -10,7 +13,9 @@ const BTN = 'min-h-touch rounded border border-line bg-surface px-3 text-sm font
 export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
   const { t } = useTranslation()
   const { user, loading } = useAuth()
+  const { signIn, failed, clearError } = useGoogleSignIn()
   return (
+    <>
     <header className="flex h-14 items-center gap-2 border-b border-line bg-surface ps-3 pe-3">
       <Logo />
       {areaLabel && areaLabel !== 'visitor' && (
@@ -29,11 +34,15 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
               </button>
             </>
           ) : (
-            <button type="button" className={BTN} onClick={() => void signInWithGoogle()}>
-              {t('nav.signIn')}
-            </button>
+            <GoogleButton compact onClick={signIn} label={t('nav.signIn')} />
           ))}
       </div>
     </header>
+    {failed && (
+      <div className="absolute inset-x-2 top-14 z-[1300] lg:end-2 lg:start-auto lg:w-96">
+        <Banner tone="danger" onClose={clearError}>{t('errors.generic')}</Banner>
+      </div>
+    )}
+    </>
   )
 }

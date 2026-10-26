@@ -1,0 +1,26 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { initI18n } from '../i18n'
+import en from '../i18n/en.json'
+
+const signInWithGoogle = vi.fn()
+vi.mock('../auth/api', () => ({ signInWithGoogle: () => signInWithGoogle(), signOutUser: vi.fn() }))
+vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: null, loading: false }) }))
+
+import { AppHeader } from './AppHeader'
+
+describe('AppHeader sign-in', () => {
+  beforeEach(() => {
+    initI18n()
+    signInWithGoogle.mockReset()
+  })
+  it('has the G and shows an error banner on failure', async () => {
+    signInWithGoogle.mockRejectedValue({ code: 'auth/network-request-failed' })
+    render(<AppHeader />)
+    const btn = screen.getByRole('button', { name: en.nav.signIn })
+    expect(btn.querySelectorAll('svg path')).toHaveLength(4)
+    await userEvent.click(btn)
+    expect(await screen.findByText(en.errors.generic)).toBeInTheDocument()
+  })
+})

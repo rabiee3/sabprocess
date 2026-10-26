@@ -1,4 +1,7 @@
 {
+  "auth": {
+    "continueWithGoogle": "المتابعة بحساب Google"
+  },
   "app": {
     "name": "HSCode",
     "tagline": "من يصنع ماذا؟ ومن يحتاج ماذا؟"

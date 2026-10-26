@@ -1,4 +1,7 @@
 {
+  "auth": {
+    "continueWithGoogle": "Continue with Google"
+  },
   "app": {
     "name": "HSCode",
     "tagline": "Who makes what. Who needs what."

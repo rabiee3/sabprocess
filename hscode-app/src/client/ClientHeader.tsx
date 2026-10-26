@@ -1,8 +1,9 @@
-import { useState } from 'react'
 import { Link } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth/useAuth'
-import { signInWithGoogle, signOutUser } from '../auth/api'
+import { signOutUser } from '../auth/api'
+import { useGoogleSignIn } from '../auth/useGoogleSignIn'
+import { GoogleButton } from '../ui/GoogleButton'
 import { LangToggle } from '../ui/LangToggle'
 import { Logo } from '../ui/Logo'
 import { Bdi } from '../ui/Bdi'
@@ -13,14 +14,7 @@ const btn = 'inline-flex min-h-touch items-center justify-center px-2 text-sm fo
 export function ClientHeader() {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const [failed, setFailed] = useState(false)
-  const signIn = () => {
-    setFailed(false)
-    signInWithGoogle().catch((e: unknown) => {
-      const code = (e as { code?: string })?.code
-      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') setFailed(true)
-    })
-  }
+  const { signIn, failed, clearError } = useGoogleSignIn()
   return (
     <>
     <header className="z-[1200] flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3">
@@ -39,15 +33,13 @@ export function ClientHeader() {
             </button>
           </>
         ) : (
-          <button type="button" className={btn} onClick={signIn}>
-            {t('nav.signIn')}
-          </button>
+          <GoogleButton compact onClick={signIn} label={t('nav.signIn')} />
         )}
       </div>
     </header>
     {failed && (
       <div className="absolute inset-x-2 top-14 z-[1300] lg:end-2 lg:start-auto lg:w-96">
-        <Banner tone="danger" onClose={() => setFailed(false)}>{t('errors.generic')}</Banner>
+        <Banner tone="danger" onClose={() => clearError()}>{t('errors.generic')}</Banner>
       </div>
     )}
     </>
