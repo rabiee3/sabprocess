@@ -6,8 +6,8 @@ vi.mock('./api', () => ({ signInWithGoogle: () => signInWithGoogle() }))
 
 import { useGoogleSignIn } from './useGoogleSignIn'
 
-async function run(code: string) {
-  signInWithGoogle.mockImplementation(() => Promise.reject({ code }))
+async function run(code?: string, ok = false) {
+  signInWithGoogle.mockImplementation(() => (ok ? Promise.resolve() : Promise.reject(code ? { code } : new Error('x'))))
   const hook = renderHook(() => useGoogleSignIn())
   act(() => {
     hook.result.current.signIn()
@@ -30,6 +30,14 @@ describe('useGoogleSignIn', () => {
     const { result } = await run('auth/network-request-failed')
     expect(result.current.failed).toBe(true)
     act(() => result.current.clearError())
+    expect(result.current.failed).toBe(false)
+  })
+  it('an error without a code sets failed', async () => {
+    const { result } = await run(undefined)
+    expect(result.current.failed).toBe(true)
+  })
+  it('success leaves failed false', async () => {
+    const { result } = await run(undefined, true)
     expect(result.current.failed).toBe(false)
   })
 })

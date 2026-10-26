@@ -129,7 +129,7 @@ test('(f) contacts are locked signed out, and shown after a Google sign-in', asy
   }
   await expect(page.locator('a[href^="tel:"]')).toHaveCount(0)
 
-  await signInGoogleEmulator(page, `buyer-${testInfo.project.name}@example.com`, 'Buyer E2E', en.factory.continueGoogle)
+  await signInGoogleEmulator(page, `buyer-${testInfo.project.name}@example.com`, 'Buyer E2E', en.auth.continueWithGoogle)
   await expect(contacts.getByRole('link', { name: FEED_MILL.phone, exact: true })).toBeVisible()
   await expect(contacts.locator('a[href^="tel:"]')).toHaveCount(1)
   await expect(contacts.getByText(en.factory.lockedTitle)).toHaveCount(0)

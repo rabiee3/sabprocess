@@ -11,7 +11,7 @@ export function GoogleButton({ onClick, label, compact, disabled }: Props) {
       onClick={onClick}
       disabled={disabled}
       className={
-        'inline-flex min-h-touch items-center gap-2 rounded border border-[#747775] bg-white font-medium whitespace-nowrap text-ink-strong disabled:opacity-60 ' +
+        'inline-flex min-h-touch items-center gap-2 rounded border border-[#747775] bg-white font-medium whitespace-nowrap text-ink-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:opacity-60 ' +
         (compact ? 'px-3 text-sm' : 'w-full justify-center px-4 text-body')
       }
     >

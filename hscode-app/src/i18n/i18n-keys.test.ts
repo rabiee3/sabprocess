@@ -12,7 +12,7 @@ function flatten(o: Record<string, unknown>, prefix = ''): Record<string, string
 }
 
 const REQUIRED: Record<string, string[]> = {
-  'survey.gate': ['signInTitle', 'signInBody', 'continueGoogle', 'offTitle', 'offBody'],
+  'survey.gate': ['signInTitle', 'signInBody', 'offTitle', 'offBody'],
   'survey.invite': ['title', 'body', 'unlock', 'invalid', 'offline', 'signedInAs'],
   'survey.list': ['title', 'add', 'empty', 'pending', 'approved', 'rejected', 'savedOnPhone', 'uploadFailed', 'adminReason', 'fixResubmit'],
   'survey.step': ['counter', 'back', 'next', 'location', 'basics', 'products', 'contacts', 'photos', 'review'],

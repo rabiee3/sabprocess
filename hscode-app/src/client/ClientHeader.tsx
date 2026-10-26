@@ -38,7 +38,7 @@ export function ClientHeader() {
       </div>
     </header>
     {failed && (
-      <div className="absolute inset-x-2 top-14 z-[1300] lg:end-2 lg:start-auto lg:w-96">
+      <div className="fixed inset-x-2 top-14 z-[1300] lg:end-2 lg:start-auto lg:w-96">
         <Banner tone="danger" onClose={() => clearError()}>{t('errors.generic')}</Banner>
       </div>
     )}
