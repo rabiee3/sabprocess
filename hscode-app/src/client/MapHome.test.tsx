@@ -27,6 +27,18 @@ vi.mock('../map/ResultsMap', () => ({
   ),
 }))
 
+const createEngineSpy = vi.fn()
+vi.mock('minisearch', async (orig) => {
+  const actual = await orig<typeof import('minisearch')>()
+  class Counted extends actual.default {
+    constructor(...a: ConstructorParameters<typeof actual.default>) {
+      super(...a)
+      createEngineSpy()
+    }
+  }
+  return { ...actual, default: Counted }
+})
+
 import { Component as MapHome } from './MapHome'
 
 const entry = (id: string, en: string, lat: number, at: number, extra: Partial<IndexEntry> = {}): IndexEntry => ({
@@ -210,5 +222,17 @@ describe('MapHome', () => {
     signInWithGoogle.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'auth/network-request-failed' }))
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     expect(await screen.findByText(/went wrong/)).toBeInTheDocument()
+  })
+
+  it('two mounts with the same entries build the search engine once', async () => {
+    const shared = [...ENTRIES]
+    loadIndex.mockResolvedValue({ entries: shared, fromCache: false })
+    createEngineSpy.mockClear()
+    const a = render(<RouterProvider router={createMemoryRouter([{ path: '/map', element: <MapHome /> }], { initialEntries: ['/map'] })} />)
+    await screen.findAllByRole('article')
+    a.unmount()
+    render(<RouterProvider router={createMemoryRouter([{ path: '/map', element: <MapHome /> }], { initialEntries: ['/map'] })} />)
+    await screen.findAllByRole('article')
+    expect(createEngineSpy).toHaveBeenCalledTimes(1)
   })
 })

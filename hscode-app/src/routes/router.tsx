@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router'
+import { RouteError } from '../ui/RouteError'
 
-export const routes = [
+const base = [
   { path: '/', HydrateFallback: () => null, lazy: () => import('../home/Splash') },
   { path: '/map', HydrateFallback: () => null, lazy: () => import('../client/MapHome') },
   { path: '/f/:id', HydrateFallback: () => null, lazy: () => import('../client/FactoryPage') },
@@ -8,5 +9,7 @@ export const routes = [
   { path: '/admin/*', HydrateFallback: () => null, lazy: () => import('../admin/AdminRoute') },
   { path: '*', HydrateFallback: () => null, lazy: () => import('./HomePlaceholder') },
 ]
+
+export const routes = base.map((r) => ({ ...r, errorElement: <RouteError /> }))
 
 export const router = createBrowserRouter(routes, { basename: '/hscode' })

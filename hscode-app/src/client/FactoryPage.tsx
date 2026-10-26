@@ -60,7 +60,7 @@ export function Component() {
     return (
       <Page>
         <div className={`${shell} pt-6`}>
-          <h1 className="sr-only">{t('factory.loadError')}</h1>
+          <h1 className="sr-only">{t('factory.errorTitle')}</h1>
           <Banner tone="danger">{t('factory.loadError')}</Banner>
           <button type="button" onClick={() => setAttempt((n) => n + 1)} className="inline-flex min-h-touch items-center justify-center rounded border-2 border-ink-strong px-4 text-sm font-semibold">
             {t('factory.retry')}
@@ -78,6 +78,9 @@ export function Component() {
           <Link to="/map" className="inline-flex min-h-touch items-center justify-center rounded bg-brand-500 px-4 text-sm font-semibold text-ink-strong">
             {t('factory.backToMap')}
           </Link>
+          <button type="button" onClick={() => setAttempt((n) => n + 1)} className="inline-flex min-h-touch items-center justify-center rounded border-2 border-ink-strong px-4 text-sm font-semibold">
+            {t('factory.tryAgain')}
+          </button>
         </div>
       </Page>
     )

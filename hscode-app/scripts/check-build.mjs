@@ -47,6 +47,12 @@ const kb = (n) => `${(n / 1024).toFixed(2)} KB`
 console.log(`check-build: entry ${entrySrc} is ${kb(entryGzip)} gzip (zlib level 9; budget ${kb(ENTRY_BUDGET)})`)
 if (entryGzip > ENTRY_BUDGET) fail(`entry chunk ${entrySrc} is ${kb(entryGzip)} gzip, over the ${kb(ENTRY_BUDGET)} budget`)
 
+// Firestore must not creep back into the entry chunk (it belongs to the lazy api/route chunks).
+const FIRESTORE_MARKER = 'firestore.googleapis.com'
+if (readFileSync(resolve(assetsDir, entrySrc), 'utf8').includes(FIRESTORE_MARKER)) {
+  fail(`entry chunk ${entrySrc} contains Firestore (found "${FIRESTORE_MARKER}"); keep it in lazy chunks (src/firebase/db.ts)`)
+}
+
 const protectedPaths = ['index.html', 'about.html', 'contact.html', 'css', 'images']
 const git = (args) => execFileSync('git', args, { cwd: rootDir, encoding: 'utf8' })
 
@@ -59,5 +65,5 @@ const status = git(['status', '--porcelain', '--', ...protectedPaths]).trim()
 if (status) fail(`root static site has changes:\n${status}`)
 
 console.log(
-  `check-build OK: hscode/index.html built (${referenced.length} assets present), no emulator strings in JS, entry ${kb(entryGzip)} gzip within budget, root static site untouched`,
+  `check-build OK: hscode/index.html built (${referenced.length} assets present), no emulator strings in JS, entry ${kb(entryGzip)} gzip within budget and Firestore-free, root static site untouched`,
 )

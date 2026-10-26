@@ -4,7 +4,7 @@ import { ResultsMap } from '../map/ResultsMap'
 import { distanceKm } from '../lib/geo'
 import { formatHs } from '../lib/hs'
 import type { IndexEntry } from '../lib/types'
-import { createEngine } from '../search/engine'
+import { getEngine } from '../search/engine'
 import { loadIndex, type IndexErrorCode } from '../search/indexSource'
 import { Banner } from '../ui/Banner'
 import { useIsDesktop } from '../admin/useIsDesktop'
@@ -50,8 +50,8 @@ export function Component() {
   }, [attempt])
 
   const entries = load.status === 'ready' ? load.entries : null
-  // Matching does not depend on the language: built once per loaded index, never per keystroke.
-  const engine = useMemo(() => (entries ? createEngine(entries, 'en') : null), [entries])
+  // Matching does not depend on the language: built once per loaded index (cached across mounts), never per keystroke.
+  const engine = useMemo(() => (entries ? getEngine(entries) : null), [entries])
 
   const nearOk = wantNear && nearMe.status === 'ok' && !!nearMe.pos
   const { results, distances } = useMemo(() => {

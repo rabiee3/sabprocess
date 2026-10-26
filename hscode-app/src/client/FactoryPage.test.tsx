@@ -119,6 +119,31 @@ describe('FactoryPage', () => {
     expect(screen.getByRole('link', { name: 'Back to the map' })).toHaveAttribute('href', '/map')
   })
 
+  it('not found offers Try again, which re-runs the load', async () => {
+    loadPublicFactory.mockResolvedValueOnce(null).mockResolvedValueOnce(factory)
+    setup()
+    await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })).toBeInTheDocument()
+    expect(loadPublicFactory).toHaveBeenCalledTimes(2)
+  })
+
+  it('error state has a short generic h1 apart from the alert text', async () => {
+    loadPublicFactory.mockRejectedValue(new Error('x'))
+    setup()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Factory unavailable' })).toBeInTheDocument()
+    expect(screen.getByText("Couldn't load this factory.")).toBeInTheDocument()
+  })
+
+  it('contacts unavailable has a Retry that reloads', async () => {
+    auth.user = { uid: 'u1' }
+    loadContact.mockResolvedValueOnce(null).mockResolvedValueOnce({})
+    setup()
+    await screen.findByText("Contact details aren't available to your account.")
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByText('No contact details shared')).toBeInTheDocument()
+    expect(loadContact).toHaveBeenCalledTimes(2)
+  })
+
   it('shows the Demo badge for sample factories', async () => {
     loadPublicFactory.mockResolvedValue({ ...factory, sample: true })
     setup()

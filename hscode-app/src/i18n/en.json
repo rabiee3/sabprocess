@@ -166,7 +166,9 @@
     "generic": "Something went wrong. Please try again.",
     "tooLong": "Too long — use at most {{max}} characters.",
     "storageFull": "This phone is out of storage for drafts — submit or delete old drafts.",
-    "denied": "The map can't be reached right now. Please try again later."
+    "denied": "The map can't be reached right now. Please try again later.",
+    "crashTitle": "Something went wrong",
+    "reload": "Reload"
   },
   "admin": {
     "title": "Superadmin",
@@ -486,6 +488,8 @@
     "directions": "Directions",
     "loading": "Loading factory…",
     "loadError": "Couldn't load this factory.",
+    "errorTitle": "Factory unavailable",
+    "tryAgain": "Try again",
     "retry": "Retry",
     "contacts": "Contacts",
     "lockedTitle": "Sign in to see contacts",

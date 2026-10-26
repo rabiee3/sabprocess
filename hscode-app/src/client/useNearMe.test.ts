@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
-import { useNearMe } from './useNearMe'
+import { resetNearMeCache, useNearMe } from './useNearMe'
 
 const getCurrentPosition = vi.fn()
 const setGeo = (v: unknown) => Object.defineProperty(globalThis.navigator, 'geolocation', { value: v, configurable: true })
 beforeEach(() => {
+  resetNearMeCache()
+  vi.useRealTimers()
   getCurrentPosition.mockReset()
   setGeo({ getCurrentPosition })
 })
@@ -62,5 +64,32 @@ describe('useNearMe', () => {
     act(() => result.current.request())
     unmount()
     expect(() => cb?.({ coords: { latitude: 1, longitude: 2 } })).not.toThrow()
+  })
+})
+
+describe('useNearMe cache', () => {
+  const fix = () => {
+    getCurrentPosition.mockImplementation((ok) => ok({ coords: { latitude: 30.1, longitude: 31.2 } }))
+    const first = renderHook(() => useNearMe())
+    act(() => first.result.current.request())
+    first.unmount()
+    getCurrentPosition.mockClear()
+  }
+
+  it('a fresh fix is restored on remount without asking again', () => {
+    fix()
+    const { result } = renderHook(() => useNearMe())
+    expect(result.current.status).toBe('ok')
+    expect(result.current.pos).toEqual({ lat: 30.1, lng: 31.2 })
+    expect(getCurrentPosition).not.toHaveBeenCalled()
+  })
+
+  it('a fix older than 10 minutes is not reused', () => {
+    vi.useFakeTimers()
+    fix()
+    vi.advanceTimersByTime(10 * 60 * 1000 + 1)
+    const { result } = renderHook(() => useNearMe())
+    expect(result.current.status).toBe('idle')
+    expect(result.current.pos).toBeUndefined()
   })
 })

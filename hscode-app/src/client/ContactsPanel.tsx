@@ -118,7 +118,16 @@ function ContactsInner({ factoryId, uid }: { factoryId: string; uid?: string }) 
       {!uid ? (
         <Locked />
       ) : state.status === 'ready' && !state.contact ? (
-        <p className="text-sm text-ink-muted">{t('factory.contactsUnavailable')}</p>
+        <div className="flex flex-col items-start gap-2">
+          <p className="text-sm text-ink-muted">{t('factory.contactsUnavailable')}</p>
+          <button
+            type="button"
+            onClick={() => setAttempt((n) => n + 1)}
+            className="inline-flex min-h-touch items-center justify-center rounded border-2 border-ink-strong px-4 text-sm font-semibold"
+          >
+            {t('factory.retry')}
+          </button>
+        </div>
       ) : state.status === 'loading' ? (
         <p className="text-sm text-ink-muted">{t('common.loading')}</p>
       ) : state.status === 'error' ? (

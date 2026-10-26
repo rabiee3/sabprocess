@@ -110,3 +110,15 @@ export function createEngine(entries: IndexEntry[], _lang: 'en' | 'ar'): Engine 
     },
   };
 }
+
+const engines = new WeakMap<IndexEntry[], Engine>();
+
+/** Memoised by array identity: loadIndex() returns the same array, so a remount never rebuilds. */
+export function getEngine(entries: IndexEntry[]): Engine {
+  let e = engines.get(entries);
+  if (!e) {
+    e = createEngine(entries, 'en');
+    engines.set(entries, e);
+  }
+  return e;
+}
