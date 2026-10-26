@@ -10,7 +10,8 @@ const SEEDED_INVITE = '482913'
 const USED_INVITE = '111111'
 
 test.beforeEach(async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile', 'surveyor flows run once, at phone size')
+  // The surveyor flows run once, at phone size; the portal checks tagged @both-sizes run at both sizes.
+  test.skip(testInfo.project.name !== 'mobile' && !testInfo.tags.includes('@both-sizes'), 'surveyor flows run once, at phone size')
   await page.route('**/tile.openstreetmap.org/**', (route) => route.fulfill({ status: 204, body: '' }))
   await page.goto('./')
   await expect(page.locator('html'), 'app is not in emulator mode').toHaveAttribute('data-emulator', 'true')
@@ -227,4 +228,35 @@ test('(g) an overlong Facebook URL is blocked at the contacts step with an error
   await page.goto('./survey')
   await expect(page.getByRole('heading', { level: 1, name: en.survey.list.title })).toBeVisible()
   await expect(row(page, 'E2E Long Link Works')).toHaveCount(0)
+})
+
+// ---- P5 portal checks, at 360 and 1280 (spec §5, §6, §10) ----
+
+test('(h) the surveyor logo links back to the client map at /', { tag: '@both-sizes' }, async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('hscode.introSeen', '1'))
+  await page.goto('./survey')
+  await expect(page.getByRole('heading', { level: 1, name: en.survey.gate.signInTitle })).toBeVisible()
+  const logo = page.getByRole('banner').getByRole('link', { name: new RegExp(en.portal.surveyor) })
+  await expect(logo).toHaveAttribute('title', en.nav.backToMap)
+  await logo.click()
+  await expect(page).toHaveURL(/\/hscode\/$/)
+  await expect(page.locator('main [role="combobox"]')).toBeAttached()
+})
+
+test('(i) surveyor sign-in in EN and AR: the Google "G" shows, no horizontal scroll, axe clean', { tag: '@both-sizes' }, async ({ page }) => {
+  await page.goto('./survey')
+  for (const lang of ['en', 'ar'] as const) {
+    const s = lang === 'en' ? en : ar
+    await page.getByRole('banner').locator(`button[lang="${lang}"]`).click()
+    await expect(page.locator('html')).toHaveAttribute('lang', lang)
+    await expect(page.getByRole('heading', { level: 1, name: s.survey.gate.signInTitle })).toBeVisible()
+    const button = page.getByRole('main').getByRole('button', { name: s.auth.continueWithGoogle })
+    await expect(button).toBeVisible()
+    const g = button.locator('svg').first()
+    await expect(g).toBeVisible()
+    expect((await g.boundingBox())!.width).toBeGreaterThanOrEqual(16)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+    const results = await new AxeBuilder({ page }).analyze()
+    expect(results.violations, `${lang} surveyor sign-in`).toEqual([])
+  }
 })

@@ -194,3 +194,12 @@ test('no link to /admin on /, /f/<id> or /survey', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: en.survey.gate.signInTitle })).toBeVisible()
   await expect(page.locator('a[href*="/admin"]')).toHaveCount(0)
 })
+
+test('an old /map?q=x link on a first visit lands on /?q=x with no intro (Back covered in client.spec)', async ({ page }) => {
+  await open(page, 'map?q=feed')
+  await expect(page).toHaveURL(/\/hscode\/\?q=feed$/)
+  await mapReady(page)
+  await expect(page.getByRole('combobox', { name: en.map.searchLabel })).toHaveValue('feed')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  expect(await seen(page)).toBeNull()
+})
