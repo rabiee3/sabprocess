@@ -21,7 +21,13 @@ export default defineConfig({
         hasTouch: true,
       },
     },
-    { name: 'desktop', use: { viewport: { width: 1280, height: 800 } } },
+    {
+      name: 'desktop',
+      // Full Chromium (new headless), not the default chrome-headless-shell: on desktop the Google sign-in
+      // popup is a separate window, and the headless shell stalls the opener's Auth-emulator helper iframe
+      // behind it, so the popup's result never arrives and sign-in hangs (client.spec (f)).
+      use: { channel: 'chromium', viewport: { width: 1280, height: 800 } },
+    },
   ],
   webServer: {
     // Always our own emulator-mode server on a dedicated port: never reuse a dev server that may

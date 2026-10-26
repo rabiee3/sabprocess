@@ -76,7 +76,8 @@ test('(c) generate and cancel an invitation code', async ({ page }) => {
   await row.getByRole('button', { name: a.invites.cancel }).click()
   await page.getByRole('dialog').getByRole('button', { name: a.invites.confirmCancel }).click()
   await expect(row.getByText(a.invites.cancelled)).toBeVisible()
-  expect((await docData(`invites/${code}`))?.cancelled).toBe(true)
+  // The row updates from the local write first; the server copy follows.
+  await expect.poll(async () => (await docData(`invites/${code}`))?.cancelled).toBe(true)
 })
 
 test('(d) deactivate a surveyor', async ({ page }) => {

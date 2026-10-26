@@ -58,8 +58,11 @@ async function rootMapAndSearch(page: Page, lang: 'en' | 'ar') {
   await expect(page).toHaveURL(/[?&]q=/)
   const name = lang === 'en' ? FEED_MILL.en : FEED_MILL.ar
   await expect(cardNames(page, s).filter({ hasText: name })).toBeVisible()
-  const query = await searchBox(page, s).inputValue()
+  // The box takes the committed query from the URL a render after the navigation: wait for it, never
+  // read it mid-update (it can still hold the typed "علف").
+  const query = new URL(page.url()).searchParams.get('q') ?? ''
   expect(query).not.toBe('')
+  await expect(searchBox(page, s)).toHaveValue(query)
 
   await page.reload()
   await expect(searchBox(page, s)).toHaveValue(query)
