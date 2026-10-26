@@ -5,11 +5,13 @@ import { GoogleButton } from './GoogleButton'
 import { Banner } from './Banner'
 import { useAuth, type Role } from '../auth/useAuth'
 import { LangToggle } from './LangToggle'
+import { Link } from 'react-router'
 import { Logo } from './Logo'
+import { PortalBrand } from './PortalBrand'
 
 const BTN = 'min-h-touch rounded border border-line bg-surface px-3 text-sm font-semibold whitespace-nowrap text-ink-strong'
 
-/** `areaLabel` is the section badge (which area of the app this is), not the signed-in user's role. */
+/** `areaLabel` picks the portal brand (surveyor or admin); any other value gets a plain logo link to the client map. */
 export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
   const { t } = useTranslation()
   const { user, loading } = useAuth()
@@ -17,9 +19,12 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
   return (
     <>
     <header className="flex h-14 items-center gap-2 border-b border-line bg-surface ps-3 pe-3">
-      <Logo />
-      {areaLabel && areaLabel !== 'visitor' && (
-        <span className="hidden rounded bg-surface-alt px-2 min-[420px]:inline py-1 text-xs font-semibold text-ink">{t(`role.${areaLabel}`)}</span>
+      {areaLabel === 'surveyor' || areaLabel === 'admin' ? (
+        <PortalBrand portal={areaLabel} />
+      ) : (
+        <Link to="/" aria-label={t('nav.backToMap')} className="inline-flex min-h-touch items-center rounded">
+          <Logo />
+        </Link>
       )}
       <div className="ms-auto flex items-center gap-2">
         <LangToggle />

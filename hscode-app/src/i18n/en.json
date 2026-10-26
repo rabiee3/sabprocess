@@ -16,7 +16,8 @@
     "surveyors": "Surveyors",
     "signIn": "Sign in",
     "signOut": "Sign out",
-    "admin": "Admin"
+    "admin": "Admin",
+    "backToMap": "Back to the map"
   },
   "common": {
     "comingSoon": "Coming soon",
@@ -24,8 +25,7 @@
     "loading": "Loading…",
     "reload": "Reload"
   },
-  "role": {
-    "client": "Client",
+  "portal": {
     "surveyor": "Surveyor",
     "admin": "Admin"
   },
@@ -173,7 +173,6 @@
     "reload": "Reload"
   },
   "admin": {
-    "title": "Superadmin",
     "menu": "Menu",
     "navLabel": "Admin navigation",
     "account": "Account",

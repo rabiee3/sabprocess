@@ -8,7 +8,7 @@ import { useAuth } from '../auth/useAuth'
 import splashPattern from '../assets/patterns/splash-pattern.svg'
 import { Placeholder } from '../routes/Placeholder'
 import { AppHeader } from '../ui/AppHeader'
-import { Logo } from '../ui/Logo'
+import { PortalBrand } from '../ui/PortalBrand'
 import { InviteCodeScreen } from './InviteCodeScreen'
 import { FactoryStepper } from './FactoryStepper'
 import { ALLOW_EDIT } from './features'
@@ -17,7 +17,7 @@ import { MySubmissions } from './MySubmissions'
 function Shell({ children }: { children: ReactNode }) {
   return (
     <>
-      <AppHeader />
+      <AppHeader areaLabel="surveyor" />
       {children}
     </>
   )
@@ -32,7 +32,7 @@ function SignInPanel() {
       style={{ backgroundImage: `url(${splashPattern})` }}
     >
       <span className="rounded bg-surface p-2">
-        <Logo />
+        <PortalBrand portal="surveyor" />
       </span>
       <h1 className="text-display font-semibold text-surface">{t('survey.gate.signInTitle')}</h1>
       <p className="max-w-sm text-body text-line">{t('survey.gate.signInBody')}</p>

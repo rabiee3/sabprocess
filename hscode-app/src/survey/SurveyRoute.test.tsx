@@ -60,4 +60,19 @@ describe('SurveyRoute', () => {
     renderAt()
     expect(screen.getByRole('link', { name: en.nav.admin })).toHaveAttribute('href', '/admin')
   })
+  it.each(['surveyor', 'visitor'] as const)('%s never sees a link to /admin', (role) => {
+    auth = { user: role === 'visitor' ? null : user, role, active: true, loading: false }
+    renderAt()
+    expect(document.querySelector('a[href="/admin"]')).toBeNull()
+  })
+  it('shows the surveyor brand linking to /', () => {
+    auth = { user: null, role: 'visitor', active: false, loading: false }
+    renderAt()
+    const links = screen.getAllByRole('link', { name: en.nav.backToMap })
+    expect(links.length).toBeGreaterThan(0)
+    for (const l of links) {
+      expect(l).toHaveAttribute('href', '/')
+      expect(l).toHaveTextContent(en.portal.surveyor)
+    }
+  })
 })

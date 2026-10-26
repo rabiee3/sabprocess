@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 import { signInAdmin } from '../auth/api'
 import { Banner } from '../ui/Banner'
 import { DarkBackdrop } from '../ui/DarkBackdrop'
@@ -50,8 +51,11 @@ export function AdminSignIn() {
       <div className="absolute top-3 end-3">
         <LangToggle />
       </div>
-      <div className="w-full max-w-sm">
-        <Logo variant="dark" className="h-auto w-full" />
+      <div className="flex w-full max-w-sm flex-col items-start gap-2">
+        <Link to="/" aria-label={t('nav.backToMap')} className="block w-full rounded">
+          <Logo variant="dark" className="h-auto w-full" />
+        </Link>
+        <span className="rounded bg-white/15 px-2 py-1 text-xs font-semibold text-white">{t('portal.admin')}</span>
       </div>
       <form
         onSubmit={(e) => void onSubmit(e)}
