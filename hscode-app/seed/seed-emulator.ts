@@ -73,6 +73,64 @@ const factories: { f: Factory; contact: Record<string, unknown> }[] = [
     },
     contact: { phone: '+20 100 000 0003', whatsappSameAsPhone: true, contactPerson: 'Mr. Karim' },
   },
+  // Real (non-sample) factories, so the map has links between what one needs and another makes:
+  // the feed mill needs maize (grain mill) and soybean meal (oil mill); a second feed factory for the sector filter.
+  {
+    f: {
+      ...base,
+      sample: false,
+      id: 'seed-feed-fish',
+      name: { en: 'Giza Fish Feed Co.', ar: 'شركة الجيزة لأعلاف الأسماك' },
+      area: 'oct6-zone-3',
+      sector: 'animal-feed',
+      location: { lat: 29.9612, lng: 30.9285, accuracyM: 12, pinMoved: false },
+      productsMade: [product('Fish feed', 'علف أسماك', '2309')],
+      productsNeeded: [product('Fish meal', 'مسحوق السمك', '2301'), product('Soybean meal', 'كسب فول الصويا', '2304')],
+    },
+    contact: { phone: '+20 100 000 0006', whatsappSameAsPhone: true },
+  },
+  {
+    f: {
+      ...base,
+      sample: false,
+      id: 'seed-grain-mill',
+      name: { en: 'Upper Egypt Grain Mills', ar: 'مطاحن الصعيد للحبوب' },
+      area: 'oct6-zone-2',
+      sector: 'food',
+      location: { lat: 29.9482, lng: 30.9198, accuracyM: 18, pinMoved: false },
+      productsMade: [product('Maize', 'ذرة', '1005'), product('Wheat flour', 'دقيق قمح', '1101')],
+      productsNeeded: [product('Wheat', 'قمح', '1001')],
+    },
+    contact: { phone: '+20 100 000 0007', whatsappSameAsPhone: true },
+  },
+  {
+    f: {
+      ...base,
+      sample: false,
+      id: 'seed-oil-mill',
+      name: { en: 'Sinai Oil Extraction', ar: 'سيناء لاستخلاص الزيوت' },
+      area: 'oct6-zone-1',
+      sector: 'food',
+      location: { lat: 29.9355, lng: 30.9061, accuracyM: 14, pinMoved: false },
+      productsMade: [product('Soybean meal', 'كسب فول الصويا', '2304'), product('Soybean oil', 'زيت فول الصويا', '1507')],
+      productsNeeded: [product('Soybeans', 'فول الصويا', '1201')],
+    },
+    contact: { phone: '+20 100 000 0008', whatsappSameAsPhone: true },
+  },
+  {
+    f: {
+      ...base,
+      sample: false,
+      id: 'seed-bakery',
+      name: { en: 'October Bakeries', ar: 'مخابز أكتوبر' },
+      area: 'oct6-zone-2',
+      sector: 'food',
+      location: { lat: 29.9531, lng: 30.9352, accuracyM: 16, pinMoved: false },
+      productsMade: [product('Bread', 'خبز', '1905')],
+      productsNeeded: [product('Wheat flour', 'دقيق قمح', '1101')],
+    },
+    contact: { phone: '+20 100 000 0009', whatsappSameAsPhone: true },
+  },
 ]
 
 const ts = (d: Date) => Timestamp.fromDate(d)
@@ -154,6 +212,8 @@ const pending = (id: string, en: string, ar: string, location: Factory['location
 }
 pending('demo-pending-gps', 'Pending Gps Works', 'أعمال معلقة', { lat: 29.9231, lng: 30.9129, accuracyM: 85, pinMoved: false })
 pending('demo-pending-hand', 'Pending Hand Works', 'أعمال يدوية', { lat: 29.9241, lng: 30.9135, accuracyM: null, pinMoved: true })
+// Never reviewed by any test: the client e2e deep-links to it and expects "not found".
+pending('demo-pending-deeplink', 'Pending Deeplink Works', 'أعمال رابط معلق', { lat: 29.9251, lng: 30.9141, accuracyM: 30, pinMoved: false })
 
 await batch.commit()
 
@@ -162,4 +222,4 @@ const auth = getAuth()
 await auth.deleteUser(ADMIN_UID).catch(() => {})
 await auth.createUser({ uid: ADMIN_UID, email: 'admin@example.test', password: 'emulator-only-123', emailVerified: true })
 
-console.log(`Seeded ${factories.length} approved factories, 2 pending, 3 invites, 2 users, 1 rejected factory, 1 admin account.`)
+console.log(`Seeded ${factories.length} approved factories, 3 pending, 3 invites, 2 users, 1 rejected factory, 1 admin account.`)

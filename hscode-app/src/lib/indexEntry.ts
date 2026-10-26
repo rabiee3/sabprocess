@@ -28,5 +28,6 @@ export function toIndexEntry(f: Factory): IndexEntry {
   };
   if (f.sector) entry.s = f.sector;
   if (f.approvedAt) entry.at = f.approvedAt.getTime();
+  if (f.sample === true) entry.x = true;
   return entry;
 }

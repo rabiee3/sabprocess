@@ -7,7 +7,7 @@ import type { Factory } from '../lib/types'
 import { MapView } from '../map/MapView'
 import { pinIcon } from '../map/pins'
 import { factoryFlags } from './flags'
-import { isSafeImage } from './safeImage'
+import { isSafeImage } from '../lib/safeImage'
 import { displayName, formatDate } from './reviewForm'
 
 const CAIRO = { lat: 30.0444, lng: 31.2357 }

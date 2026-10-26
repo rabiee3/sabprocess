@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { formatHs, hsMatchesPrefix, hsString, normalizeHs, validateHs } from './hs';
 
+describe('hs digits', () => {
+  it('maps Arabic-Indic and Persian digits', () => {
+    expect(normalizeHs('٢٣٠٩.٩٠')).toBe('230990');
+    expect(normalizeHs('۲۳ ۰۹')).toBe('2309');
+  });
+});
+
 describe('hs', () => {
   it('normalizeHs strips non-digits', () => {
     expect(normalizeHs(' 2309.90 ')).toBe('230990');

@@ -1,0 +1,1 @@
+var e=/^data:image\/(jpeg|png|webp);base64,/,t=t=>!!t&&e.test(t);export{t};

@@ -1,7 +1,17 @@
 import type { HsCode } from './types';
 
 export function normalizeHs(input: string): string {
-  return input.replace(/\D/g, '');
+  return input
+    .replace(/[٠-٩]/g, (c) => String(c.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (c) => String(c.charCodeAt(0) - 0x06f0))
+    .replace(/\D/g, '');
+}
+
+const DIGIT_QUERY = /^[\d٠-٩۰-۹.\s-]+$/;
+
+/** True when the raw query is only digits/dots/spaces/dashes and has at least 2 digits. */
+export function isHsQuery(q: string): boolean {
+  return DIGIT_QUERY.test(q) && normalizeHs(q).length >= 2;
 }
 
 export function validateHs(hs: HsCode): { ok: true } | { ok: false; error: 'heading' | 'sub' | 'tariff' } {

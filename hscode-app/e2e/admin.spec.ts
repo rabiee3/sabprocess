@@ -105,7 +105,7 @@ test('(f) dashboard shows counts, and no export or download control exists', asy
   const tiles = page.getByRole('region', { name: a.dash.statusTitle }).getByRole('listitem')
   await expect(tiles).toHaveCount(4)
   await expect(tiles.first().locator('p').nth(1)).toHaveText(/^\d+$/)
-  // The seed has 3 approved + 2 pending + 1 rejected; other tests only move factories between statuses.
+  // The seed has 7 approved + 3 pending + 1 rejected; other tests only move factories between statuses.
   await expect
     .poll(async () => (await tiles.locator('p:nth-child(2)').allTextContents()).reduce((n, t) => n + Number(t), 0))
     .toBeGreaterThanOrEqual(6)

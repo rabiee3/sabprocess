@@ -15,7 +15,8 @@ const h = vi.hoisted(() => ({
   snaps: [] as { uid: string; ok: SnapCb; unsub: ReturnType<typeof vi.fn> }[],
 }))
 
-vi.mock('../firebase', () => ({ auth: {}, db: {} }))
+vi.mock('../firebase/app', () => ({ auth: {} }))
+vi.mock('../firebase/db', () => ({ db: {} }))
 vi.mock('./api', () => ({ ensureUserDoc: vi.fn() }))
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: (_a: unknown, cb: AuthCb) => {
@@ -43,8 +44,14 @@ function Probe() {
 }
 const mount = () => render(<AuthProvider><Probe /></AuthProvider>)
 const fire = (u: unknown) => act(async () => { h.authCb!(u) })
-const flush = () => act(async () => { await Promise.resolve() })
+// A macrotask: lets the lazily imported role watcher (already warm, see beforeAll) and ensureUserDoc settle.
+const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)) })
 const snap = (data: unknown, hasPendingWrites = false) => ({ data: () => data, metadata: { hasPendingWrites } })
+
+// Warm the role watcher chunk once, so each test's dynamic import resolves within a single flush.
+beforeAll(async () => {
+  await import('./roleWatcher')
+})
 
 beforeEach(() => {
   h.authCb = null

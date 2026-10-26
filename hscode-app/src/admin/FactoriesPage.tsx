@@ -13,7 +13,7 @@ import { FactoryFilters } from './FactoryFilters'
 import { deleteFactory, hideFactory, unhideFactory } from './repo'
 import { displayName, formatDate } from './reviewForm'
 import { classify } from './classify'
-import { isSafeImage } from './safeImage'
+import { isSafeImage } from '../lib/safeImage'
 
 const TABS: FactoryStatus[] = ['approved', 'pending', 'rejected', 'hidden']
 type Action = 'hide' | 'unhide' | 'delete'
