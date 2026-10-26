@@ -1,0 +1,1 @@
+import{Q as e,et as t,f as n}from"./index-Z-upzjBd.js";var r=t(e(),1);function i(){return(0,r.useContext)(n)}export{i as t};

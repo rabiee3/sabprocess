@@ -1,1 +1,0 @@
-import{et as e,f as t,nt as n}from"./index-D6Rd6Ih6.js";var r=n(e(),1);function i(){return(0,r.useContext)(t)}export{i as t};
