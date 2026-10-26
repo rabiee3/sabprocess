@@ -48,6 +48,8 @@ export function Component() {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [toast, setToast] = useState<string | null>(null)
+  // Phone: the results sheet's height, so the map fits its pins into the part the sheet does not cover.
+  const [sheetPx, setSheetPx] = useState(() => Math.round(window.innerHeight * 0.4))
 
   useEffect(() => {
     let live = true
@@ -127,6 +129,9 @@ export function Component() {
               onSelect={select}
               userPos={nearOk ? nearMe.pos : undefined}
               className="size-full"
+              desktop={desktop}
+              topOverlayRef={controls}
+              sheetPx={sheetPx}
             />
           </div>
           <div ref={controls} className="absolute inset-x-2 top-2 z-[1100] flex flex-col gap-2 lg:max-w-md">
@@ -174,6 +179,7 @@ export function Component() {
               fromCache={fromCache}
               onSelect={select}
               onTry={(w) => set({ q: w, hs: '' }, { push: true })}
+              onHeight={setSheetPx}
             />
           )}
         </div>

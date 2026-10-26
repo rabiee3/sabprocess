@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { signOutUser } from '../auth/api'
+import { useSignOut } from '../auth/useSignOut'
 import { useGoogleSignIn } from '../auth/useGoogleSignIn'
 import { GoogleButton } from './GoogleButton'
 import { Banner } from './Banner'
+import { SignOutKeptBanner } from './SignOutKeptBanner'
 import { useAuth, type Role } from '../auth/useAuth'
 import { LangToggle } from './LangToggle'
 import { Link } from 'react-router'
@@ -18,6 +19,7 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
   const { t } = useTranslation()
   const { user, loading } = useAuth()
   const { signIn, failed, clearError } = useGoogleSignIn()
+  const { signOut } = useSignOut()
   return (
     <>
     <header className="flex h-14 items-center gap-2 border-b border-line bg-surface ps-3 pe-3">
@@ -37,7 +39,7 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
                 {user.displayName ?? user.email}
               </span>
               {/* Below 640px only the icon, so logo · tag · LangToggle · Sign out fit a 360px phone in Arabic. */}
-              <button type="button" className={`${BTN} inline-flex min-w-11 items-center justify-center`} onClick={() => void signOutUser()}>
+              <button type="button" className={`${BTN} inline-flex min-w-11 items-center justify-center`} onClick={() => void signOut()}>
                 <Icon svg={logoutIcon} className="size-5 sm:hidden rtl:-scale-x-100" />
                 <span className="max-sm:sr-only">{t('nav.signOut')}</span>
               </button>
@@ -52,6 +54,7 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
         <Banner tone="danger" onClose={clearError}>{t('errors.generic')}</Banner>
       </div>
     )}
+    <SignOutKeptBanner />
     </>
   )
 }

@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { HsBadge } from '../hs/HsBadge'
+import { DemoBadge } from '../ui/DemoBadge'
 import type { IndexEntry } from '../lib/types'
 import plant from '../assets/placeholders/photo-plant.svg'
 import silo from '../assets/placeholders/photo-silo.svg'
@@ -25,7 +26,7 @@ export function FactoryCard({ entry: e, lang, selected, distanceKm, showNeeds, o
   const loc = useLocation()
   const { ref, src } = useThumb<HTMLDivElement>(e.id)
   const name = pickName(e.n, lang) || t('map.noName')
-  const meta = [areaLabel(e.a, lang), sectorLabel(e.s, lang)].filter(Boolean).join(' · ')
+  const meta = [areaLabel(e.a, lang, e.ao), sectorLabel(e.s, lang)].filter(Boolean).join(' · ')
   const made = e.m.slice(0, 3).map((p) => pickName(p.n, lang)).filter(Boolean)
   const needed = e.d.slice(0, 3)
   const dist =
@@ -56,11 +57,7 @@ export function FactoryCard({ entry: e, lang, selected, distanceKm, showNeeds, o
             </h3>
             {dist && <span className="shrink-0 text-caption text-ink-muted">{dist}</span>}
           </div>
-          {e.x && (
-            <span className="me-2 inline-block rounded-sm bg-amber-50 px-2 py-0.5 text-caption font-semibold text-amber-900">
-              {t('map.demo')}
-            </span>
-          )}
+          {e.x && <DemoBadge className="me-2" />}
           {meta && <p className="text-caption text-ink-muted">{meta}</p>}
           {made.length > 0 && (
             <p className="text-caption text-ink">

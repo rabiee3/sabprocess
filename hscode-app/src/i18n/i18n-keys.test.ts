@@ -37,6 +37,16 @@ describe('i18n catalogues', () => {
     const base = (o: Record<string, string>) => [...new Set(Object.keys(o).map((k) => k.replace(PLURAL, '')))].sort()
     expect(base(A)).toEqual(base(E))
   })
+  it('one shared Demo badge key; the old per-screen keys are gone', () => {
+    expect(E['demo.badge']).toBe('Demo')
+    expect(A['demo.badge']).toBeTruthy()
+    expect(E['map.demo']).toBeUndefined()
+    expect(E['factory.demo']).toBeUndefined()
+    expect(E['factory.notPublic']).toBeTruthy()
+    expect(E['nav.signOutKeptData']).toBe(
+      'Signed out. Some survey changes are still waiting to upload, so this phone keeps its saved data until they sync.',
+    )
+  })
   it('no value is empty', () => {
     for (const [k, v] of [...Object.entries(E), ...Object.entries(A)]) {
       expect(v.trim(), k).not.toBe('')

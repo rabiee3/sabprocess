@@ -8,7 +8,8 @@ import { safeStorage } from '../lib/safeStorage'
 
 vi.mock('../firebase', () => ({ db: {}, auth: {} }))
 const signInWithGoogle = vi.fn()
-vi.mock('../auth/api', () => ({ signInWithGoogle: (...a: unknown[]) => signInWithGoogle(...a), signOutUser: vi.fn() }))
+vi.mock('../auth/api', () => ({ signInWithGoogle: (...a: unknown[]) => signInWithGoogle(...a) }))
+vi.mock('../auth/signOutAndWipe', () => ({ signOutAndWipe: vi.fn() }))
 vi.mock('firebase/firestore', () => ({ doc: () => ({}), getDoc: vi.fn().mockResolvedValue({ exists: () => false }) }))
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
 
@@ -29,8 +30,10 @@ vi.mock('../hs/lazyTable', () => ({
 const near = { status: 'idle' as string, pos: undefined as { lat: number; lng: number } | undefined, request: vi.fn() }
 vi.mock('./useNearMe', () => ({ useNearMe: () => near }))
 
+const mapProps = vi.hoisted(() => ({ last: {} as Record<string, unknown> }))
 vi.mock('../map/ResultsMap', () => ({
-  ResultsMap: ({ entries, onSelect, userPos }: { entries: IndexEntry[]; onSelect: (id: string) => void; userPos?: unknown }) => (
+  ResultsMap: ({ entries, onSelect, userPos, ...rest }: { entries: IndexEntry[]; onSelect: (id: string) => void; userPos?: unknown }) => (
+    (mapProps.last = rest),
     <div data-testid="map" data-user={userPos ? 'yes' : 'no'}>
       {entries.map((e) => (
         <button key={e.id} type="button" data-testid={`pin-${e.id}`} onClick={() => onSelect(e.id)} />
@@ -171,6 +174,19 @@ describe('MapHome', () => {
     setup('/?q=zzzzqq')
     expect(await screen.findByText('No factories found')).toBeInTheDocument()
     expect(screen.queryByRole('article')).toBeNull()
+  })
+
+  it('on a phone the map gets the sheet height and the search overlay to pad its fit; expanding the sheet grows it', async () => {
+    setup()
+    await screen.findAllByRole('article')
+    expect(mapProps.last.desktop).toBe(false)
+    const ref = mapProps.last.topOverlayRef as { current: HTMLElement | null }
+    expect(ref.current).not.toBeNull()
+    expect(within(ref.current!).getByRole('combobox')).toBeInTheDocument()
+    const collapsed = mapProps.last.sheetPx as number
+    expect(collapsed).toBeGreaterThan(0)
+    await userEvent.click(screen.getByRole('button', { name: 'Expand or collapse results' }))
+    await waitFor(() => expect(mapProps.last.sheetPx as number).toBeGreaterThan(collapsed))
   })
 
   it('shows the Demo badge for sample factories and the saved-results note from cache while offline', async () => {

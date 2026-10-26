@@ -6,8 +6,10 @@ import { initI18n } from '../i18n'
 import en from '../i18n/en.json'
 
 const signInWithGoogle = vi.fn()
-vi.mock('../auth/api', () => ({ signInWithGoogle: () => signInWithGoogle(), signOutUser: vi.fn() }))
+vi.mock('../auth/api', () => ({ signInWithGoogle: () => signInWithGoogle() }))
 const auth = { user: null as null | { displayName: string; email: string }, loading: false }
+const signOutAndWipe = vi.hoisted(() => vi.fn())
+vi.mock('../auth/signOutAndWipe', () => ({ signOutAndWipe: () => signOutAndWipe() }))
 vi.mock('../auth/useAuth', () => ({ useAuth: () => auth }))
 
 import { AppHeader } from './AppHeader'
@@ -56,5 +58,18 @@ describe('AppHeader sign-in', () => {
     expect(link).toHaveAttribute('href', '/')
     expect(link).toHaveAccessibleDescription(en.nav.backToMap)
     expect(link).not.toHaveTextContent(en.portal.surveyor)
+  })
+  it('Sign out wipes the cache; when survey writes are still pending it says the data was kept (fixed info banner)', async () => {
+    signOutAndWipe.mockResolvedValue('kept')
+    auth.user = { displayName: 'Mona', email: 'm@example.com' }
+    render(<MemoryRouter><AppHeader /></MemoryRouter>)
+    expect(screen.queryByText(en.nav.signOutKeptData)).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: en.nav.signOut }))
+    expect(signOutAndWipe).toHaveBeenCalledTimes(1)
+    const msg = await screen.findByText(en.nav.signOutKeptData)
+    expect(msg.closest('[role="status"]')).not.toBeNull()
+    expect(msg.closest('.fixed')).not.toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: en.common.close }))
+    expect(screen.queryByText(en.nav.signOutKeptData)).toBeNull()
   })
 })

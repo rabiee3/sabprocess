@@ -6,7 +6,7 @@ import en from '../i18n/en.json'
 
 let auth: Record<string, unknown> = {}
 vi.mock('../auth/useAuth', () => ({ useAuth: () => auth }))
-vi.mock('../auth/api', () => ({ claimInvite: vi.fn(), signInWithGoogle: vi.fn(), signOutUser: vi.fn() }))
+vi.mock('../auth/api', () => ({ claimInvite: vi.fn(), signInWithGoogle: vi.fn() }))
 const loadHsTable = vi.fn(() => Promise.resolve({}))
 vi.mock('../hs/lazyTable', async (orig) => ({
   ...(await orig<typeof import('../hs/lazyTable')>()),

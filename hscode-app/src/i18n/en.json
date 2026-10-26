@@ -17,13 +17,17 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "admin": "Admin",
-    "backToMap": "Back to the map"
+    "backToMap": "Back to the map",
+    "signOutKeptData": "Signed out. Some survey changes are still waiting to upload, so this phone keeps its saved data until they sync."
   },
   "common": {
     "comingSoon": "Coming soon",
     "close": "Close",
     "loading": "Loading…",
     "reload": "Reload"
+  },
+  "demo": {
+    "badge": "Demo"
   },
   "portal": {
     "surveyor": "Surveyor",
@@ -450,7 +454,6 @@
     "showMore": "Show more",
     "saved": "Showing saved results",
     "viewFactory": "View factory",
-    "demo": "Demo",
     "makes": "Makes",
     "needs": "Needs",
     "km": "km",
@@ -470,8 +473,8 @@
     "back": "Back to the map",
     "notFoundTitle": "Factory not found",
     "notFoundBody": "This factory isn't available. It may have been removed or isn't public yet.",
+    "notPublic": "Not public yet. Only approved factories appear on the public map.",
     "backToMap": "Back to the map",
-    "demo": "Demo",
     "verified": "Verified on site · {{date}}",
     "photoAlt": "Photo {{n}} of {{total}} — {{name}}",
     "photoPrev": "Previous photo",

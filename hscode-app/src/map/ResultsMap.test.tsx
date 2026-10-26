@@ -182,6 +182,32 @@ describe('ResultsMap', () => {
   })
 })
 
+describe('ResultsMap padding', () => {
+  const a = [e('1', 29.9, 30.9), e('2', 30.1, 31.1)]
+  it('desktop keeps the 40px padding', () => {
+    render(<ResultsMap entries={a} onSelect={() => {}} desktop sheetPx={300} />)
+    expect(map.fitBounds.mock.calls[0][1]).toEqual({ padding: [40, 40], maxZoom: 15 })
+  })
+  it('on a phone the pins clear the sheet below and the search overlay above', () => {
+    const top = document.createElement('div')
+    Object.defineProperty(top, 'offsetTop', { value: 8 })
+    Object.defineProperty(top, 'offsetHeight', { value: 104 })
+    render(<ResultsMap entries={a} onSelect={() => {}} desktop={false} sheetPx={312} topOverlayRef={{ current: top }} />)
+    const opts = map.fitBounds.mock.calls[0][1]
+    expect(opts.paddingBottomRight[1]).toBe(312)
+    expect(opts).toEqual({ paddingTopLeft: [16, 112], paddingBottomRight: [16, 312], maxZoom: 15 })
+  })
+  it('on a phone with an unmeasured overlay the top padding falls back to 120', () => {
+    render(<ResultsMap entries={a} onSelect={() => {}} desktop={false} sheetPx={250} topOverlayRef={{ current: null }} />)
+    expect(map.fitBounds.mock.calls[0][1]).toEqual({ paddingTopLeft: [16, 120], paddingBottomRight: [16, 250], maxZoom: 15 })
+  })
+  it('a sheet height change alone does not refit', () => {
+    const { rerender } = render(<ResultsMap entries={a} onSelect={() => {}} desktop={false} sheetPx={250} />)
+    rerender(<ResultsMap entries={a} onSelect={() => {}} desktop={false} sheetPx={600} />)
+    expect(map.fitBounds).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('ResultsMap fit key', () => {
   it('does not refit when the same entries are only reordered (Near me)', () => {
     const a = [e('1', 29.9, 30.9), e('2', 30.1, 31.1), e('3', 30.2, 31.2)]

@@ -5,7 +5,7 @@ import { initI18n } from '../i18n'
 import en from '../i18n/en.json'
 
 const signInWithGoogle = vi.fn()
-vi.mock('../auth/api', () => ({ signInWithGoogle: () => signInWithGoogle(), signOutUser: vi.fn() }))
+vi.mock('../auth/api', () => ({ signInWithGoogle: () => signInWithGoogle() }))
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: null }) }))
 vi.mock('./publicRepo', () => ({ loadContact: vi.fn() }))
 

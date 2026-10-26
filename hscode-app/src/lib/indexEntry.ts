@@ -26,6 +26,8 @@ export function toIndexEntry(f: Factory): IndexEntry {
     m: mapProducts(f.productsMade),
     d: mapProducts(f.productsNeeded),
   };
+  const areaOther = f.area === 'other' ? f.areaOther?.trim() : undefined;
+  if (areaOther) entry.ao = areaOther;
   if (f.sector) entry.s = f.sector;
   if (f.approvedAt) entry.at = f.approvedAt.getTime();
   if (f.sample === true) entry.x = true;

@@ -3,7 +3,6 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
-  signOut,
   type User,
 } from 'firebase/auth'
 import {
@@ -40,10 +39,6 @@ export async function signInWithGoogle(): Promise<void> {
 
 export async function signInAdmin(email: string, password: string): Promise<void> {
   await signInWithEmailAndPassword(auth, email, password)
-}
-
-export async function signOutUser(): Promise<void> {
-  await signOut(auth)
 }
 
 /** The User fields the user doc is built from. */

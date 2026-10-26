@@ -138,16 +138,16 @@ test('(g) the seeded sample carries a Demo badge on its card and its page; a rea
   await open(page, './')
   await expectPinsAndResults(page, en)
   const feedCard = cards(page).filter({ has: page.getByRole('heading', { level: 3, name: FEED_MILL.en }) })
-  await expect(feedCard.getByText(en.map.demo, { exact: true })).toBeVisible()
+  await expect(feedCard.getByText(en.demo.badge, { exact: true })).toBeVisible()
   const grainCard = cards(page).filter({ has: page.getByRole('heading', { level: 3, name: GRAIN_MILL.en }) })
   await expect(grainCard).toBeVisible()
-  await expect(grainCard.getByText(en.map.demo, { exact: true })).toHaveCount(0)
+  await expect(grainCard.getByText(en.demo.badge, { exact: true })).toHaveCount(0)
 
   await open(page, `f/${FEED_MILL.id}`)
-  await expect(page.getByRole('main').getByText(en.factory.demo, { exact: true })).toBeVisible()
+  await expect(page.getByRole('main').getByText(en.demo.badge, { exact: true })).toBeVisible()
   await open(page, `f/${GRAIN_MILL.id}`)
   await expect(page.getByRole('heading', { level: 1, name: GRAIN_MILL.en })).toBeVisible()
-  await expect(page.getByRole('main').getByText(en.factory.demo, { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('main').getByText(en.demo.badge, { exact: true })).toHaveCount(0)
 })
 
 test('(i) axe: the map, the results open, and the factory page', async ({ page }, testInfo) => {

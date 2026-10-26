@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { collection, getCountFromServer, query, where } from 'firebase/firestore'
-import { signOutUser } from '../auth/api'
+import { useSignOut } from '../auth/useSignOut'
 import { useAuth } from '../auth/useAuth'
 import { db } from '../firebase'
 import { LangToggle } from '../ui/LangToggle'
@@ -37,6 +37,7 @@ function usePendingCount() {
 export function AdminLayout() {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const { signOut } = useSignOut()
   const admin = usePendingCount()
   const { pending } = admin
   const isDesktop = useIsDesktop()
@@ -114,7 +115,7 @@ export function AdminLayout() {
           </p>
           <button
             type="button"
-            onClick={() => void signOutUser()}
+            onClick={() => void signOut()}
             className="min-h-touch rounded border border-line bg-surface px-3 text-sm font-semibold text-ink-strong"
           >
             {t('nav.signOut')}

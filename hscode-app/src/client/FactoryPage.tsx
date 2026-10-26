@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '../auth/useAuth'
 import { Banner } from '../ui/Banner'
-import type { Factory } from '../lib/types'
+import { DemoBadge } from '../ui/DemoBadge'
 import type { PhotoData } from '../survey/types'
 import { ClientHeader } from './ClientHeader'
 import { ContactsPanel } from './ContactsPanel'
@@ -14,7 +15,7 @@ import { PhotoCarousel } from './PhotoCarousel'
 import { areaLabel, pickName, sectorLabel, type Lang } from './labels'
 import { loadPhotos, loadPublicFactory } from './publicRepo'
 
-type State = { status: 'loading' } | { status: 'error' } | { status: 'missing' } | { status: 'ready'; factory: Factory }
+type State = { status: 'loading' } | { status: 'error' } | { status: 'missing' } | { status: 'ready'; load: LoadedFactory }
 
 const BACK = 'inline-flex min-h-touch items-center gap-1 px-4 text-sm font-semibold text-ink-strong'
 const shell = 'mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-10'
@@ -35,37 +36,38 @@ export function Component() {
   const location = useLocation()
   const from = (location.state as { from?: unknown } | null)?.from
   const navigate = useNavigate()
+  const { role } = useAuth()
   const fromMap = isFromMap(from)
   // A factory already seen this session renders at once from the session cache (spec §8).
   const hit = getCached(id)
-  const [state, setState] = useState<State>(hit ? { status: 'ready', factory: hit.factory } : { status: 'loading' })
+  const [state, setState] = useState<State>(hit ? { status: 'ready', load: hit.load } : { status: 'loading' })
   const [photos, setPhotos] = useState<PhotoData[] | null>(hit?.photos ?? null)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let live = true
-    const fetchPhotos = (factory: LoadedFactory) =>
+    const fetchPhotos = (load: LoadedFactory) =>
       loadPhotos(id).then(
         (p) => {
-          setCached(id, { factory, photos: p })
+          setCached(id, { load, photos: p })
           if (live) setPhotos(p)
         },
         () => live && setPhotos([]),
       )
     const cached = getCached(id)
     if (cached) {
-      setState({ status: 'ready', factory: cached.factory })
+      setState({ status: 'ready', load: cached.load })
       setPhotos(cached.photos)
-      if (!cached.photos) void fetchPhotos(cached.factory)
+      if (!cached.photos) void fetchPhotos(cached.load)
     } else {
       setState({ status: 'loading' })
       setPhotos(null)
       loadPublicFactory(id).then(
-        (factory) => {
-          if (factory) setCached(id, { factory, photos: null })
+        (load) => {
+          if (load) setCached(id, { load, photos: null })
           if (!live) return
-          setState(factory ? { status: 'ready', factory } : { status: 'missing' })
-          if (factory) void fetchPhotos(factory)
+          setState(load ? { status: 'ready', load } : { status: 'missing' })
+          if (load) void fetchPhotos(load)
         },
         () => live && setState({ status: 'error' }),
       )
@@ -108,11 +110,13 @@ export function Component() {
     )
   }
 
-  const f = state.factory
+  const { factory: f, isPublic } = state.load
+  // Not public: only its owner or the admin can read it (the rules). Contacts stay admin-only (spec §9 M2).
+  const showContacts = isPublic || role === 'admin'
   const name = pickName(f.name, lang) || t('map.noName')
   const otherLang: Lang = lang === 'ar' ? 'en' : 'ar'
   const other = f.name[otherLang]
-  const meta = [areaLabel(f.area, lang), sectorLabel(f.sector, lang)].filter(Boolean)
+  const meta = [areaLabel(f.area, lang, f.areaOther), sectorLabel(f.sector, lang)].filter(Boolean)
   const verified = f.approvedAt
     ? t('factory.verified', { date: new Intl.DateTimeFormat(lang, { dateStyle: 'medium' }).format(f.approvedAt) })
     : ''
@@ -138,17 +142,16 @@ export function Component() {
           <h1 className="text-xl font-bold text-ink-strong"><bdi>{name}</bdi></h1>
           {other && other !== name && <p lang={otherLang} className="text-ink-muted">{other}</p>}
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
-            {f.sample && (
-              <span className="inline-block rounded-sm bg-amber-50 px-2 py-0.5 text-caption font-semibold text-amber-900">{t('factory.demo')}</span>
-            )}
+            {f.sample && <DemoBadge />}
             {meta.length > 0 && <span>{meta.join(' · ')}</span>}
           </p>
           {verified && <p className="text-sm text-green-700">{verified}</p>}
         </header>
+        {!isPublic && <Banner tone="warning">{t('factory.notPublic')}</Banner>}
         <FactoryProducts id="made-h" title={t('factory.makes')} products={f.productsMade} variant="made" lang={lang} />
         <FactoryProducts id="needs-h" title={t('factory.needs')} products={f.productsNeeded} variant="needed" lang={lang} />
         <MiniMap lat={f.location.lat} lng={f.location.lng} />
-        <ContactsPanel factoryId={f.id} />
+        {showContacts && <ContactsPanel factoryId={f.id} />}
       </div>
     </Page>
   )
