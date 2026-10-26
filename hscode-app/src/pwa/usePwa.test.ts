@@ -95,6 +95,35 @@ describe('usePwa', () => {
     expect(result.current.canInstall).toBe(false)
   })
 
+  it('once the service worker is ready, adds the lazy chunks this page already loaded to app-chunks', async () => {
+    const added: string[] = []
+    const cache = { add: vi.fn(async (u: string) => void added.push(u)) }
+    const open = vi.fn(async () => cache)
+    // The entry is precached already: caches.match finds it, so it is not added twice.
+    const match = vi.fn(async (u: string) => (u.includes('/index-') ? new Response('') : undefined))
+    vi.stubGlobal('caches', { open, match })
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { ready: Promise.resolve({}) } })
+    const o = location.origin
+    vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
+      { name: `${o}/hscode/assets/index-AAA.js` },
+      { name: `${o}/hscode/assets/MapHome-BBB.js` },
+      { name: `${o}/hscode/assets/MapHome-CCC.css` },
+      { name: `${o}/hscode/icons/icon-192.png` },
+      { name: 'https://tile.openstreetmap.org/1/2/3.png' },
+      { name: 'https://firestore.googleapis.com/google.firestore.v1.Firestore/Listen' },
+    ] as PerformanceEntry[])
+    try {
+      await load()
+      await vi.waitFor(() => expect(added).toEqual([`${o}/hscode/assets/MapHome-BBB.js`, `${o}/hscode/assets/MapHome-CCC.css`]))
+      expect(open).toHaveBeenCalledWith('app-chunks')
+      // Hashed, immutable files: a Vary: Origin header must not hide a hit (module scripts send Origin).
+      expect(match).toHaveBeenCalledWith(`${o}/hscode/assets/MapHome-BBB.js`, { ignoreVary: true })
+    } finally {
+      delete (navigator as { serviceWorker?: unknown }).serviceWorker
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('isIosSafari is true for iPhone Safari and false for Chrome on iPhone or Android', async () => {
     const { isIosSafari } = await load()
     expect(isIosSafari(IPHONE_SAFARI)).toBe(true)

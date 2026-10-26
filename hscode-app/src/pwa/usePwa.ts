@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { registerSW } from 'virtual:pwa-register'
+import { APP_CHUNKS_CACHE } from './cacheNames'
 
 /** Chromium's install prompt event (not in lib.dom). */
 type InstallPromptEvent = Event & {
@@ -37,9 +38,27 @@ function set(next: Partial<PwaState>) {
 
 let updateSW: (reloadPage?: boolean) => Promise<void> = async () => {}
 
+/**
+ * The first visit loads its route chunks before the service worker exists, so the runtime route never saw
+ * them. Once it is ready, put what this page already loaded from /hscode/assets/ (and is not precached)
+ * into the runtime cache, so the visited route opens offline too.
+ */
+async function cacheLoadedChunks() {
+  const prefix = `${location.origin}/hscode/assets/`
+  const urls = [...new Set(performance.getEntriesByType('resource').map((e) => e.name))].filter((u) => u.startsWith(prefix))
+  const cache = await caches.open(APP_CHUNKS_CACHE)
+  for (const url of urls) {
+    if (!(await caches.match(url, { ignoreVary: true }))) await cache.add(url).catch(() => undefined)
+  }
+}
+
 if (typeof window !== 'undefined') {
   // virtual:pwa-register is a no-op in dev and emulator builds (the plugin is disabled there).
   updateSW = registerSW({ immediate: true, onNeedRefresh: () => set({ needRefresh: true }) })
+  // Never resolves in dev or emulator builds: no service worker is registered there.
+  if ('serviceWorker' in navigator && 'caches' in window) {
+    navigator.serviceWorker.ready.then(cacheLoadedChunks).catch(() => undefined)
+  }
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault() // keep it for our own Install button instead of the mini-infobar
     deferred = e as InstallPromptEvent

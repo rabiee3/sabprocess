@@ -17,5 +17,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["tests", "e2e", "seed", "playwright.config.ts"]
+  "include": ["tests", "e2e", "e2e-pwa", "seed", "playwright.config.ts", "playwright.pwa.config.ts"]
 }

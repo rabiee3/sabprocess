@@ -18,8 +18,9 @@
     "emu:dev": "vite --mode emulator --port 5174 --strictPort",
     "seed:emu": "tsx seed/seed-emulator.ts",
     "e2e": "node scripts/with-emulators.mjs firestore,auth \"npm run seed:emu && playwright test\"",
-    "verify": "npm run lint && npm run typecheck && npm test && npm run test:rules && npm run e2e && npm run build && npm run check:build",
-    "icons": "node scripts/make-icons.mjs"
+    "verify": "npm run lint && npm run typecheck && npm test && npm run test:rules && npm run e2e && npm run e2e:pwa && npm run build && npm run check:build",
+    "icons": "node scripts/make-icons.mjs",
+    "e2e:pwa": "playwright test --config playwright.pwa.config.ts"
   },
   "dependencies": {
     "browser-image-compression": "^2.0.2",

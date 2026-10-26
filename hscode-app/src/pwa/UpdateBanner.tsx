@@ -13,7 +13,8 @@ export function UpdateBanner() {
   const [dismissed, setDismissed] = useState(false)
   if (!needRefresh || dismissed) return null
   return (
-    <div className="fixed inset-x-2 bottom-2 z-[1400] lg:end-2 lg:start-auto lg:w-96">
+    // Top, under the header, like the other floating banners: never over the surveyor Add button.
+    <div className="fixed inset-x-2 top-14 z-[1300] lg:end-2 lg:start-auto lg:w-96">
       <Banner tone="info" title={t('pwa.updateTitle')} onClose={() => setDismissed(true)}>
         <button
           type="button"

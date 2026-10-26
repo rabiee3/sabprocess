@@ -5,7 +5,7 @@ import en from '../src/i18n/en.json' with { type: 'json' }
 
 /**
  * The installable PWA, against `vite preview` of a non-emulator build in .pwa-preview/ (the `pwa`
- * Playwright project). That build carries the production Firebase config, so every request that could
+ * Playwright config, playwright.pwa.config.ts). That build carries the production Firebase config, so every request that could
  * reach Google or Firebase is aborted: this spec never touches production. The app shows its index error
  * state, which is fine; only the shell, the service worker, the manifest and offline reload are checked.
  */
@@ -25,6 +25,11 @@ async function blockProduction(context: BrowserContext) {
 }
 
 const swReady = () => navigator.serviceWorker.ready.then((r) => r.scope)
+/** Cache Storage keys (pathnames) per cache name. */
+const cacheKeys = () =>
+  caches.keys().then((names) =>
+    Promise.all(names.map(async (n) => [n, (await (await caches.open(n)).keys()).map((r) => new URL(r.url).pathname)] as const)),
+  )
 
 test.describe.configure({ mode: 'serial' })
 
@@ -59,6 +64,23 @@ test('the service worker registers with scope /hscode/', async ({ page }) => {
   expect(new URL(scope).pathname).toBe('/hscode/')
 })
 
+test('the precache holds the app shell only: index.html and what it loads, never a lazy route chunk', async ({ page, request }) => {
+  await page.goto('./')
+  await page.evaluate(swReady)
+  // The shell is what the built index.html loads (not the live DOM: lazy imports add modulepreloads at runtime).
+  const html = await (await request.get('/hscode/index.html')).text()
+  const shell = [...html.matchAll(/\/hscode\/assets\/[^"'\s]+/g)].map((m) => m[0])
+  expect(shell.length).toBeGreaterThan(1)
+  const precache = (await page.evaluate(cacheKeys)).find(([n]) => n.includes('precache'))?.[1] ?? []
+  expect(precache).toContain('/hscode/index.html')
+  expect(precache).toContain('/hscode/manifest.webmanifest')
+  expect(precache).toContain('/hscode/icons/icon-192.png')
+  for (const p of shell) expect(precache, p).toContain(p)
+  const precachedJs = precache.filter((p) => p.endsWith('.js'))
+  expect(precachedJs.filter((p) => !shell.includes(p))).toEqual([])
+  expect(precache.filter((p) => /\/(MapHome|FactoryPage|SurveyRoute|AdminRoute)-/.test(p))).toEqual([])
+})
+
 test('after the first load, an offline reload still renders the app shell; Firestore never goes through the SW', async ({
   context,
   page,
@@ -75,15 +97,27 @@ test('after the first load, an offline reload still renders the app shell; Fires
   await page.goto('./')
   await expect(page.getByRole('banner').getByRole('img', { name: 'HSCode' })).toBeVisible()
   await page.evaluate(swReady)
+  // The map route's lazy chunks, loaded before the SW took over, are runtime-cached (app-chunks); wait
+  // until every /hscode/assets/ file this visit loaded is in Cache Storage.
+  const uncached = () =>
+    page.evaluate(async () => {
+      const loaded = performance.getEntriesByType('resource').map((e) => e.name).filter((u) => new URL(u).pathname.startsWith('/hscode/assets/'))
+      const hits = await Promise.all(loaded.map(async (u) => ((await caches.match(u)) ? null : new URL(u).pathname)))
+      return hits.filter(Boolean)
+    })
+  await expect.poll(uncached).toEqual([])
+  expect((await page.evaluate(cacheKeys)).find(([n]) => n === 'app-chunks')?.[1].some((p) => /\/MapHome-.+\.js$/.test(p))).toBe(true)
 
   await context.setOffline(true)
   await page.reload()
   await expect(page.getByRole('banner').getByRole('img', { name: 'HSCode' })).toBeVisible()
   await expect(page.getByRole('button', { name: en.menu.open })).toBeVisible()
   expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true)
-  // A deep link works offline too (navigateFallback to the precached index.html).
+  // A route never visited has no cached chunk: offline, its deep link still gets index.html (the
+  // navigateFallback) and the failed lazy import lands on RouteError's Reload, not a browser error page.
   await page.goto('./survey')
-  await expect(page.getByRole('banner').getByRole('img', { name: 'HSCode' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: en.errors.crashTitle })).toBeVisible()
+  await expect(page.getByRole('button', { name: en.errors.reload })).toBeVisible()
   await context.setOffline(false)
 
   expect(servedBySw).toEqual([])

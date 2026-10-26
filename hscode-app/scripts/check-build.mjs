@@ -85,6 +85,14 @@ for (const s of ['firestore.googleapis.com', 'identitytoolkit', 'securetoken']) 
 // The registration (virtual:pwa-register) asks for /hscode/sw.js with scope /hscode/.
 const appJs = readdirSync(assetsDir).filter((n) => n.endsWith('.js')).map((f) => readFileSync(resolve(assetsDir, f), 'utf8')).join('\n')
 if (!appJs.includes('/hscode/sw.js')) fail('no JS asset registers /hscode/sw.js')
+// Precache = the app shell only (spec §7): every precached assets/*.js is one index.html loads; lazy route
+// chunks are runtime-cached instead.
+const precached = [...sw.matchAll(/url:"([^"]+)"/g)].map((m) => m[1])
+if (!precached.includes('index.html')) fail(`${out}/sw.js does not precache index.html`)
+const shellJs = new Set(referenced.filter((f) => f.endsWith('.js')).map((f) => `assets/${f}`))
+const lazyPrecached = precached.filter((u) => u.startsWith('assets/') && u.endsWith('.js') && !shellJs.has(u))
+if (lazyPrecached.length) fail(`${out}/sw.js precaches lazy chunks: ${lazyPrecached.join(', ')}`)
+if (!shellJs.has(`assets/${entrySrc}`) || !precached.includes(`assets/${entrySrc}`)) fail(`${out}/sw.js does not precache the entry ${entrySrc}`)
 
 const protectedPaths = ['index.html', 'about.html', 'contact.html', 'css', 'images']
 const git = (args) => execFileSync('git', args, { cwd: rootDir, encoding: 'utf8' })

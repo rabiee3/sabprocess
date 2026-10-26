@@ -36,6 +36,16 @@ describe('UpdateBanner', () => {
     expect(pwa.update).toHaveBeenCalledTimes(1)
   })
 
+  it('sits at the top under the header, like the other banners, so it never covers the surveyor Add button', () => {
+    pwa.needRefresh = true
+    render(<UpdateBanner />)
+    const box = screen.getByRole('status').parentElement!
+    expect(box.className).toContain('fixed')
+    expect(box.className).toContain('top-14')
+    expect(box.className).toContain('z-[1300]')
+    expect(box.className).not.toMatch(/bottom-/)
+  })
+
   it('can be dismissed without reloading', async () => {
     pwa.needRefresh = true
     render(<UpdateBanner />)
