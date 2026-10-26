@@ -14,8 +14,22 @@ import { MiniMap } from './MiniMap'
 import { PhotoCarousel } from './PhotoCarousel'
 import { areaLabel, pickName, sectorLabel, type Lang } from './labels'
 import { loadPhotos, loadPublicFactory } from './publicRepo'
+import { firestoreErrorKey } from '../lib/firestoreErrors'
 
-type State = { status: 'loading' } | { status: 'error' } | { status: 'missing' } | { status: 'ready'; load: LoadedFactory }
+type State =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'missing' }
+  | { status: 'ready'; load: LoadedFactory }
+type View = { key: string; state: State; photos: PhotoData[] | null }
+
+const viewKey = (id: string, attempt: number) => `${attempt}:${id}`
+
+/** A factory already seen this session renders at once from the session cache (spec §8); else it loads. */
+function initialView(id: string, key: string): View {
+  const hit = getCached(id)
+  return { key, state: hit ? { status: 'ready', load: hit.load } : { status: 'loading' }, photos: hit?.photos ?? null }
+}
 
 const BACK = 'inline-flex min-h-touch items-center gap-1 px-4 text-sm font-semibold text-ink-strong'
 const shell = 'mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-10'
@@ -38,38 +52,44 @@ export function Component() {
   const navigate = useNavigate()
   const { role } = useAuth()
   const fromMap = isFromMap(from)
-  // A factory already seen this session renders at once from the session cache (spec §8).
-  const hit = getCached(id)
-  const [state, setState] = useState<State>(hit ? { status: 'ready', load: hit.load } : { status: 'loading' })
-  const [photos, setPhotos] = useState<PhotoData[] | null>(hit?.photos ?? null)
   const [attempt, setAttempt] = useState(0)
+  // Each factory id (and each retry) starts from its own view; switching is done during render, not in an effect.
+  const key = viewKey(id, attempt)
+  const [stored, setView] = useState<View>(() => initialView(id, key))
+  let view = stored
+  if (stored.key !== key) {
+    view = initialView(id, key)
+    setView(view)
+  }
+  const { state, photos } = view
 
   useEffect(() => {
     let live = true
+    const k = viewKey(id, attempt)
+    // Only the view this load belongs to is updated: a late answer for another id or attempt is dropped.
+    const update = (patch: Partial<View>) => {
+      if (live) setView((v) => (v.key === k ? { ...v, ...patch } : v))
+    }
     const fetchPhotos = (load: LoadedFactory) =>
       loadPhotos(id).then(
         (p) => {
           setCached(id, { load, photos: p })
-          if (live) setPhotos(p)
+          update({ photos: p })
         },
-        () => live && setPhotos([]),
+        () => update({ photos: [] }),
       )
     const cached = getCached(id)
     if (cached) {
-      setState({ status: 'ready', load: cached.load })
-      setPhotos(cached.photos)
       if (!cached.photos) void fetchPhotos(cached.load)
     } else {
-      setState({ status: 'loading' })
-      setPhotos(null)
       loadPublicFactory(id).then(
         (load) => {
           if (load) setCached(id, { load, photos: null })
           if (!live) return
-          setState(load ? { status: 'ready', load } : { status: 'missing' })
+          update({ state: load ? { status: 'ready', load } : { status: 'missing' } })
           if (load) void fetchPhotos(load)
         },
-        () => live && setState({ status: 'error' }),
+        (e: unknown) => update({ state: { status: 'error', message: firestoreErrorKey(e, 'factory.loadError') } }),
       )
     }
     return () => {
@@ -85,7 +105,7 @@ export function Component() {
       <Page>
         <div className={`${shell} pt-6`}>
           <h1 className="sr-only">{t('factory.errorTitle')}</h1>
-          <Banner tone="danger">{t('factory.loadError')}</Banner>
+          <Banner tone="danger">{t(state.message)}</Banner>
           <button type="button" onClick={() => setAttempt((n) => n + 1)} className="inline-flex min-h-touch items-center justify-center rounded border-2 border-ink-strong px-4 text-sm font-semibold">
             {t('factory.retry')}
           </button>

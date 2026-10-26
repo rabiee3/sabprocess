@@ -5,8 +5,11 @@ import { initI18n } from './i18n'
 import { AuthProvider } from './auth/AuthProvider'
 import App from './App.tsx'
 import { UpdateBanner } from './pwa/UpdateBanner'
+import { installErrorReporting } from './telemetry/reportError'
 
 initI18n()
+// Uncaught errors and unhandled rejections go to Analytics (never in the emulator).
+installErrorReporting()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

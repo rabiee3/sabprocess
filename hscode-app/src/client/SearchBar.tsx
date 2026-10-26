@@ -36,15 +36,25 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
   // HS names for suggestions come from the HS table, fetched the first time someone types (spec §8).
   const { table: hsTable } = useHsTable(typing)
 
-  useEffect(() => setText(value), [value])
+  // A new committed value (a search applied, Back, a cleared filter) replaces the text; adjusted while rendering.
+  const [shownValue, setShownValue] = useState(value)
+  if (value !== shownValue) {
+    setShownValue(value)
+    setText(value)
+  }
+
+  // Not typing (or no engine yet): no suggestions, cleared at once rather than after the debounce.
+  const suggesting = !!engine && typing
+  const [wasSuggesting, setWasSuggesting] = useState(suggesting)
+  if (suggesting !== wasSuggesting) {
+    setWasSuggesting(suggesting)
+    if (!suggesting) setSug(EMPTY)
+  }
 
   // Suggestions are debounced; the engine is built elsewhere, when the browser is idle. Text typed before it is
   // ready gets its suggestions once it is (the effect re-runs on `engine`), and HS names once the table arrives.
   useEffect(() => {
-    if (!engine || !typing) {
-      setSug(EMPTY)
-      return
-    }
+    if (!engine || !typing) return
     const h = setTimeout(() => setSug(suggest(engine, text, lang, hsTable?.searchHeadings)), 150)
     return () => clearTimeout(h)
   }, [engine, text, lang, typing, hsTable])

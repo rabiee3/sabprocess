@@ -169,7 +169,7 @@
     "offline": "You're offline — connect to continue",
     "accessOff": "Your surveyor access was turned off",
     "rejected": "This factory couldn't be saved — open it and check the details.",
-    "quota": "HSCode is busy right now — please try again later",
+    "quota": "The service is busy right now — please try again later",
     "indexFull": "Search index is full — approving is blocked until space is freed.",
     "generic": "Something went wrong. Please try again.",
     "tooLong": "Too long — use at most {{max}} characters.",

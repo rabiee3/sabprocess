@@ -223,6 +223,47 @@ describe('MapHome', () => {
     expect(screen.getByTestId('loc').textContent).not.toContain('near')
   })
 
+  it('arriving with near=1 and a recent location fix keeps near and sorts by distance, without asking again', async () => {
+    near.status = 'ok'
+    near.pos = { lat: 30, lng: 31 }
+    setup('/?near=1')
+    await screen.findAllByRole('article')
+    expect(near.request).not.toHaveBeenCalled()
+    expect(screen.getByTestId('loc').textContent).toContain('near=1')
+    expect(names()).toEqual(['Maize Growers', 'Nile Fodder', 'Delta Feed Mill'])
+  })
+
+  it('a quota error on the index shows the service-busy message with Retry', async () => {
+    loadIndex.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'quota' }))
+    setup()
+    expect(await screen.findByText('The service is busy right now — please try again later')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+
+  it('closing the Near me message hides it; a new failed request shows it again', async () => {
+    near.status = 'denied'
+    setup()
+    await screen.findAllByRole('article')
+    await userEvent.click(screen.getByRole('button', { name: /Near me/ }))
+    const msg = await screen.findByText(/Location is blocked/)
+    await userEvent.click(within(msg.closest('[role="status"]') as HTMLElement).getByRole('button'))
+    expect(screen.queryByText(/Location is blocked/)).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /Near me/ }))
+    expect(await screen.findByText(/Location is blocked/)).toBeInTheDocument()
+  })
+
+  it('a new result list starts again at the first page of cards', async () => {
+    const many = Array.from({ length: 60 }, (_, i) => entry(`m${i}`, `Mill ${i}`, 30 + i / 100, i))
+    loadIndex.mockResolvedValue({ entries: many, fromCache: false })
+    setup()
+    await screen.findAllByRole('article')
+    expect(screen.getAllByRole('article')).toHaveLength(50)
+    await userEvent.click(screen.getByRole('button', { name: /show more/i }))
+    expect(screen.getAllByRole('article')).toHaveLength(60)
+    await userEvent.type(screen.getByRole('combobox'), 'mill{Enter}')
+    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(50))
+  })
+
   it('Back steps through committed searches', async () => {
     const router = setup()
     await screen.findAllByRole('article')
@@ -233,6 +274,8 @@ describe('MapHome', () => {
     expect(screen.getByTestId('loc').textContent).toContain('q=fodder')
     await act(() => router.navigate(-1))
     expect(screen.getByTestId('loc').textContent).toContain('q=maize')
+    // The search box follows at once.
+    expect(box).toHaveValue('maize')
   })
 
   it('selecting two cards then Back returns to the search without a selection', async () => {
@@ -259,6 +302,8 @@ describe('MapHome', () => {
     setup()
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     await vi.waitFor(() => expect(signInWithGoogle).toHaveBeenCalledTimes(1))
+    // Let the rejection settle first: asserted at once, a wrongly shown error would not be on screen yet.
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)) })
     expect(screen.queryByText(/went wrong/)).toBeNull()
     signInWithGoogle.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'auth/network-request-failed' }))
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))

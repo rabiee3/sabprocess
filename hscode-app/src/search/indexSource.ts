@@ -1,9 +1,10 @@
 import { doc, getDocFromCache, getDocFromServer, type Firestore } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { IndexEntry } from '../lib/types';
+import { classifyFirestoreError, type FirestoreErrorKind } from '../lib/firestoreErrors';
 
 export type IndexLoad = { entries: IndexEntry[]; fromCache: boolean };
-export type IndexErrorCode = 'offline' | 'denied' | 'quota' | 'generic';
+export type IndexErrorCode = FirestoreErrorKind;
 
 export class IndexError extends Error {
   code: IndexErrorCode;
@@ -12,24 +13,6 @@ export class IndexError extends Error {
     this.name = 'IndexError';
     this.code = code;
   }
-}
-
-export function classifyError(err: unknown): IndexErrorCode {
-  const code = String((err as { code?: unknown })?.code ?? '');
-  const msg = String((err as { message?: unknown })?.message ?? '');
-  if (code === 'resource-exhausted') return 'quota';
-  if (
-    code === 'permission-denied' ||
-    code === 'unauthenticated' ||
-    code.startsWith('app-check') ||
-    /app-check/i.test(msg)
-  ) {
-    return 'denied';
-  }
-  if (code === 'unavailable' || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
-    return 'offline';
-  }
-  return 'generic';
 }
 
 type Shard = { entries?: IndexEntry[]; version?: unknown };
@@ -62,7 +45,7 @@ async function readServer(fs: Firestore): Promise<Shard | undefined> {
   try {
     return shardOf(await getDocFromServer(doc(fs, 'searchIndex/shard-0')));
   } catch (err) {
-    throw new IndexError(classifyError(err), (err as Error)?.message);
+    throw new IndexError(classifyFirestoreError(err), (err as Error)?.message);
   }
 }
 

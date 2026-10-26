@@ -228,6 +228,16 @@ describe('FactoryStepper', () => {
     expect(loadDraft('u1', 'fnew')).not.toBeNull()
   })
 
+  it('a quota error on submit shows the service-busy message', async () => {
+    vi.mocked(repo.submitFactory).mockImplementation(() => {
+      throw { code: 'resource-exhausted' }
+    })
+    saveDraft('u1', fullDraft())
+    renderAt('/survey/new?step=review')
+    await user.click(screen.getByRole('button', { name: en.survey.review.submit }))
+    expect(screen.getByText('The service is busy right now — please try again later')).toBeInTheDocument()
+  })
+
   it('restores the entered name from the saved draft after a remount', async () => {
     const first = renderAt('/survey/new?step=basics')
     await user.type(screen.getByLabelText(en.survey.basics.nameEn), 'Zed')

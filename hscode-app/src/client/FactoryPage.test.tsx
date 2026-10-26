@@ -141,6 +141,22 @@ describe('FactoryPage', () => {
     expect(screen.getByText("Couldn't load this factory.")).toBeInTheDocument()
   })
 
+  it('a quota error loading the factory shows the service-busy message with Retry', async () => {
+    loadPublicFactory.mockRejectedValueOnce(Object.assign(new Error('quota'), { code: 'resource-exhausted' }))
+    setup()
+    expect(await screen.findByText('The service is busy right now — please try again later')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Factory unavailable' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })).toBeInTheDocument()
+  })
+
+  it('a quota error loading contacts shows the service-busy message', async () => {
+    auth.user = { uid: 'u1' }
+    loadContact.mockRejectedValueOnce(Object.assign(new Error('quota'), { code: 'resource-exhausted' }))
+    setup()
+    expect(await screen.findByText('The service is busy right now — please try again later')).toBeInTheDocument()
+  })
+
   it('contacts unavailable has a Retry that reloads', async () => {
     auth.user = { uid: 'u1' }
     loadContact.mockResolvedValueOnce(null).mockResolvedValueOnce({})

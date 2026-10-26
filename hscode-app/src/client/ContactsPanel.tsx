@@ -7,9 +7,10 @@ import { Banner } from '../ui/Banner'
 import { safeUrl, whatsappHref } from '../lib/contactLinks'
 import { normalizeDigits } from '../survey/draft'
 import type { ContactDraft } from '../survey/types'
+import { firestoreErrorKey } from '../lib/firestoreErrors'
 import { loadContact } from './publicRepo'
 
-type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; contact: ContactDraft | null }
+type State = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; contact: ContactDraft | null }
 
 const row = 'flex min-h-touch items-center justify-between gap-3 border-b border-line py-1 last:border-b-0'
 const link = 'inline-flex min-h-touch items-center text-sm font-semibold text-blue-800 underline'
@@ -93,16 +94,19 @@ export function ContactsPanel({ factoryId }: { factoryId: string }) {
 
 function ContactsInner({ factoryId, uid }: { factoryId: string; uid?: string }) {
   const { t } = useTranslation()
-  const [state, setState] = useState<State>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
+  // A result counts only for the factory and attempt it was read for; until it arrives, this is loading.
+  const [result, setResult] = useState<{ key: string; state: State } | null>(null)
+  const key = `${attempt}:${factoryId}`
+  const state: State = result?.key === key ? result.state : { status: 'loading' }
 
   useEffect(() => {
     if (!uid) return
     let live = true
-    setState({ status: 'loading' })
+    const k = `${attempt}:${factoryId}`
     loadContact(factoryId).then(
-      (contact) => live && setState({ status: 'ready', contact }),
-      () => live && setState({ status: 'error' }),
+      (contact) => live && setResult({ key: k, state: { status: 'ready', contact } }),
+      (e: unknown) => live && setResult({ key: k, state: { status: 'error', message: firestoreErrorKey(e, 'errors.generic') } }),
     )
     return () => {
       live = false
@@ -129,7 +133,7 @@ function ContactsInner({ factoryId, uid }: { factoryId: string; uid?: string }) 
         <p className="text-sm text-ink-muted">{t('common.loading')}</p>
       ) : state.status === 'error' ? (
         <div className="flex flex-col gap-2">
-          <Banner tone="danger">{t('errors.generic')}</Banner>
+          <Banner tone="danger">{t(state.message)}</Banner>
           <button
             type="button"
             onClick={() => setAttempt((n) => n + 1)}

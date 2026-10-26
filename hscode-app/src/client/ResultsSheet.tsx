@@ -65,7 +65,12 @@ export function ResultsSheet(p: Props) {
     return () => window.removeEventListener('resize', measure)
   }, [desktop, onHeight, expanded])
 
-  useEffect(() => setLimit(PAGE), [entries])
+  // A new result list starts again at the first page (adjusted while rendering, not in an effect).
+  const [pagedEntries, setPagedEntries] = useState(entries)
+  if (entries !== pagedEntries) {
+    setPagedEntries(entries)
+    setLimit(PAGE)
+  }
   useEffect(() => {
     if (selectedId) document.getElementById(`card-${selectedId}`)?.scrollIntoView?.({ block: 'nearest' })
   }, [selectedId])

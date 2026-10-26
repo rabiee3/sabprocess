@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { FirebaseApp } from 'firebase/app'
-import { setupAppCheck } from './appCheck'
+import { setupAppCheck, watchAppCheckErrors } from './appCheck'
+
+const tokenErrorCbs = vi.hoisted(() => [] as (() => void)[])
+vi.mock('firebase/app-check', async (orig) => ({
+  ...(await orig<typeof import('firebase/app-check')>()),
+  onTokenChanged: (_ac: unknown, _next: unknown, error: () => void) => {
+    tokenErrorCbs.push(error)
+    return () => {}
+  },
+}))
 
 const app = {} as FirebaseApp
 
@@ -43,11 +52,32 @@ describe('setupAppCheck', () => {
     expect(d.initializeAppCheck).not.toHaveBeenCalled()
   })
 
+  it('never sets the debug token in the emulator or with an empty site key, even in dev', () => {
+    const d = makeDeps()
+    setupAppCheck(app, { ...base, dev: true, useEmulator: true }, d.deps)
+    expect((self as { FIREBASE_APPCHECK_DEBUG_TOKEN?: unknown }).FIREBASE_APPCHECK_DEBUG_TOKEN).toBeUndefined()
+    setupAppCheck(app, { ...base, dev: true, siteKey: '' }, d.deps)
+    expect((self as { FIREBASE_APPCHECK_DEBUG_TOKEN?: unknown }).FIREBASE_APPCHECK_DEBUG_TOKEN).toBeUndefined()
+  })
+
   it('enables the debug token in dev only', () => {
     const d = makeDeps()
     setupAppCheck(app, base, d.deps)
     expect((self as { FIREBASE_APPCHECK_DEBUG_TOKEN?: unknown }).FIREBASE_APPCHECK_DEBUG_TOKEN).toBeUndefined()
     setupAppCheck(app, { ...base, dev: true }, d.deps)
     expect((self as { FIREBASE_APPCHECK_DEBUG_TOKEN?: unknown }).FIREBASE_APPCHECK_DEBUG_TOKEN).toBe(true)
+  })
+})
+
+describe('watchAppCheckErrors', () => {
+  it('reports only the first App Check failure', () => {
+    tokenErrorCbs.length = 0
+    const onFirstError = vi.fn()
+    watchAppCheckErrors({} as never, onFirstError)
+    expect(tokenErrorCbs).toHaveLength(1)
+    tokenErrorCbs[0]()
+    tokenErrorCbs[0]()
+    tokenErrorCbs[0]()
+    expect(onFirstError).toHaveBeenCalledTimes(1)
   })
 })
