@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import closeIcon from '../assets/icons/close.svg?raw'
+import { Icon } from './Icon'
 
 type Props = { open: boolean; title: string; onClose: () => void; children: ReactNode }
 
@@ -62,7 +63,7 @@ export function BottomSheet({ open, title, onClose, children }: Props) {
           aria-label={t('common.close')}
           className="-me-2 flex min-h-touch min-w-11 items-center justify-center"
         >
-          <span aria-hidden="true" className="size-6" dangerouslySetInnerHTML={{ __html: closeIcon }} />
+          <Icon svg={closeIcon} className="size-6" />
         </button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>

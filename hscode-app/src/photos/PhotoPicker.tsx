@@ -6,6 +6,7 @@ import cameraIcon from '../assets/icons/camera.svg?raw'
 import imageIcon from '../assets/icons/image.svg?raw'
 import closeIcon from '../assets/icons/close.svg?raw'
 import { compressPhoto, makeThumb } from './compress'
+import { Icon } from '../ui/Icon'
 
 const IDS: PhotoData['id'][] = ['p1', 'p2', 'p3']
 const MAX = IDS.length
@@ -117,11 +118,11 @@ export function PhotoPicker({ photos, onChange }: Props) {
       <p className="text-sm text-ink">{t('survey.photos.intro')}</p>
       <div className="flex gap-3">
         <button type="button" disabled={disabled} className={btn} onClick={() => cameraRef.current?.click()}>
-          <span aria-hidden="true" className="size-6" dangerouslySetInnerHTML={{ __html: cameraIcon }} />
+          <Icon svg={cameraIcon} className="size-6" />
           {t('survey.photos.camera')}
         </button>
         <button type="button" disabled={disabled} className={btn} onClick={() => galleryRef.current?.click()}>
-          <span aria-hidden="true" className="size-6" dangerouslySetInnerHTML={{ __html: imageIcon }} />
+          <Icon svg={imageIcon} className="size-6" />
           {t('survey.photos.gallery')}
         </button>
         {input(cameraRef, true)}
@@ -144,7 +145,7 @@ export function PhotoPicker({ photos, onChange }: Props) {
                   onClick={() => void remove(p.id)}
                   className="absolute end-1 top-1 flex min-h-touch min-w-11 items-center justify-center rounded-full bg-surface/90 text-ink-strong"
                 >
-                  <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: closeIcon }} />
+                  <Icon svg={closeIcon} className="size-5" />
                 </button>
               </>
             )}

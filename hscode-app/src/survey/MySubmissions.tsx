@@ -15,6 +15,7 @@ import { ALLOW_EDIT } from './features'
 import { outbox, type OutboxEntry } from './outbox'
 import { reconcile } from './reconcile'
 import { subscribeMySubmissions, type SubmissionItem, type SurveyErrorCode } from './repo'
+import { Icon } from '../ui/Icon'
 
 const PLACEHOLDERS = [siloImg, plantImg, warehouseImg]
 const placeholderFor = (fid: string) => PLACEHOLDERS[[...fid].reduce((n, c) => n + c.charCodeAt(0), 0) % PLACEHOLDERS.length]
@@ -164,7 +165,7 @@ export function MySubmissions() {
           to="new"
           className="mx-auto flex min-h-cta max-w-md items-center justify-center gap-2 rounded bg-brand-500 px-4 text-body font-semibold text-ink-strong"
         >
-          <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: plusIcon }} />
+          <Icon svg={plusIcon} className="size-5" />
           {t('survey.list.add')}
         </Link>
       </footer>

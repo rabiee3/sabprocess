@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { areas, sectors } from '../data'
 import { BottomSheet } from '../ui/BottomSheet'
+import { Icon } from '../ui/Icon'
 import chevron from '../assets/icons/chevron-down.svg?raw'
 import locate from '../assets/icons/locate.svg?raw'
 import { areaLabel, sectorLabel, type Lang } from './labels'
@@ -19,7 +20,7 @@ type Props = {
 }
 
 const chip =
-  'inline-flex min-h-touch items-center gap-1 whitespace-nowrap rounded-full border px-3 text-sm font-semibold text-ink-strong shadow-sm'
+  'inline-flex min-h-touch max-w-[calc(100vw-2rem)] shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3 text-sm font-semibold text-ink-strong shadow-sm'
 
 export function FilterChips({ lang, area, sector, near, locating, onArea, onSector, onNear }: Props) {
   const { t } = useTranslation()
@@ -42,7 +43,7 @@ export function FilterChips({ lang, area, sector, near, locating, onArea, onSect
   }
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
+    <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible">
       {(['area', 'sector'] as const).map((k) => {
         const on = k === 'area' ? !!area : !!sector
         return (
@@ -50,11 +51,12 @@ export function FilterChips({ lang, area, sector, near, locating, onArea, onSect
             key={k}
             type="button"
             aria-haspopup="dialog"
+            title={label(k)}
             onClick={() => setOpen(k)}
             className={`${chip} ${on ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface'}`}
           >
-            {label(k)}
-            <span aria-hidden="true" className="size-4" dangerouslySetInnerHTML={{ __html: chevron }} />
+            <span className="min-w-0 max-w-[14rem] truncate">{label(k)}</span>
+            <Icon svg={chevron} />
           </button>
         )
       })}
@@ -64,15 +66,17 @@ export function FilterChips({ lang, area, sector, near, locating, onArea, onSect
         onClick={onNear}
         className={`${chip} ${near ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface'}`}
       >
-        {locating ? (
-          <span
-            role="status"
-            aria-label={t('map.locating')}
-            className="size-4 animate-spin rounded-full border-2 border-ink-strong border-t-transparent"
-          />
-        ) : (
-          <span aria-hidden="true" className="size-4" dangerouslySetInnerHTML={{ __html: locate }} />
-        )}
+        <span className="inline-flex size-4 shrink-0 items-center justify-center">
+          {locating ? (
+            <span
+              role="status"
+              aria-label={t('map.locating')}
+              className="size-full animate-spin rounded-full border-2 border-ink-strong border-t-transparent"
+            />
+          ) : (
+            <Icon svg={locate} className="size-full" />
+          )}
+        </span>
         {t('map.nearMe')}
       </button>
 

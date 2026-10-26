@@ -9,6 +9,7 @@ import pinDefault from '../assets/map/pin-default.svg'
 import pinSelected from '../assets/map/pin-selected.svg'
 import siloPhoto from '../assets/placeholders/photo-silo.svg'
 import searchIcon from '../assets/icons/search.svg?raw'
+import { Icon } from '../ui/Icon'
 
 const TOP_LINK = 'min-h-touch items-center rounded px-2 text-sm font-semibold text-white hover:underline'
 const CHIP =
@@ -81,11 +82,7 @@ export function Component() {
           <form role="search" onSubmit={onSearch} className="hidden w-full max-w-xl gap-3 lg:flex">
             <label className="relative flex-1">
               <span className="sr-only">{t('home.searchLabel')}</span>
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 start-4 flex items-center text-ink-muted [&>svg]:size-5"
-                dangerouslySetInnerHTML={{ __html: searchIcon }}
-              />
+              <Icon svg={searchIcon} className="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-ink-muted" />
               <input
                 type="search"
                 value={q}

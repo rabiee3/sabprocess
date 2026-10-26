@@ -4,6 +4,7 @@ import checkIcon from '../assets/icons/check-circle.svg?raw'
 import alertIcon from '../assets/icons/alert-circle.svg?raw'
 import cloudOffIcon from '../assets/icons/cloud-off.svg?raw'
 import warningIcon from '../assets/icons/warning.svg?raw'
+import { Icon } from './Icon'
 
 export type ChipStatus = 'pending' | 'approved' | 'rejected' | 'savedOnPhone' | 'uploadFailed'
 
@@ -21,7 +22,7 @@ export function StatusChip({ status }: { status: ChipStatus }) {
   const s = STYLES[status]
   return (
     <span data-chip className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${s.box}`}>
-      <span aria-hidden="true" className="size-4 shrink-0 [&>svg]:size-4" dangerouslySetInnerHTML={{ __html: s.svg }} />
+      <Icon svg={s.svg} className="size-4" />
       {t(`survey.list.${status}`)}
     </span>
   )
