@@ -52,7 +52,8 @@ export function AdminSignIn() {
         <LangToggle />
       </div>
       <div className="flex w-full max-w-sm flex-col items-start gap-2">
-        <Link to="/" aria-label={t('nav.backToMap')} className="block w-full rounded">
+        {/* Named by the visible logo (WCAG 2.5.3); "Back to the map" is the title. */}
+        <Link to="/" title={t('nav.backToMap')} className="block w-full rounded">
           <Logo variant="dark" className="h-auto w-full" />
         </Link>
         <span className="rounded bg-white/15 px-2 py-1 text-xs font-semibold text-white">{t('portal.admin')}</span>

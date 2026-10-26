@@ -13,8 +13,10 @@ describe('PortalBrand', () => {
         <PortalBrand portal={portal} />
       </MemoryRouter>,
     )
-    const link = screen.getByRole('link', { name: en.nav.backToMap })
+    // WCAG 2.5.3 label in name: the name is the visible logo + tag; "Back to the map" is the description.
+    const link = screen.getByRole('link', { name: `HSCode ${en.portal[portal]}` })
     expect(link).toHaveAttribute('href', '/')
-    expect(link).toHaveTextContent(en.portal[portal])
+    expect(link).not.toHaveAttribute('aria-label')
+    expect(link).toHaveAccessibleDescription(en.nav.backToMap)
   })
 })

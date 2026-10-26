@@ -8,6 +8,8 @@ import { LangToggle } from './LangToggle'
 import { Link } from 'react-router'
 import { Logo } from './Logo'
 import { PortalBrand } from './PortalBrand'
+import { Icon } from './Icon'
+import logoutIcon from '../assets/icons/logout.svg?raw'
 
 const BTN = 'min-h-touch rounded border border-line bg-surface px-3 text-sm font-semibold whitespace-nowrap text-ink-strong'
 
@@ -22,7 +24,7 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
       {areaLabel === 'surveyor' || areaLabel === 'admin' ? (
         <PortalBrand portal={areaLabel} />
       ) : (
-        <Link to="/" aria-label={t('nav.backToMap')} className="inline-flex min-h-touch items-center rounded">
+        <Link to="/" title={t('nav.backToMap')} className="inline-flex min-h-touch items-center rounded">
           <Logo />
         </Link>
       )}
@@ -34,12 +36,14 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
               <span className="hidden max-w-32 truncate text-sm text-ink sm:inline">
                 {user.displayName ?? user.email}
               </span>
-              <button type="button" className={BTN} onClick={() => void signOutUser()}>
-                {t('nav.signOut')}
+              {/* Below 640px only the icon, so logo · tag · LangToggle · Sign out fit a 360px phone in Arabic. */}
+              <button type="button" className={`${BTN} inline-flex min-w-11 items-center justify-center`} onClick={() => void signOutUser()}>
+                <Icon svg={logoutIcon} className="size-5 sm:hidden rtl:-scale-x-100" />
+                <span className="max-sm:sr-only">{t('nav.signOut')}</span>
               </button>
             </>
           ) : (
-            <GoogleButton compact onClick={signIn} label={t('nav.signIn')} />
+            <GoogleButton compact iconOnlyOnPhone onClick={signIn} label={t('nav.signIn')} />
           ))}
       </div>
     </header>

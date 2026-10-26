@@ -68,11 +68,11 @@ describe('SurveyRoute', () => {
   it('shows the surveyor brand linking to /', () => {
     auth = { user: null, role: 'visitor', active: false, loading: false }
     renderAt()
-    const links = screen.getAllByRole('link', { name: en.nav.backToMap })
+    const links = screen.getAllByRole('link', { name: `HSCode ${en.portal.surveyor}` })
     expect(links.length).toBeGreaterThan(0)
     for (const l of links) {
       expect(l).toHaveAttribute('href', '/')
-      expect(l).toHaveTextContent(en.portal.surveyor)
+      expect(l).toHaveAccessibleDescription(en.nav.backToMap)
     }
   })
 })

@@ -182,8 +182,8 @@ describe('AdminRoute', () => {
   it('the sidebar logo links to the client map with an Admin tag', async () => {
     auth = { user, role: 'admin', active: true, loading: false }
     renderAt()
-    const link = await screen.findByRole('link', { name: en.nav.backToMap })
+    const link = await screen.findByRole('link', { name: `HSCode ${en.portal.admin}` })
     expect(link).toHaveAttribute('href', '/')
-    expect(link).toHaveTextContent(en.portal.admin)
+    expect(link).toHaveAccessibleDescription(en.nav.backToMap)
   })
 })

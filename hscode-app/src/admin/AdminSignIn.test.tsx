@@ -90,8 +90,11 @@ describe('AdminSignIn layout', () => {
   })
   it('links the logo back to the client map and shows the Admin tag', () => {
     render(<MemoryRouter><AdminSignIn /></MemoryRouter>)
-    const link = screen.getByRole('link', { name: en.nav.backToMap })
+    // Label in name (WCAG 2.5.3): the name is the visible logo; "Back to the map" is the description.
+    const link = screen.getByRole('link', { name: 'HSCode' })
     expect(link).toHaveAttribute('href', '/')
+    expect(link).not.toHaveAttribute('aria-label')
+    expect(link).toHaveAccessibleDescription(en.nav.backToMap)
     expect(screen.getByText(en.portal.admin)).toBeInTheDocument()
   })
 })
