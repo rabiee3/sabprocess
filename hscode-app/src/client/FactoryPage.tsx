@@ -7,18 +7,13 @@ import type { PhotoData } from '../survey/types'
 import { ClientHeader } from './ClientHeader'
 import { ContactsPanel } from './ContactsPanel'
 import { FactoryProducts } from './FactoryProducts'
+import { isFromMap } from './isFromMap'
 import { MiniMap } from './MiniMap'
 import { PhotoCarousel } from './PhotoCarousel'
 import { areaLabel, pickName, sectorLabel, type Lang } from './labels'
 import { loadPhotos, loadPublicFactory } from './publicRepo'
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'missing' } | { status: 'ready'; factory: Factory }
-
-/** True when the factory page was opened from the map (root or the legacy /map), so Back can use history. */
-// oxlint-disable-next-line react/only-export-components -- pure helper, tested directly
-export function isFromMap(from: unknown): from is string {
-  return typeof from === 'string' && /^(\/|\/map)(\?.*)?$/.test(from)
-}
 
 const BACK = 'inline-flex min-h-touch items-center gap-1 px-4 text-sm font-semibold text-ink-strong'
 const shell = 'mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-10'

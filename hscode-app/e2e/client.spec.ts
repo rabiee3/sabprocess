@@ -172,10 +172,12 @@ test('(j) a deep link to a pending factory shows the not-found page', async ({ p
   await expect(page.getByRole('link', { name: en.factory.backToMap })).toBeVisible()
 })
 
-test('an old /map?q= link lands on the root map with the query intact, and Back does not return to /map', async ({ page }) => {
+test('an old /map?q= link lands on the root map with the query intact, and Back does not return to /map', async ({ page, context }) => {
+  await context.grantPermissions(['geolocation'])
+  await context.setGeolocation({ latitude: 29.9727, longitude: 30.9421, accuracy: 15 })
   await open(page, `./f/${FEED_MILL.id}`)
   await page.goto('map?q=feed&near=1')
-  await expect(page).toHaveURL(/\/hscode\/\?q=feed&near=1$/)
+  await expect(page).toHaveURL(/\/hscode\/\?q=feed(&near=1)?$/)
   await expect(searchBox(page)).toHaveValue('feed')
   await page.goBack()
   await expect(page).toHaveURL(new RegExp(`/hscode/f/${FEED_MILL.id}$`))

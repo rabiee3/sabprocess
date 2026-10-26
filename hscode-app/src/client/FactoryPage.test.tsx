@@ -30,7 +30,7 @@ vi.mock('./publicRepo', () => ({
   loadContact: (...a: unknown[]) => loadContact(...a),
 }))
 
-import { Component as FactoryPage, isFromMap } from './FactoryPage'
+import { Component as FactoryPage } from './FactoryPage'
 
 const IMG = 'data:image/png;base64,AAAA'
 const factory: Factory = {
@@ -192,11 +192,6 @@ describe('FactoryPage', () => {
   it('without a map origin, Back is a link to /', async () => {
     setup()
     await waitFor(() => expect(screen.getByRole('link', { name: 'Back to the map' })).toHaveAttribute('href', '/'))
-  })
-
-  it('isFromMap accepts the root and /map forms only', () => {
-    for (const ok of ['/', '/?q=a', '/map', '/map?q=a']) expect(isFromMap(ok)).toBe(true)
-    for (const no of ['/f/x', '/mapx', '', undefined, 5]) expect(isFromMap(no)).toBe(false)
   })
 
   it('signed in but contact read denied: neutral message, no sign-in prompt', async () => {
