@@ -1,1 +1,0 @@
-import{T as e,n as t,o as n,p as r}from"./api-C-Uq48p2.js";function i(t,i,a){return r(e(n,`users`,t),{includeMetadataChanges:!0},i,a)}export{t as ensureUserDoc,i as watchUserDoc};
