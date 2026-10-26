@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth/useAuth'
 import { signOutUser } from '../auth/api'
@@ -8,11 +8,18 @@ import { LangToggle } from '../ui/LangToggle'
 import { Logo } from '../ui/Logo'
 import { Bdi } from '../ui/Bdi'
 import { Banner } from '../ui/Banner'
+import { ClientMenu } from '../ui/ClientMenu'
+import { ABOUT_STATE } from './intro/useIntro'
 
 const btn = 'inline-flex min-h-touch items-center justify-center px-2 text-sm font-semibold text-ink-strong'
 
-export function ClientHeader() {
+/**
+ * Logo · LangToggle · sign-in or user + Sign out · ☰. `onAbout` reopens the intro in place (the map);
+ * pages without the intro leave it unset and About goes to the map, which opens it.
+ */
+export function ClientHeader({ onAbout }: { onAbout?: () => void } = {}) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { signIn, failed, clearError } = useGoogleSignIn()
   return (
@@ -33,8 +40,9 @@ export function ClientHeader() {
             </button>
           </>
         ) : (
-          <GoogleButton compact onClick={signIn} label={t('nav.signIn')} />
+          <GoogleButton compact iconOnlyOnPhone onClick={signIn} label={t('nav.signIn')} />
         )}
+        <ClientMenu onAbout={onAbout ?? (() => void navigate('/', { state: ABOUT_STATE }))} />
       </div>
     </header>
     {failed && (

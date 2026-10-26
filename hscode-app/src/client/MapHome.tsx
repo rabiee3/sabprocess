@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router'
 import { ResultsMap } from '../map/ResultsMap'
 import { distanceKm } from '../lib/geo'
 import { formatHs } from '../lib/hs'
@@ -10,6 +11,8 @@ import { Banner } from '../ui/Banner'
 import { useIsDesktop } from '../admin/useIsDesktop'
 import { ClientHeader } from './ClientHeader'
 import { FilterChips } from './FilterChips'
+import { IntroOverlay } from './intro/IntroOverlay'
+import { useIntro } from './intro/useIntro'
 import { ResultsSheet } from './ResultsSheet'
 import { SearchBar } from './SearchBar'
 import type { Lang } from './labels'
@@ -29,6 +32,8 @@ export function Component() {
   const state = useMapState()
   const { q, area, sector, hs, near: wantNear, sel, set } = state
   const desktop = useIsDesktop()
+  const intro = useIntro()
+  const navigate = useNavigate()
   const nearMe = useNearMe()
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
@@ -89,8 +94,9 @@ export function Component() {
 
   return (
     <div className="flex h-dvh flex-col bg-surface text-ink">
-      <ClientHeader />
-      <main className="flex min-h-0 flex-1">
+      <ClientHeader onAbout={intro.show} />
+      {/* While the intro is open it owns the page's h1; the map region is inert (not the header, which holds ☰). */}
+      <main className="flex min-h-0 flex-1" inert={intro.open}>
         <h1 className="sr-only">{t('map.title')}</h1>
         <div className="relative min-w-0 flex-1">
           <div className="absolute inset-0 z-0 bg-map-bg">
@@ -166,6 +172,9 @@ export function Component() {
           />
         )}
       </main>
+      {intro.open && (
+        <IntroOverlay onDismiss={intro.dismiss} onSearch={(text) => void navigate(`/?q=${encodeURIComponent(text)}`)} />
+      )}
     </div>
   )
 }

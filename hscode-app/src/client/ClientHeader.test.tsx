@@ -27,4 +27,10 @@ describe('ClientHeader sign-in', () => {
     expect(msg.closest('.fixed')).not.toBeNull()
     expect(document.querySelector('.absolute.top-14')).toBeNull()
   })
+  it('fits 360px: the sign-in button collapses to the G on phones; ☰ comes last', () => {
+    render(<MemoryRouter><ClientHeader /></MemoryRouter>)
+    expect(screen.getByText(en.nav.signIn)).toHaveClass('max-sm:sr-only')
+    const controls = screen.getByRole('banner').querySelectorAll('button')
+    expect(controls[controls.length - 1]).toHaveAccessibleName(en.menu.open)
+  })
 })

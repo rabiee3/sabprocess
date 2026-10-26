@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router'
 import { initI18n } from '../i18n'
 import type { IndexEntry } from '../lib/types'
+import { safeStorage } from '../lib/safeStorage'
 
 vi.mock('../firebase', () => ({ db: {}, auth: {} }))
 const signInWithGoogle = vi.fn()
@@ -65,6 +66,7 @@ const names = () => screen.getAllByRole('article').map((a) => within(a).getByRol
 
 beforeEach(() => {
   initI18n()
+  safeStorage.set('hscode.introSeen', '1') // the first-visit intro has its own describe below
   loadIndex.mockReset()
   loadIndex.mockResolvedValue({ entries: ENTRIES, fromCache: false })
   near.status = 'idle'
@@ -234,5 +236,62 @@ describe('MapHome', () => {
     render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <MapHome /> }], { initialEntries: ['/'] })} />)
     await screen.findAllByRole('article')
     expect(createEngineSpy).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('MapHome first-visit intro', () => {
+  beforeEach(() => safeStorage.remove('hscode.introSeen'))
+
+  it('shows the intro dialog on a first visit and makes the map inert', async () => {
+    setup()
+    const dialog = screen.getByRole('dialog', { name: 'Who makes what. Who needs what.' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(screen.getByRole('main')).toHaveAttribute('inert')
+    expect(screen.getByRole('banner')).not.toHaveAttribute('inert')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('main')).not.toHaveAttribute('inert')
+    expect(safeStorage.get('hscode.introSeen')).toBe('1')
+    await screen.findAllByRole('article')
+  })
+
+  it('never shows on a deep link with a query', async () => {
+    setup('/?q=maize')
+    await screen.findAllByRole('article')
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('a search from the intro closes it and puts q in the URL', async () => {
+    setup()
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search factories' }), 'maize{Enter}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByTestId('loc').textContent).toBe('?q=maize')
+    expect(await screen.findAllByRole('article')).toHaveLength(1)
+  })
+
+  it('"About HSCode" in the menu reopens it; closing returns focus to the menu button and keeps the key', async () => {
+    safeStorage.set('hscode.introSeen', '1')
+    const set = vi.spyOn(safeStorage, 'set')
+    setup()
+    await screen.findAllByRole('article')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    const menu = screen.getByRole('button', { name: 'Menu' })
+    await userEvent.click(menu)
+    await userEvent.click(screen.getByRole('menuitem', { name: 'About HSCode' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveAttribute('inert')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(menu).toHaveFocus()
+    expect(set).not.toHaveBeenCalled()
+    set.mockRestore()
+  })
+
+  it('the page has no link to /admin with the intro open or the menu open', async () => {
+    setup()
+    expect(document.querySelectorAll('a[href*="/admin"]')).toHaveLength(0)
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }))
+    expect(document.querySelectorAll('a[href*="/admin"]')).toHaveLength(0)
   })
 })

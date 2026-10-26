@@ -13,6 +13,8 @@ type Strings = typeof en
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/tile.openstreetmap.org/**', (route) => route.fulfill({ status: 204, body: '' }))
+  // The first-visit intro has its own spec (intro.spec.ts); here the map is used directly.
+  await page.addInitScript(() => localStorage.setItem('hscode.introSeen', '1'))
 })
 
 async function open(page: Page, path: string) {

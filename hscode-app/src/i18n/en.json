@@ -405,9 +405,6 @@
     "headline": "Who makes what. Who needs what.",
     "subtitle": "Egyptian factories on one map — search by product, HS code, industry or industrial area, and see what each factory buys as well as what it sells.",
     "findFactories": "Find factories",
-    "imSurveyor": "I'm a surveyor",
-    "forSurveyors": "For surveyors",
-    "admin": "Admin",
     "searchLabel": "Search factories",
     "searchPlaceholder": "Search a product, HS code, or industry…",
     "try": "Try",
@@ -503,5 +500,14 @@
     "facebook": "Facebook",
     "noContacts": "No contact details shared",
     "contactsUnavailable": "Contact details aren't available to your account."
+  },
+  "menu": {
+    "open": "Menu",
+    "about": "About HSCode",
+    "surveyors": "For surveyors",
+    "install": "Install app"
+  },
+  "intro": {
+    "close": "Close"
   }
 }

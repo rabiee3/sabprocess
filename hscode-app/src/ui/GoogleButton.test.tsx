@@ -16,4 +16,14 @@ describe('GoogleButton', () => {
     render(<GoogleButton compact disabled onClick={() => {}} label="Sign in" />)
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled()
   })
+  it('iconOnlyOnPhone: below 640px only the G shows; the label stays the accessible name', () => {
+    render(<GoogleButton compact iconOnlyOnPhone onClick={() => {}} label="Sign in" />)
+    const btn = screen.getByRole('button', { name: 'Sign in' })
+    expect(btn.className).toContain('min-w-11')
+    expect(screen.getByText('Sign in')).toHaveClass('max-sm:sr-only')
+  })
+  it('keeps the label visible by default', () => {
+    render(<GoogleButton compact onClick={() => {}} label="Sign in" />)
+    expect(screen.getByText('Sign in')).not.toHaveClass('max-sm:sr-only')
+  })
 })
