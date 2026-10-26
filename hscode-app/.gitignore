@@ -30,3 +30,6 @@ ui-debug.log
 firebase-debug.*.log
 playwright-report/
 test-results/
+
+# PWA e2e scratch build (never ../hscode)
+.pwa-preview/

@@ -15,6 +15,8 @@ import { ALLOW_EDIT } from './features'
 import { outbox, type OutboxEntry } from './outbox'
 import { reconcile } from './reconcile'
 import { subscribeMySubmissions, type SubmissionItem, type SurveyErrorCode } from './repo'
+import { Icon } from '../ui/Icon'
+import { usePwa } from '../pwa/usePwa'
 
 const PLACEHOLDERS = [siloImg, plantImg, warehouseImg]
 const placeholderFor = (fid: string) => PLACEHOLDERS[[...fid].reduce((n, c) => n + c.charCodeAt(0), 0) % PLACEHOLDERS.length]
@@ -25,6 +27,7 @@ export function MySubmissions() {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const uid = user?.uid
+  const { canInstall, install, isIosSafari } = usePwa()
   // The stepper could not keep a draft or the outbox entry on this phone.
   const storageFull = (useLocation().state as { storageFull?: boolean } | null)?.storageFull === true
   const [state, setState] = useState<Snapshot & { error?: SurveyErrorCode }>({ items: [], entries: [], loaded: false })
@@ -71,6 +74,17 @@ export function MySubmissions() {
         <h1 className="text-title font-semibold text-ink-strong">{t('survey.list.title')}</h1>
         {error && <Banner tone="danger">{t(`errors.${error}`)}</Banner>}
         {storageFull && <Banner tone="warning">{t('errors.storageFull')}</Banner>}
+        {canInstall ? (
+          <button
+            type="button"
+            onClick={() => void install()}
+            className="flex min-h-touch w-full items-center justify-center rounded border border-brand-700 px-3 font-semibold text-brand-900"
+          >
+            {t('pwa.install')}
+          </button>
+        ) : (
+          isIosSafari && <p className="text-sm text-ink-subtle">{t('pwa.iosHint')}</p>
+        )}
         <div className="flex flex-wrap gap-2">
           {counts.map((c) => (
             <span key={c.key} className={`rounded px-2 py-1 text-xs font-semibold ${c.box}`}>
@@ -164,7 +178,7 @@ export function MySubmissions() {
           to="new"
           className="mx-auto flex min-h-cta max-w-md items-center justify-center gap-2 rounded bg-brand-500 px-4 text-body font-semibold text-ink-strong"
         >
-          <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: plusIcon }} />
+          <Icon svg={plusIcon} className="size-5" />
           {t('survey.list.add')}
         </Link>
       </footer>

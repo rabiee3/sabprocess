@@ -18,7 +18,9 @@
     "emu:dev": "vite --mode emulator --port 5174 --strictPort",
     "seed:emu": "tsx seed/seed-emulator.ts",
     "e2e": "node scripts/with-emulators.mjs firestore,auth \"npm run seed:emu && playwright test\"",
-    "verify": "npm run lint && npm run typecheck && npm test && npm run test:rules && npm run e2e && npm run build && npm run check:build"
+    "verify": "npm run lint && npm run typecheck && npm test && npm run test:rules && npm run e2e && npm run e2e:pwa && npm run build && npm run check:build",
+    "icons": "node scripts/make-icons.mjs",
+    "e2e:pwa": "playwright test --config playwright.pwa.config.ts"
   },
   "dependencies": {
     "browser-image-compression": "^2.0.2",
@@ -31,12 +33,15 @@
     "react-dom": "^19.3.1",
     "react-i18next": "^17.1.8",
     "react-leaflet": "^5.0.0",
-    "react-router": "^8.5.0"
+    "react-router": "^8.5.0",
+    "vite-plugin-pwa": "^2.0.0",
+    "workbox-window": "^7.4.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "@firebase/rules-unit-testing": "^6.0.0",
     "@playwright/test": "^1.64.1",
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

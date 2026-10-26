@@ -13,6 +13,8 @@ type Strings = typeof en
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/tile.openstreetmap.org/**', (route) => route.fulfill({ status: 204, body: '' }))
+  // The first-visit intro has its own spec (intro.spec.ts); here the map is used directly.
+  await page.addInitScript(() => localStorage.setItem('hscode.introSeen', '1'))
 })
 
 async function open(page: Page, path: string) {
@@ -37,21 +39,15 @@ async function expectPinsAndResults(page: Page, s: Strings) {
   expect(await cards(page, s).count()).toBeGreaterThan(0)
 }
 
-/** (a) + (b) in one language: splash -> map, then a suggestion search that survives a reload. */
-async function splashToMapAndSearch(page: Page, lang: 'en' | 'ar') {
+/** (a) + (b) in one language: map at the root, then a suggestion search that survives a reload. */
+async function rootMapAndSearch(page: Page, lang: 'en' | 'ar') {
   const s = (lang === 'en' ? en : ar) as Strings
   await open(page, './')
   if (lang === 'ar') {
     await page.locator('button[lang="ar"]').click()
     expect(await page.evaluate(() => document.documentElement.dir)).toBe('rtl')
   }
-  await page
-    .getByRole('link', { name: s.home.findFactories })
-    .or(page.getByRole('button', { name: s.home.findFactories }))
-    .filter({ visible: true })
-    .first()
-    .click()
-  await expect(page).toHaveURL(/\/hscode\/map/)
+  await expect(page).toHaveURL(/\/hscode\/?$/)
   await expectPinsAndResults(page, s)
   if (lang === 'en') await expect(results(page, s).getByRole('heading', { level: 2 })).toHaveText(/^[1-9]\d* factor(y|ies)$/)
 
@@ -62,8 +58,11 @@ async function splashToMapAndSearch(page: Page, lang: 'en' | 'ar') {
   await expect(page).toHaveURL(/[?&]q=/)
   const name = lang === 'en' ? FEED_MILL.en : FEED_MILL.ar
   await expect(cardNames(page, s).filter({ hasText: name })).toBeVisible()
-  const query = await searchBox(page, s).inputValue()
+  // The box takes the committed query from the URL a render after the navigation: wait for it, never
+  // read it mid-update (it can still hold the typed "علف").
+  const query = new URL(page.url()).searchParams.get('q') ?? ''
   expect(query).not.toBe('')
+  await expect(searchBox(page, s)).toHaveValue(query)
 
   await page.reload()
   await expect(searchBox(page, s)).toHaveValue(query)
@@ -72,16 +71,16 @@ async function splashToMapAndSearch(page: Page, lang: 'en' | 'ar') {
   expect(await noHScroll(page)).toBe(true)
 }
 
-test('(a)(b) splash -> map with pins and results; an Arabic suggestion finds the feed mill and survives a reload', async ({ page }) => {
-  await splashToMapAndSearch(page, 'en')
+test('(a)(b) map at the root with pins and results; an Arabic suggestion finds the feed mill and survives a reload', async ({ page }) => {
+  await rootMapAndSearch(page, 'en')
 })
 
 test('(h) Arabic: the same flow runs right-to-left with no horizontal scroll', async ({ page }) => {
-  await splashToMapAndSearch(page, 'ar')
+  await rootMapAndSearch(page, 'ar')
 })
 
 test('(c) the "Animal feed" sector chip shows only feed factories', async ({ page }) => {
-  await open(page, 'map')
+  await open(page, './')
   await expectPinsAndResults(page, en)
   await page.getByRole('button', { name: en.map.chipSector }).click()
   await page.getByRole('dialog').getByRole('radio', { name: 'Animal feed' }).click() // the sheet closes on choice
@@ -95,7 +94,7 @@ test('(c) the "Animal feed" sector chip shows only feed factories', async ({ pag
 test('(d) near me sorts the results by distance, nearest first', async ({ page, context }) => {
   await context.grantPermissions(['geolocation'])
   await context.setGeolocation({ latitude: 29.9727, longitude: 30.9421, accuracy: 15 }) // at the feed mill
-  await open(page, 'map')
+  await open(page, './')
   await expectPinsAndResults(page, en)
   await page.getByRole('button', { name: en.map.nearMe }).click()
   await expect(page.getByRole('button', { name: en.map.nearMe })).toHaveAttribute('aria-pressed', 'true')
@@ -113,7 +112,7 @@ test('(e) "Who supplies this?" on a needed product lists the seeded maker', asyn
   await expect(page.getByRole('heading', { level: 1, name: FEED_MILL.en })).toBeVisible()
   const maize = page.getByRole('region', { name: en.factory.needs }).getByRole('listitem').filter({ hasText: 'Maize' })
   await maize.getByRole('link', { name: en.factory.whoSupplies }).click()
-  await expect(page).toHaveURL(/\/map\?hs=1005/)
+  await expect(page).toHaveURL(/\/hscode\/\?hs=1005/)
   await expect(cardNames(page).filter({ hasText: GRAIN_MILL.en })).toBeVisible()
   await expect(cardNames(page).filter({ hasText: FEED_MILL.en })).toHaveCount(0)
 })
@@ -129,14 +128,14 @@ test('(f) contacts are locked signed out, and shown after a Google sign-in', asy
   }
   await expect(page.locator('a[href^="tel:"]')).toHaveCount(0)
 
-  await signInGoogleEmulator(page, `buyer-${testInfo.project.name}@example.com`, 'Buyer E2E', en.factory.continueGoogle)
+  await signInGoogleEmulator(page, `buyer-${testInfo.project.name}@example.com`, 'Buyer E2E', en.auth.continueWithGoogle)
   await expect(contacts.getByRole('link', { name: FEED_MILL.phone, exact: true })).toBeVisible()
   await expect(contacts.locator('a[href^="tel:"]')).toHaveCount(1)
   await expect(contacts.getByText(en.factory.lockedTitle)).toHaveCount(0)
 })
 
 test('(g) the seeded sample carries a Demo badge on its card and its page; a real factory does not', async ({ page }) => {
-  await open(page, 'map')
+  await open(page, './')
   await expectPinsAndResults(page, en)
   const feedCard = cards(page).filter({ has: page.getByRole('heading', { level: 3, name: FEED_MILL.en }) })
   await expect(feedCard.getByText(en.map.demo, { exact: true })).toBeVisible()
@@ -152,7 +151,7 @@ test('(g) the seeded sample carries a Demo badge on its card and its page; a rea
 })
 
 test('(i) axe: the map, the results open, and the factory page', async ({ page }, testInfo) => {
-  await open(page, 'map')
+  await open(page, './')
   await expectPinsAndResults(page, en)
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
 
@@ -176,4 +175,15 @@ test('(j) a deep link to a pending factory shows the not-found page', async ({ p
   await open(page, `f/${PENDING_ID}`)
   await expect(page.getByRole('heading', { level: 1, name: en.factory.notFoundTitle })).toBeVisible()
   await expect(page.getByRole('link', { name: en.factory.backToMap })).toBeVisible()
+})
+
+test('an old /map?q= link lands on the root map with the query intact, and Back does not return to /map', async ({ page, context }) => {
+  await context.grantPermissions(['geolocation'])
+  await context.setGeolocation({ latitude: 29.9727, longitude: 30.9421, accuracy: 15 })
+  await open(page, `./f/${FEED_MILL.id}`)
+  await page.goto('map?q=feed&near=1')
+  await expect(page).toHaveURL(/\/hscode\/\?q=feed(&near=1)?$/)
+  await expect(searchBox(page)).toHaveValue('feed')
+  await page.goBack()
+  await expect(page).toHaveURL(new RegExp(`/hscode/f/${FEED_MILL.id}$`))
 })

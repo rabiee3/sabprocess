@@ -1,7 +1,7 @@
 // Fails fast when a leftover emulator still holds the Firestore/Auth ports.
 import net from 'node:net'
 
-const PORTS = [8080, 9099]
+const PORTS = [8180, 9099]
 
 const inUse = (port) =>
   new Promise((resolve) => {

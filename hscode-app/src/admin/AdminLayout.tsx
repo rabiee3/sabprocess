@@ -6,7 +6,7 @@ import { signOutUser } from '../auth/api'
 import { useAuth } from '../auth/useAuth'
 import { db } from '../firebase'
 import { LangToggle } from '../ui/LangToggle'
-import { Logo } from '../ui/Logo'
+import { PortalBrand } from '../ui/PortalBrand'
 import { AdminContext } from './AdminContext'
 import { useIsDesktop } from './useIsDesktop'
 
@@ -82,8 +82,7 @@ export function AdminLayout() {
         }`}
       >
         <div className="flex items-center gap-2 p-4">
-          <Logo />
-          <span className="text-xs text-ink-subtle">{t('admin.title')}</span>
+          <PortalBrand portal="admin" />
         </div>
         <nav ref={navRef} aria-label={t('admin.navLabel')} className="flex flex-1 flex-col gap-1 p-3">
           {NAV.map(({ key, badge }) => (

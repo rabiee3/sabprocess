@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router'
 import { ResultsMap } from '../map/ResultsMap'
 import { distanceKm } from '../lib/geo'
 import { formatHs } from '../lib/hs'
@@ -10,6 +11,8 @@ import { Banner } from '../ui/Banner'
 import { useIsDesktop } from '../admin/useIsDesktop'
 import { ClientHeader } from './ClientHeader'
 import { FilterChips } from './FilterChips'
+import { IntroOverlay } from './intro/IntroOverlay'
+import { useIntro } from './intro/useIntro'
 import { ResultsSheet } from './ResultsSheet'
 import { SearchBar } from './SearchBar'
 import type { Lang } from './labels'
@@ -29,6 +32,16 @@ export function Component() {
   const state = useMapState()
   const { q, area, sector, hs, near: wantNear, sel, set } = state
   const desktop = useIsDesktop()
+  const intro = useIntro()
+  const navigate = useNavigate()
+  const title = useRef<HTMLHeadingElement>(null)
+  const controls = useRef<HTMLDivElement>(null)
+  // After a first-visit intro: the search box, except on touch screens, where focusing it would pop up the
+  // keyboard over the map; there the map heading takes focus (screen readers announce it, nothing pops up).
+  const introReturn = useCallback(() => {
+    const touch = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
+    return touch ? title.current : controls.current?.querySelector<HTMLElement>('[role="combobox"]')
+  }, [])
   const nearMe = useNearMe()
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
@@ -89,9 +102,10 @@ export function Component() {
 
   return (
     <div className="flex h-dvh flex-col bg-surface text-ink">
-      <ClientHeader />
-      <main className="flex min-h-0 flex-1">
-        <h1 className="sr-only">{t('map.title')}</h1>
+      <ClientHeader onAbout={intro.show} />
+      {/* While the intro is open it owns the page's h1; the map region is inert (not the header, which holds ☰). */}
+      <main className="flex min-h-0 flex-1" inert={intro.open}>
+        <h1 ref={title} tabIndex={-1} className="sr-only">{t('map.title')}</h1>
         <div className="relative min-w-0 flex-1">
           <div className="absolute inset-0 z-0 bg-map-bg">
             <ResultsMap
@@ -102,7 +116,7 @@ export function Component() {
               className="size-full"
             />
           </div>
-          <div className="absolute inset-x-2 top-2 z-[1100] flex flex-col gap-2 lg:max-w-md">
+          <div ref={controls} className="absolute inset-x-2 top-2 z-[1100] flex flex-col gap-2 lg:max-w-md">
             <SearchBar
               engine={engine}
               lang={lang}
@@ -166,6 +180,13 @@ export function Component() {
           />
         )}
       </main>
+      {intro.open && (
+        <IntroOverlay
+          onDismiss={intro.dismiss}
+          onSearch={(text) => void navigate(`/?q=${encodeURIComponent(text)}`)}
+          returnFocus={introReturn}
+        />
+      )}
     </div>
   )
 }

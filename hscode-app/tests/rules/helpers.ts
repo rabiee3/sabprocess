@@ -10,8 +10,8 @@ import { ADMIN_UID } from '../../src/firebase/config'
 export { ADMIN_UID }
 
 function emulatorHost(): { host: string; port: number } {
-  const [host, port] = (process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080').split(':')
-  return { host: host || '127.0.0.1', port: Number(port) || 8080 }
+  const [host, port] = (process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8180').split(':')
+  return { host: host || '127.0.0.1', port: Number(port) || 8180 }
 }
 
 let env: RulesTestEnvironment | undefined

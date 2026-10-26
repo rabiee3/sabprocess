@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import closeIcon from '../assets/icons/close.svg?raw'
+import { Icon } from './Icon'
 
 type Props = {
   step: number
@@ -26,7 +27,7 @@ export function Stepper({ step, total, title, onClose, onBack, onNext, nextLabel
             aria-label={t('common.close')}
             className="-ms-2 flex min-h-touch min-w-11 items-center justify-center"
           >
-            <span aria-hidden="true" className="size-6" dangerouslySetInnerHTML={{ __html: closeIcon }} />
+            <Icon svg={closeIcon} className="size-6" />
           </button>
           <div className="min-w-0">
             <p className="text-caption text-ink-muted">{t('survey.step.counter', { n: step, total })}</p>

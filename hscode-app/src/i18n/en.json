@@ -1,4 +1,7 @@
 {
+  "auth": {
+    "continueWithGoogle": "Continue with Google"
+  },
   "app": {
     "name": "HSCode",
     "tagline": "Who makes what. Who needs what."
@@ -13,7 +16,8 @@
     "surveyors": "Surveyors",
     "signIn": "Sign in",
     "signOut": "Sign out",
-    "admin": "Admin"
+    "admin": "Admin",
+    "backToMap": "Back to the map"
   },
   "common": {
     "comingSoon": "Coming soon",
@@ -21,8 +25,7 @@
     "loading": "Loading…",
     "reload": "Reload"
   },
-  "role": {
-    "client": "Client",
+  "portal": {
     "surveyor": "Surveyor",
     "admin": "Admin"
   },
@@ -30,7 +33,6 @@
     "gate": {
       "signInTitle": "Map the factories of Egypt",
       "signInBody": "Add what each factory makes and needs, right from the field. Sign in with Google to start.",
-      "continueGoogle": "Continue with Google",
       "offTitle": "Surveyor access is off",
       "offBody": "Your account can't submit factories right now. Ask your supervisor to turn surveyor access back on.",
       "adminNote": "Admins review submissions from the admin area."
@@ -171,7 +173,6 @@
     "reload": "Reload"
   },
   "admin": {
-    "title": "Superadmin",
     "menu": "Menu",
     "navLabel": "Admin navigation",
     "account": "Account",
@@ -403,9 +404,6 @@
     "headline": "Who makes what. Who needs what.",
     "subtitle": "Egyptian factories on one map — search by product, HS code, industry or industrial area, and see what each factory buys as well as what it sells.",
     "findFactories": "Find factories",
-    "imSurveyor": "I'm a surveyor",
-    "forSurveyors": "For surveyors",
-    "admin": "Admin",
     "searchLabel": "Search factories",
     "searchPlaceholder": "Search a product, HS code, or industry…",
     "try": "Try",
@@ -494,7 +492,6 @@
     "contacts": "Contacts",
     "lockedTitle": "Sign in to see contacts",
     "lockedBody": "Factories share their phone and WhatsApp with signed-in buyers. We only use your Google account to sign you in.",
-    "continueGoogle": "Continue with Google",
     "contactPerson": "Contact person",
     "phone": "Phone",
     "whatsapp": "WhatsApp",
@@ -502,5 +499,20 @@
     "facebook": "Facebook",
     "noContacts": "No contact details shared",
     "contactsUnavailable": "Contact details aren't available to your account."
+  },
+  "pwa": {
+    "updateTitle": "Update available",
+    "reload": "Reload",
+    "install": "Install app",
+    "iosHint": "To install: tap Share, then Add to Home Screen."
+  },
+  "menu": {
+    "open": "Menu",
+    "about": "About HSCode",
+    "surveyors": "For surveyors",
+    "install": "Install app"
+  },
+  "intro": {
+    "close": "Close"
   }
 }

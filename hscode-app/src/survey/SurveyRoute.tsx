@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, Route, Routes } from 'react-router'
-import { signInWithGoogle } from '../auth/api'
+import { useGoogleSignIn } from '../auth/useGoogleSignIn'
+import { GoogleButton } from '../ui/GoogleButton'
+import { Banner } from '../ui/Banner'
 import { useAuth } from '../auth/useAuth'
 import splashPattern from '../assets/patterns/splash-pattern.svg'
 import { Placeholder } from '../routes/Placeholder'
 import { AppHeader } from '../ui/AppHeader'
-import { Logo } from '../ui/Logo'
+import { PortalBrand } from '../ui/PortalBrand'
 import { InviteCodeScreen } from './InviteCodeScreen'
 import { FactoryStepper } from './FactoryStepper'
 import { ALLOW_EDIT } from './features'
@@ -15,7 +17,7 @@ import { MySubmissions } from './MySubmissions'
 function Shell({ children }: { children: ReactNode }) {
   return (
     <>
-      <AppHeader />
+      <AppHeader areaLabel="surveyor" />
       {children}
     </>
   )
@@ -23,23 +25,25 @@ function Shell({ children }: { children: ReactNode }) {
 
 function SignInPanel() {
   const { t } = useTranslation()
+  const { signIn, failed, clearError } = useGoogleSignIn()
   return (
     <main
       className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center gap-5 bg-ink-strong p-6 text-center"
       style={{ backgroundImage: `url(${splashPattern})` }}
     >
       <span className="rounded bg-surface p-2">
-        <Logo />
+        <PortalBrand portal="surveyor" />
       </span>
       <h1 className="text-display font-semibold text-surface">{t('survey.gate.signInTitle')}</h1>
       <p className="max-w-sm text-body text-line">{t('survey.gate.signInBody')}</p>
-      <button
-        type="button"
-        onClick={() => void signInWithGoogle()}
-        className="min-h-cta w-full max-w-sm rounded bg-brand-500 px-4 text-body font-semibold text-ink-strong"
-      >
-        {t('survey.gate.continueGoogle')}
-      </button>
+      {failed && (
+        <div className="w-full max-w-sm text-start">
+          <Banner tone="danger" onClose={clearError}>{t('errors.generic')}</Banner>
+        </div>
+      )}
+      <div className="w-full max-w-sm">
+        <GoogleButton onClick={signIn} label={t('auth.continueWithGoogle')} />
+      </div>
     </main>
   )
 }

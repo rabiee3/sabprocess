@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-const EMULATORS = /^http:\/\/127\.0\.0\.1:(8080|9099)\//
+const EMULATORS = /^http:\/\/127\.0\.0\.1:(8180|9099)\//
 const FLAG = '__e2eOffline'
 
 /**

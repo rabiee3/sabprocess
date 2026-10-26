@@ -10,6 +10,7 @@ import { DataTable, type Column } from '../ui/DataTable'
 import { cancelInvite, generateInvite, subscribeInvites } from './invites'
 import { subscribeSurveyors } from './surveyors'
 import type { Invite, Surveyor } from './types'
+import { Icon } from '../ui/Icon'
 
 type InviteStatus = 'unused' | 'used' | 'cancelled'
 
@@ -27,7 +28,7 @@ function InviteStatusChip({ status }: { status: InviteStatus }) {
   const s = CHIP[status]
   return (
     <span data-chip className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold ${s.box}`}>
-      <span aria-hidden="true" className="size-4 shrink-0 [&>svg]:size-4" dangerouslySetInnerHTML={{ __html: s.svg }} />
+      <Icon svg={s.svg} className="size-4" />
       {t(`admin.invites.${status}`)}
     </span>
   )
@@ -192,7 +193,7 @@ export function InvitesPage() {
             onClick={() => void onGenerate()}
             className="flex min-h-touch items-center justify-center gap-2 rounded bg-brand-500 px-4 text-body font-semibold text-ink-strong disabled:opacity-60"
           >
-            <span aria-hidden="true" className="size-5 [&>svg]:size-5" dangerouslySetInnerHTML={{ __html: plusIcon }} />
+            <Icon svg={plusIcon} className="size-5" />
             {busy ? t('admin.invites.generating') : t('admin.invites.generate')}
           </button>
         </div>

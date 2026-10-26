@@ -6,6 +6,7 @@ import { hsString, validateHs } from '../../lib/hs'
 import trashIcon from '../../assets/icons/trash.svg?raw'
 import { LIMITS, MAX_PRODUCTS, tooLong, type ProductList } from '../draft'
 import { Field, FieldError, TextInput, type StepProps } from './shared'
+import { Icon } from '../../ui/Icon'
 
 const SECTIONS: { list: ProductList; title: string; variant: 'made' | 'needed' }[] = [
   { list: 'productsMade', title: 'survey.products.made', variant: 'made' },
@@ -73,7 +74,7 @@ export function StepProducts({ draft, dispatch, errors, headingLevel = 2 }: Step
                       onClick={() => dispatch({ type: 'removeProduct', list, key: p.key })}
                       className="flex min-h-touch min-w-11 items-center justify-center text-red-700"
                     >
-                      <span aria-hidden="true" className="size-6" dangerouslySetInnerHTML={{ __html: trashIcon }} />
+                      <Icon svg={trashIcon} className="size-6" />
                     </button>
                   </div>
                   {errors.includes('hs.tariffInvalid') && p.hs && !validateHs(p.hs).ok && (

@@ -4,6 +4,7 @@ import infoIcon from '../assets/icons/alert-circle.svg?raw'
 import warningIcon from '../assets/icons/warning.svg?raw'
 import successIcon from '../assets/icons/check-circle.svg?raw'
 import closeIcon from '../assets/icons/close.svg?raw'
+import { Icon } from './Icon'
 
 export type BannerTone = 'info' | 'warning' | 'danger' | 'success'
 
@@ -29,11 +30,7 @@ export function Banner({ tone, title, children, onClose }: Props) {
       role={tone === 'danger' ? 'alert' : 'status'}
       className={`flex items-start gap-3 rounded p-3 text-sm ${c.box}`}
     >
-      <span
-        aria-hidden="true"
-        className={`mt-0.5 size-6 shrink-0 ${c.icon}`}
-        dangerouslySetInnerHTML={{ __html: c.svg }}
-      />
+      <Icon svg={c.svg} className={`mt-0.5 size-6 ${c.icon}`} />
       <div className="min-w-0 flex-1">
         {title && <p className="font-semibold">{title}</p>}
         {children && <div>{children}</div>}
@@ -45,7 +42,7 @@ export function Banner({ tone, title, children, onClose }: Props) {
           aria-label={t('common.close')}
           className="-m-2 flex min-h-touch min-w-11 shrink-0 items-center justify-center"
         >
-          <span aria-hidden="true" className="size-6" dangerouslySetInnerHTML={{ __html: closeIcon }} />
+          <Icon svg={closeIcon} className="size-6" />
         </button>
       )}
     </div>

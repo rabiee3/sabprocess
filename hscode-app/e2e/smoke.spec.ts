@@ -4,6 +4,8 @@ import en from '../src/i18n/en.json' with { type: 'json' }
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/tile.openstreetmap.org/**', (route) => route.fulfill({ status: 204, body: '' }))
+  // The first-visit intro has its own spec (intro.spec.ts); the shell checks run on the bare map.
+  await page.addInitScript(() => localStorage.setItem('hscode.introSeen', '1'))
   // Guard: every test fails unless the app runs in emulator mode, so e2e never reaches production.
   await page.goto('./')
   await expect(page.locator('html'), 'app is not in emulator mode').toHaveAttribute('data-emulator', 'true')

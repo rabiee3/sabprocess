@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth/useAuth'
-import { signInWithGoogle } from '../auth/api'
+import { useGoogleSignIn } from '../auth/useGoogleSignIn'
+import { GoogleButton } from '../ui/GoogleButton'
 import { Banner } from '../ui/Banner'
 import { safeUrl, whatsappHref } from '../lib/contactLinks'
 import { normalizeDigits } from '../survey/draft'
@@ -21,6 +22,7 @@ const telHref = (raw: string) => {
 
 function Locked() {
   const { t } = useTranslation()
+  const { signIn, failed, clearError } = useGoogleSignIn()
   return (
     <div className="flex flex-col gap-3">
       <div aria-hidden="true" className="flex select-none flex-col gap-2 blur-sm">
@@ -30,13 +32,8 @@ function Locked() {
       </div>
       <p className="font-semibold text-ink-strong">{t('factory.lockedTitle')}</p>
       <p className="text-sm text-ink-muted">{t('factory.lockedBody')}</p>
-      <button
-        type="button"
-        onClick={() => void signInWithGoogle().catch(() => {})}
-        className="inline-flex min-h-touch items-center justify-center rounded border-2 border-ink-strong px-4 text-sm font-semibold text-ink-strong"
-      >
-        {t('factory.continueGoogle')}
-      </button>
+      {failed && <Banner tone="danger" onClose={clearError}>{t('errors.generic')}</Banner>}
+      <GoogleButton onClick={signIn} label={t('auth.continueWithGoogle')} />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import locateIcon from '../assets/icons/locate.svg?raw'
 import { MapView } from './MapView'
 import { pinIcon } from './pins'
 import { useGeolocation, type GpsStatus } from './useGeolocation'
+import { Icon } from '../ui/Icon'
 
 type LatLng = { lat: number; lng: number }
 
@@ -161,7 +162,7 @@ export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = 
             aria-label={t('survey.location.myLocation')}
             className="absolute end-2 top-2 z-[1000] flex min-h-touch items-center gap-2 rounded bg-white px-3 text-sm font-medium text-ink-strong shadow"
           >
-            <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: locateIcon }} />
+            <Icon svg={locateIcon} className="size-5" />
             {t('survey.location.myLocation')}
           </button>
         )}
@@ -188,11 +189,7 @@ export function LocationPicker({ value, areaCenter, onChange, gps: gpsEnabled = 
             aria-label={t(`survey.location.nudge${dir}`)}
             className={`${cell} flex min-h-touch min-w-11 items-center justify-center rounded bg-white shadow`}
           >
-            <span
-              aria-hidden="true"
-              className={`size-6 ${rotate}`}
-              dangerouslySetInnerHTML={{ __html: arrowIcon }}
-            />
+            <Icon svg={arrowIcon} className={`size-6 ${rotate}`} />
           </button>
         ))}
       </div>

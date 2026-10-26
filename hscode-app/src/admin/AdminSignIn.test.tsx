@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import userEvent from '@testing-library/user-event'
 import { initI18n } from '../i18n'
 import en from '../i18n/en.json'
@@ -11,7 +12,7 @@ import { AdminSignIn } from './AdminSignIn'
 
 async function submit() {
   const u = userEvent.setup()
-  render(<AdminSignIn />)
+  render(<MemoryRouter><AdminSignIn /></MemoryRouter>)
   await u.type(screen.getByLabelText(en.admin.signIn.email), 'a@b.com')
   await u.type(screen.getByLabelText(en.admin.signIn.password), 'pw')
   await u.click(screen.getByRole('button', { name: en.admin.signIn.submit }))
@@ -24,7 +25,7 @@ describe('AdminSignIn', () => {
   })
 
   it('has autocomplete hints and an email input', () => {
-    render(<AdminSignIn />)
+    render(<MemoryRouter><AdminSignIn /></MemoryRouter>)
     const email = screen.getByLabelText(en.admin.signIn.email)
     expect(email).toHaveAttribute('type', 'email')
     expect(email).toHaveAttribute('autocomplete', 'username')
@@ -66,7 +67,7 @@ describe('AdminSignIn layout', () => {
     initI18n()
   })
   it('pins the language toggle to the top end corner, outside the form', () => {
-    const { container } = render(<AdminSignIn />)
+    const { container } = render(<MemoryRouter><AdminSignIn /></MemoryRouter>)
     const group = screen.getByRole('group', { name: en.lang.label })
     const wrap = group.parentElement!
     expect(wrap.className).toMatch(/\babsolute\b/)
@@ -80,11 +81,20 @@ describe('AdminSignIn layout', () => {
 describe('AdminSignIn layout', () => {
   it('puts the logo above the card, outside the form', () => {
     initI18n()
-    render(<AdminSignIn />)
+    render(<MemoryRouter><AdminSignIn /></MemoryRouter>)
     const logo = screen.getByRole('img', { name: 'HSCode' })
     const form = document.querySelector('form')!
     expect(form.contains(logo)).toBe(false)
     expect(logo.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+  })
+  it('links the logo back to the client map and shows the Admin tag', () => {
+    render(<MemoryRouter><AdminSignIn /></MemoryRouter>)
+    // Label in name (WCAG 2.5.3): the name is the visible logo; "Back to the map" is the description.
+    const link = screen.getByRole('link', { name: 'HSCode' })
+    expect(link).toHaveAttribute('href', '/')
+    expect(link).not.toHaveAttribute('aria-label')
+    expect(link).toHaveAccessibleDescription(en.nav.backToMap)
+    expect(screen.getByText(en.portal.admin)).toBeInTheDocument()
   })
 })

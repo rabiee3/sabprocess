@@ -4,6 +4,7 @@ import emptyIcon from '../assets/icons/search-empty.svg?raw'
 import type { IndexEntry } from '../lib/types'
 import { FactoryCard } from './FactoryCard'
 import type { Lang } from './labels'
+import { Icon } from '../ui/Icon'
 
 const PAGE = 50
 
@@ -66,7 +67,7 @@ export function ResultsSheet(p: Props) {
       {p.loading && !p.error && <Skeletons />}
       {ok && entries.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-6 text-center">
-          <span aria-hidden="true" className="size-12 text-ink-muted" dangerouslySetInnerHTML={{ __html: emptyIcon }} />
+          <Icon svg={emptyIcon} className="size-12 text-ink-muted" />
           <p className="font-semibold text-ink-strong">{t('map.emptyTitle')}</p>
           <p className="text-sm text-ink-muted">{t('map.emptyBody')}</p>
           <div className="flex items-center gap-2">

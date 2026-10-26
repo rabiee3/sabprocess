@@ -30,7 +30,8 @@ describe('SurveyRoute', () => {
   it('visitor sees Continue with Google', () => {
     auth = { user: null, role: 'visitor', active: false, loading: false }
     renderAt()
-    expect(screen.getByRole('button', { name: en.survey.gate.continueGoogle })).toBeInTheDocument()
+    const btn = screen.getByRole('button', { name: en.auth.continueWithGoogle })
+    expect(btn.querySelectorAll('svg path')).toHaveLength(4)
   })
   it('client sees the invite screen', () => {
     auth = { user, role: 'client', active: false, loading: false }
@@ -58,5 +59,20 @@ describe('SurveyRoute', () => {
     auth = { user, role: 'admin', active: true, loading: false }
     renderAt()
     expect(screen.getByRole('link', { name: en.nav.admin })).toHaveAttribute('href', '/admin')
+  })
+  it.each(['surveyor', 'visitor'] as const)('%s never sees a link to /admin', (role) => {
+    auth = { user: role === 'visitor' ? null : user, role, active: true, loading: false }
+    renderAt()
+    expect(document.querySelector('a[href="/admin"]')).toBeNull()
+  })
+  it('shows the surveyor brand linking to /', () => {
+    auth = { user: null, role: 'visitor', active: false, loading: false }
+    renderAt()
+    const links = screen.getAllByRole('link', { name: `HSCode ${en.portal.surveyor}` })
+    expect(links.length).toBeGreaterThan(0)
+    for (const l of links) {
+      expect(l).toHaveAttribute('href', '/')
+      expect(l).toHaveAccessibleDescription(en.nav.backToMap)
+    }
   })
 })

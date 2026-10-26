@@ -1,26 +1,31 @@
-import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth/useAuth'
-import { signInWithGoogle, signOutUser } from '../auth/api'
+import { signOutUser } from '../auth/api'
+import { useGoogleSignIn } from '../auth/useGoogleSignIn'
+import { GoogleButton } from '../ui/GoogleButton'
 import { LangToggle } from '../ui/LangToggle'
 import { Logo } from '../ui/Logo'
 import { Bdi } from '../ui/Bdi'
 import { Banner } from '../ui/Banner'
+import { ClientMenu } from '../ui/ClientMenu'
+import { Icon } from '../ui/Icon'
+import logoutIcon from '../assets/icons/logout.svg?raw'
+import { ABOUT_STATE } from './intro/useIntro'
+import { usePwa } from '../pwa/usePwa'
 
 const btn = 'inline-flex min-h-touch items-center justify-center px-2 text-sm font-semibold text-ink-strong'
 
-export function ClientHeader() {
+/**
+ * Logo · LangToggle · sign-in or user + Sign out · ☰. `onAbout` reopens the intro in place (the map);
+ * pages without the intro leave it unset and About goes to the map, which opens it.
+ */
+export function ClientHeader({ onAbout }: { onAbout?: () => void } = {}) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { user } = useAuth()
-  const [failed, setFailed] = useState(false)
-  const signIn = () => {
-    setFailed(false)
-    signInWithGoogle().catch((e: unknown) => {
-      const code = (e as { code?: string })?.code
-      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') setFailed(true)
-    })
-  }
+  const { signIn, failed, clearError } = useGoogleSignIn()
+  const { canInstall, install } = usePwa()
   return (
     <>
     <header className="z-[1200] flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3">
@@ -34,20 +39,24 @@ export function ClientHeader() {
             <span className="hidden max-w-32 truncate text-sm sm:inline">
               <Bdi>{user.displayName || user.email}</Bdi>
             </span>
-            <button type="button" className={btn} onClick={() => void signOutUser()}>
-              {t('nav.signOut')}
+            {/* Below 640px only the icon, so Logo · LangToggle · Sign out · ☰ fit 360px in Arabic; never wraps. */}
+            <button type="button" className={`${btn} min-w-11 whitespace-nowrap`} onClick={() => void signOutUser()}>
+              <Icon svg={logoutIcon} className="size-5 sm:hidden rtl:-scale-x-100" />
+              <span className="max-sm:sr-only">{t('nav.signOut')}</span>
             </button>
           </>
         ) : (
-          <button type="button" className={btn} onClick={signIn}>
-            {t('nav.signIn')}
-          </button>
+          <GoogleButton compact iconOnlyOnPhone onClick={signIn} label={t('nav.signIn')} />
         )}
+        <ClientMenu
+          onAbout={onAbout ?? (() => void navigate('/', { state: ABOUT_STATE }))}
+          onInstall={canInstall ? () => void install() : undefined}
+        />
       </div>
     </header>
     {failed && (
-      <div className="absolute inset-x-2 top-14 z-[1300] lg:end-2 lg:start-auto lg:w-96">
-        <Banner tone="danger" onClose={() => setFailed(false)}>{t('errors.generic')}</Banner>
+      <div className="fixed inset-x-2 top-14 z-[1300] lg:end-2 lg:start-auto lg:w-96">
+        <Banner tone="danger" onClose={() => clearError()}>{t('errors.generic')}</Banner>
       </div>
     )}
     </>

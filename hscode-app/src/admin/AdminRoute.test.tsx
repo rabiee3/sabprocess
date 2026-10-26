@@ -179,4 +179,11 @@ describe('AdminRoute', () => {
     expect(await screen.findByText('7')).toBeInTheDocument()
     expect(getCount).toHaveBeenCalledTimes(2)
   })
+  it('the sidebar logo links to the client map with an Admin tag', async () => {
+    auth = { user, role: 'admin', active: true, loading: false }
+    renderAt()
+    const link = await screen.findByRole('link', { name: `HSCode ${en.portal.admin}` })
+    expect(link).toHaveAttribute('href', '/')
+    expect(link).toHaveAccessibleDescription(en.nav.backToMap)
+  })
 })

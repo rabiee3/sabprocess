@@ -7,6 +7,7 @@ import type { Engine } from '../search/engine'
 import { suggest, type Suggestions } from '../search/suggest'
 import type { Lang } from './labels'
 import type { MapStatePatch } from './useMapState'
+import { Icon } from '../ui/Icon'
 
 type Option = { key: string; group: string; label: string; hint?: string; patch: MapStatePatch }
 
@@ -93,7 +94,7 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
   return (
     <form role="search" onSubmit={(e) => e.preventDefault()} className="relative">
       <div className="flex min-h-control items-center gap-2 rounded-lg border border-line bg-surface px-3 shadow-md">
-        <span aria-hidden="true" className="size-5 shrink-0 text-ink-muted" dangerouslySetInnerHTML={{ __html: searchIcon }} />
+        <Icon svg={searchIcon} className="size-5 text-ink-muted" />
         <input
           ref={input}
           type="search"
@@ -127,7 +128,7 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
             }}
             className="-me-2 flex min-h-touch min-w-11 items-center justify-center"
           >
-            <span aria-hidden="true" className="size-5" dangerouslySetInnerHTML={{ __html: closeIcon }} />
+            <Icon svg={closeIcon} className="size-5" />
           </button>
         )}
       </div>

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router'
 import { initI18n } from '../i18n'
 import type { IndexEntry } from '../lib/types'
+import { safeStorage } from '../lib/safeStorage'
 
 vi.mock('../firebase', () => ({ db: {}, auth: {} }))
 const signInWithGoogle = vi.fn()
@@ -53,9 +54,9 @@ const ENTRIES: IndexEntry[] = [
 function Probe() {
   return <output data-testid="loc">{useLocation().search}</output>
 }
-function setup(url = '/map') {
+function setup(url = '/') {
   const router = createMemoryRouter(
-    [{ path: '/map', element: (<><MapHome /><Probe /></>) }, { path: '*', element: <p>other</p> }],
+    [{ path: '/', element: (<><MapHome /><Probe /></>) }, { path: '*', element: <p>other</p> }],
     { initialEntries: [url] },
   )
   render(<RouterProvider router={router} />)
@@ -65,6 +66,7 @@ const names = () => screen.getAllByRole('article').map((a) => within(a).getByRol
 
 beforeEach(() => {
   initI18n()
+  safeStorage.set('hscode.introSeen', '1') // the first-visit intro has its own describe below
   loadIndex.mockReset()
   loadIndex.mockResolvedValue({ entries: ENTRIES, fromCache: false })
   near.status = 'idle'
@@ -155,7 +157,7 @@ describe('MapHome', () => {
   })
 
   it('empty results show the empty state', async () => {
-    setup('/map?q=zzzzqq')
+    setup('/?q=zzzzqq')
     expect(await screen.findByText('No factories found')).toBeInTheDocument()
     expect(screen.queryByRole('article')).toBeNull()
   })
@@ -176,7 +178,7 @@ describe('MapHome', () => {
   })
 
   it('arriving with near=1 does not ask for location and drops the param', async () => {
-    setup('/map?near=1')
+    setup('/?near=1')
     await screen.findAllByRole('article')
     expect(near.request).not.toHaveBeenCalled()
     expect(screen.getByTestId('loc').textContent).not.toContain('near')
@@ -228,11 +230,86 @@ describe('MapHome', () => {
     const shared = [...ENTRIES]
     loadIndex.mockResolvedValue({ entries: shared, fromCache: false })
     createEngineSpy.mockClear()
-    const a = render(<RouterProvider router={createMemoryRouter([{ path: '/map', element: <MapHome /> }], { initialEntries: ['/map'] })} />)
+    const a = render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <MapHome /> }], { initialEntries: ['/'] })} />)
     await screen.findAllByRole('article')
     a.unmount()
-    render(<RouterProvider router={createMemoryRouter([{ path: '/map', element: <MapHome /> }], { initialEntries: ['/map'] })} />)
+    render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <MapHome /> }], { initialEntries: ['/'] })} />)
     await screen.findAllByRole('article')
     expect(createEngineSpy).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('MapHome first-visit intro', () => {
+  beforeEach(() => safeStorage.remove('hscode.introSeen'))
+
+  it('shows the intro dialog on a first visit and makes the map inert', async () => {
+    setup()
+    const dialog = screen.getByRole('dialog', { name: 'Who makes what. Who needs what.' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(screen.getByRole('main')).toHaveAttribute('inert')
+    expect(screen.getByRole('banner')).not.toHaveAttribute('inert')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('main')).not.toHaveAttribute('inert')
+    expect(safeStorage.get('hscode.introSeen')).toBe('1')
+    await screen.findAllByRole('article')
+  })
+
+  it('closing a first-visit intro puts focus on the map search, not <body>', async () => {
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.getByRole('combobox', { name: 'Search factories' })).toHaveFocus()
+  })
+
+  it('on a touch screen it focuses the map heading instead, so no keyboard pops up', async () => {
+    const mm = window.matchMedia
+    window.matchMedia = ((q: string) => ({ matches: q === '(pointer: coarse)', media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+    try {
+      setup()
+      await userEvent.keyboard('{Escape}')
+      expect(screen.getByRole('heading', { level: 1, name: 'Factory map' })).toHaveFocus()
+    } finally {
+      window.matchMedia = mm
+    }
+  })
+
+  it('never shows on a deep link with a query', async () => {
+    setup('/?q=maize')
+    await screen.findAllByRole('article')
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('a search from the intro closes it and puts q in the URL', async () => {
+    setup()
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search factories' }), 'maize{Enter}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByTestId('loc').textContent).toBe('?q=maize')
+    expect(await screen.findAllByRole('article')).toHaveLength(1)
+  })
+
+  it('"About HSCode" in the menu reopens it; closing returns focus to the menu button and keeps the key', async () => {
+    safeStorage.set('hscode.introSeen', '1')
+    const set = vi.spyOn(safeStorage, 'set')
+    setup()
+    await screen.findAllByRole('article')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    const menu = screen.getByRole('button', { name: 'Menu' })
+    await userEvent.click(menu)
+    await userEvent.click(screen.getByRole('menuitem', { name: 'About HSCode' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveAttribute('inert')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(menu).toHaveFocus()
+    expect(set).not.toHaveBeenCalled()
+    set.mockRestore()
+  })
+
+  it('the page has no link to /admin with the intro open or the menu open', async () => {
+    setup()
+    expect(document.querySelectorAll('a[href*="/admin"]')).toHaveLength(0)
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }))
+    expect(document.querySelectorAll('a[href*="/admin"]')).toHaveLength(0)
   })
 })
