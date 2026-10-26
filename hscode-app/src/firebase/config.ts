@@ -16,5 +16,8 @@ export const firebaseConfig = {
   measurementId: 'G-SF70L271BF',
 }
 
+/** Public reCAPTCHA v3 site key for App Check. Empty means App Check is off. See docs/hscode/app-check-setup.md. */
+export const RECAPTCHA_SITE_KEY = ''
+
 export const ADMIN_UID = 'CYQ2CC3DXMTne79XA79vqsYxB8R2'
 export const EMULATOR_PROJECT_ID = 'demo-hscode'
