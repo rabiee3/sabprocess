@@ -7,7 +7,8 @@ import en from '../i18n/en.json'
 
 const signInWithGoogle = vi.fn()
 vi.mock('../auth/api', () => ({ signInWithGoogle: () => signInWithGoogle(), signOutUser: vi.fn() }))
-vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: null }) }))
+const auth = { user: null as null | { displayName: string; email: string } }
+vi.mock('../auth/useAuth', () => ({ useAuth: () => auth }))
 
 import { ClientHeader } from './ClientHeader'
 
@@ -15,6 +16,7 @@ describe('ClientHeader sign-in', () => {
   beforeEach(() => {
     initI18n()
     signInWithGoogle.mockReset()
+    auth.user = null
   })
   it('has the G and shows an error banner on failure', async () => {
     signInWithGoogle.mockRejectedValue({ code: 'auth/network-request-failed' })
@@ -32,5 +34,13 @@ describe('ClientHeader sign-in', () => {
     expect(screen.getByText(en.nav.signIn)).toHaveClass('max-sm:sr-only')
     const controls = screen.getByRole('banner').querySelectorAll('button')
     expect(controls[controls.length - 1]).toHaveAccessibleName(en.menu.open)
+  })
+  it('signed in: Sign out never wraps and collapses to an icon on phones, keeping its name', () => {
+    auth.user = { displayName: 'Mona', email: 'm@example.com' }
+    render(<MemoryRouter><ClientHeader /></MemoryRouter>)
+    const out = screen.getByRole('button', { name: en.nav.signOut })
+    expect(out.className).toContain('whitespace-nowrap')
+    expect(out.className).toContain('min-w-11')
+    expect(screen.getByText(en.nav.signOut)).toHaveClass('max-sm:sr-only')
   })
 })

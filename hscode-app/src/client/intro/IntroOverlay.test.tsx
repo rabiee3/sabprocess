@@ -128,6 +128,36 @@ describe('IntroOverlay', () => {
     opener.remove()
   })
 
+  it('with no real opener (first visit), returns focus to the fallback target on unmount', () => {
+    const target = document.createElement('input')
+    document.body.appendChild(target)
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    const { unmount } = render(
+      <MemoryRouter>
+        <IntroOverlay onDismiss={() => {}} onSearch={() => {}} returnFocus={() => target} />
+      </MemoryRouter>,
+    )
+    unmount()
+    expect(target).toHaveFocus()
+    target.remove()
+  })
+
+  it('a live opener wins over the fallback', () => {
+    const opener = document.createElement('button')
+    const target = document.createElement('input')
+    document.body.append(opener, target)
+    opener.focus()
+    const { unmount } = render(
+      <MemoryRouter>
+        <IntroOverlay onDismiss={() => {}} onSearch={() => {}} returnFocus={() => target} />
+      </MemoryRouter>,
+    )
+    unmount()
+    expect(opener).toHaveFocus()
+    opener.remove()
+    target.remove()
+  })
+
   it('renders the Arabic copy', async () => {
     await setLanguage('ar')
     setup()

@@ -28,13 +28,22 @@ const PINS = [
  * The first-visit intro (the former splash) as a full-screen modal over the map.
  * One staff link only (surveyors); there is deliberately no admin link.
  */
-export function IntroOverlay({ onDismiss, onSearch }: { onDismiss: () => void; onSearch: (q: string) => void }) {
+export function IntroOverlay({
+  onDismiss,
+  onSearch,
+  returnFocus,
+}: {
+  onDismiss: () => void
+  onSearch: (q: string) => void
+  /** Where focus goes on close when nothing real opened it (a first visit). */
+  returnFocus?: () => HTMLElement | null | undefined
+}) {
   const { t } = useTranslation()
   const [q, setQ] = useState('')
   const titleId = useId()
   const dialog = useRef<HTMLDivElement>(null)
   const title = useRef<HTMLHeadingElement>(null)
-  useFocusTrap(dialog, title, onDismiss)
+  useFocusTrap(dialog, title, onDismiss, returnFocus)
 
   function search(text: string) {
     const query = text.trim()

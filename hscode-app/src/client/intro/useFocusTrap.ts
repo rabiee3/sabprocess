@@ -11,16 +11,20 @@ function focusables(root: HTMLElement): HTMLElement[] {
 
 /**
  * Modal focus handling: focus `initial` on mount, keep Tab / Shift+Tab inside `root`, call `onEscape`
- * on Escape, and on unmount return focus to whatever had it before (if that was a real control).
+ * on Escape, and on unmount return focus to whatever had it before. When that was nothing real (<body>, as on a
+ * first visit) or it is gone (the ☰ of a page that navigated away), `returnFocus()` names the target instead.
  */
 export function useFocusTrap(
   root: RefObject<HTMLElement | null>,
   initial: RefObject<HTMLElement | null>,
   onEscape: () => void,
+  returnFocus?: () => HTMLElement | null | undefined,
 ) {
   const escape = useRef(onEscape)
+  const fallback = useRef(returnFocus)
   useEffect(() => {
     escape.current = onEscape
+    fallback.current = returnFocus
   })
 
   useEffect(() => {
@@ -60,6 +64,7 @@ export function useFocusTrap(
     return () => {
       document.removeEventListener('keydown', onKey)
       if (opener && opener !== document.body && opener.isConnected) opener.focus()
+      else fallback.current?.()?.focus()
     }
   }, [root, initial])
 }

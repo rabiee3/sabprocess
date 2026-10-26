@@ -255,6 +255,24 @@ describe('MapHome first-visit intro', () => {
     await screen.findAllByRole('article')
   })
 
+  it('closing a first-visit intro puts focus on the map search, not <body>', async () => {
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.getByRole('combobox', { name: 'Search factories' })).toHaveFocus()
+  })
+
+  it('on a touch screen it focuses the map heading instead, so no keyboard pops up', async () => {
+    const mm = window.matchMedia
+    window.matchMedia = ((q: string) => ({ matches: q === '(pointer: coarse)', media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+    try {
+      setup()
+      await userEvent.keyboard('{Escape}')
+      expect(screen.getByRole('heading', { level: 1, name: 'Factory map' })).toHaveFocus()
+    } finally {
+      window.matchMedia = mm
+    }
+  })
+
   it('never shows on a deep link with a query', async () => {
     setup('/?q=maize')
     await screen.findAllByRole('article')

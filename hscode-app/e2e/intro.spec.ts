@@ -123,7 +123,30 @@ test('menu → "About HSCode" on a factory page opens it on the map', async ({ p
   await expect(intro(page)).toHaveCount(0) // the About request was consumed, not replayed
 })
 
-test('blocked storage: it closes, the map stays usable, and it simply shows again next visit', async ({ page }) => {
+test('the intro key cannot be stored: it closes, the map stays usable, and it simply shows again next visit', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  // Only the intro key fails, so this exercises the intro's degraded path, not Firestore's cache.
+  await page.addInitScript((k) => {
+    const real = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === k) throw new DOMException('blocked', 'QuotaExceededError')
+      return real.call(this, key, value)
+    }
+  }, KEY)
+  await open(page, './')
+  await intro(page).getByRole('button', { name: en.intro.close }).click()
+  await expect(intro(page)).toHaveCount(0)
+  await page.getByRole('combobox', { name: en.map.searchLabel }).fill('feed')
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/[?&]q=feed/)
+  await expect(page.getByLabel(en.map.resultsLabel, { exact: true }).locator('article').first()).toBeVisible()
+  await open(page, './')
+  await expect(intro(page)).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test('localStorage blocked for every key (SecurityError): the whole app still loads the map and its results', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await page.addInitScript(() => {
@@ -134,12 +157,11 @@ test('blocked storage: it closes, the map stays usable, and it simply shows agai
   await open(page, './')
   await intro(page).getByRole('button', { name: en.intro.close }).click()
   await expect(intro(page)).toHaveCount(0)
-  await page.getByRole('combobox', { name: en.map.searchLabel }).fill('feed')
-  await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/[?&]q=feed/)
+  // Firestore must have fallen back to its memory cache: the index loads and pins and cards show.
+  await expect(page.locator('.leaflet-marker-icon').first()).toBeVisible()
   await expect(page.getByLabel(en.map.resultsLabel, { exact: true }).locator('article').first()).toBeVisible()
-  await open(page, './')
-  await expect(intro(page)).toBeVisible()
+  await open(page, `f/${FACTORY_ID}`)
+  await expect(page.getByRole('heading', { level: 1, name: 'Delta Feed Mill' })).toBeVisible()
   expect(errors).toEqual([])
 })
 

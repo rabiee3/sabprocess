@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation } from 'react-router'
 import { safeStorage } from '../../lib/safeStorage'
 import { INTRO_KEY, useIntro } from './useIntro'
 
@@ -72,5 +72,15 @@ describe('useIntro', () => {
     act(() => result.current.dismiss())
     expect(result.current.open).toBe(false)
     expect(set).not.toHaveBeenCalled()
+  })
+
+  it('clears the About router state once read, so a reload or Back does not replay it', async () => {
+    safeStorage.set(INTRO_KEY, '1')
+    const { result } = renderHook(() => ({ intro: useIntro(), loc: useLocation() }), {
+      wrapper: at('/', { intro: 'about' }),
+    })
+    await vi.waitFor(() => expect(result.current.loc.state).toBeNull())
+    expect(result.current.loc.pathname).toBe('/')
+    expect(result.current.intro.open).toBe(true)
   })
 })

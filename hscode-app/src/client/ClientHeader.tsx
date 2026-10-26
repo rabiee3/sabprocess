@@ -9,6 +9,8 @@ import { Logo } from '../ui/Logo'
 import { Bdi } from '../ui/Bdi'
 import { Banner } from '../ui/Banner'
 import { ClientMenu } from '../ui/ClientMenu'
+import { Icon } from '../ui/Icon'
+import logoutIcon from '../assets/icons/logout.svg?raw'
 import { ABOUT_STATE } from './intro/useIntro'
 
 const btn = 'inline-flex min-h-touch items-center justify-center px-2 text-sm font-semibold text-ink-strong'
@@ -35,8 +37,10 @@ export function ClientHeader({ onAbout }: { onAbout?: () => void } = {}) {
             <span className="hidden max-w-32 truncate text-sm sm:inline">
               <Bdi>{user.displayName || user.email}</Bdi>
             </span>
-            <button type="button" className={btn} onClick={() => void signOutUser()}>
-              {t('nav.signOut')}
+            {/* Below 640px only the icon, so Logo · LangToggle · Sign out · ☰ fit 360px in Arabic; never wraps. */}
+            <button type="button" className={`${btn} min-w-11 whitespace-nowrap`} onClick={() => void signOutUser()}>
+              <Icon svg={logoutIcon} className="size-5 sm:hidden rtl:-scale-x-100" />
+              <span className="max-sm:sr-only">{t('nav.signOut')}</span>
             </button>
           </>
         ) : (
