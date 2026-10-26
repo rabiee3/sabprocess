@@ -21,4 +21,4 @@ export const db = initializeFirestore(app, {
       : memoryLocalCache(),
 })
 
-if (useEmulator) connectFirestoreEmulator(db, '127.0.0.1', 8080)
+if (useEmulator) connectFirestoreEmulator(db, '127.0.0.1', 8180)

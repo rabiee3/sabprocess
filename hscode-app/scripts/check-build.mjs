@@ -33,7 +33,7 @@ const missing = referenced.filter((f) => !existsSync(resolve(assetsDir, f)))
 if (missing.length) fail(`${out}/index.html references missing assets: ${missing.join(', ')}`)
 
 // The production bundle must not carry emulator wiring (it would mean an emulator-mode build shipped).
-const FORBIDDEN = ['127.0.0.1:8080', '127.0.0.1:9099', 'demo-hscode']
+const FORBIDDEN = ['127.0.0.1:8180', '127.0.0.1:8080', '127.0.0.1:9099', 'demo-hscode']
 for (const f of readdirSync(assetsDir).filter((n) => n.endsWith('.js'))) {
   const js = readFileSync(resolve(assetsDir, f), 'utf8')
   const hit = FORBIDDEN.find((s) => js.includes(s))

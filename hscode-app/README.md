@@ -22,7 +22,7 @@ Stack: Vite, React 19, Tailwind 4, react-router, Firebase (Auth, Firestore), i18
 
 ## Emulators
 
-Anything in emulator mode (`--mode emulator`, `VITE_USE_EMULATOR=true`) talks only to `demo-hscode` on `127.0.0.1:8080` (Firestore)
+Anything in emulator mode (`--mode emulator`, `VITE_USE_EMULATOR=true`) talks only to `demo-hscode` on `127.0.0.1:8180` (Firestore)
 and `127.0.0.1:9099` (Auth), and sets `data-emulator="true"` on `<html>`. The e2e suite asserts that marker, so it can never
 run against production. Google sign-in in the emulator is a fake account chooser popup ("Add new account").
 Never kill emulator processes by hand: `scripts/with-emulators.mjs` stops leftovers itself.
