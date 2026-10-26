@@ -1,9 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { doc, onSnapshot } from 'firebase/firestore'
 import { ADMIN_UID } from '../firebase/config'
-import { auth, db } from '../firebase'
-import { ensureUserDoc } from './api'
+// Only the app/auth module: Firestore is loaded lazily (./roleWatcher) to keep it out of the entry chunk.
+import { auth } from '../firebase/app'
 import { AuthContext, type AuthState, type Role } from './context'
 
 // Roles a users doc may grant. The admin comes only from the UID, never from the doc.
@@ -29,17 +28,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cancelled = true
         unsubSnap?.()
       }
+      const fallBackToClient = () => setState({ user, role: 'client', active: false, loading: false })
       void (async () => {
+        let watcher: typeof import('./roleWatcher')
         try {
-          await ensureUserDoc(user)
+          watcher = await import('./roleWatcher')
+        } catch {
+          // The chunk failed to load (e.g. offline on a fresh deploy): same outcome as a snapshot error.
+          if (!cancelled) fallBackToClient()
+          return
+        }
+        if (cancelled) return
+        try {
+          await watcher.ensureUserDoc(user)
         } catch {
           // Offline or denied: fall through to the snapshot, which resolves from cache if it can.
         }
         if (cancelled) return
-        unsubSnap = onSnapshot(
-          doc(db, 'users', user.uid),
-          // Metadata changes too: the server's ack of a claim changes no data, only hasPendingWrites.
-          { includeMetadataChanges: true },
+        unsubSnap = watcher.watchUserDoc(
+          user.uid,
           (snap) => {
             const data = snap.data()
             // A claim's optimistic local write would flip the UI to surveyor before the server decides; a rejected
@@ -51,10 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               )
               return
             }
-            const role = ROLES.includes(data?.role) ? (data?.role as Role) : 'client'
+            const role = ROLES.includes(data?.role as Role) ? (data?.role as Role) : 'client'
             setState({ user, role, active: data?.active === true, loading: false })
           },
-          () => setState({ user, role: 'client', active: false, loading: false }),
+          fallBackToClient,
         )
       })()
     })
