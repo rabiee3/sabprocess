@@ -5,12 +5,14 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import type { ReactNode } from 'react'
 import { initI18n, setLanguage } from '../i18n'
 import type { Factory } from '../lib/types'
+import en from '../i18n/en.json'
 
 vi.mock('../firebase', () => ({ db: {}, auth: {} }))
 const signInWithGoogle = vi.fn().mockResolvedValue(undefined)
-vi.mock('../auth/api', () => ({ signInWithGoogle: (...a: unknown[]) => signInWithGoogle(...a), signOutUser: vi.fn() }))
-const auth = { user: null as unknown }
-vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: auth.user, role: 'visitor', active: false, loading: false }) }))
+vi.mock('../auth/api', () => ({ signInWithGoogle: (...a: unknown[]) => signInWithGoogle(...a) }))
+vi.mock('../auth/signOutAndWipe', () => ({ signOutAndWipe: vi.fn() }))
+const auth = { user: null as unknown, role: 'visitor' }
+vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: auth.user, role: auth.role, active: false, loading: false }) }))
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
 const mapProps: Record<string, unknown>[] = []
 vi.mock('react-leaflet', () => ({
@@ -31,6 +33,7 @@ vi.mock('./publicRepo', () => ({
 }))
 
 import { Component as FactoryPage } from './FactoryPage'
+import { clearFactoryCache } from './factoryCache'
 
 const IMG = 'data:image/png;base64,AAAA'
 const factory: Factory = {
@@ -42,6 +45,8 @@ const factory: Factory = {
   approvedAt: new Date('2026-10-05T12:00:00Z'),
 }
 
+const pub = (f: Factory) => ({ factory: f, isPublic: f.status === 'approved' })
+
 function setup(entry: string | { pathname: string; state?: unknown } = '/f/f1') {
   const router = createMemoryRouter(
     [{ path: '/f/:id', element: <FactoryPage /> }, { path: '/', element: <p>map page</p> }],
@@ -52,12 +57,14 @@ function setup(entry: string | { pathname: string; state?: unknown } = '/f/f1') 
 }
 
 beforeEach(() => {
+  clearFactoryCache()
   initI18n()
   setLanguage('en')
   auth.user = null
+  auth.role = 'visitor'
   mapProps.length = 0
   signInWithGoogle.mockClear()
-  loadPublicFactory.mockReset().mockResolvedValue(factory)
+  loadPublicFactory.mockReset().mockResolvedValue(pub(factory))
   loadPhotos.mockReset().mockResolvedValue([{ id: 'p1', data: IMG }, { id: 'p2', data: IMG }])
   loadContact.mockReset().mockResolvedValue({ phone: '0100 123 4567', whatsapp: '01001234567', website: 'example.com', facebook: 'javascript:alert(1)', contactPerson: 'Hassan' })
 })
@@ -120,7 +127,7 @@ describe('FactoryPage', () => {
   })
 
   it('not found offers Try again, which re-runs the load', async () => {
-    loadPublicFactory.mockResolvedValueOnce(null).mockResolvedValueOnce(factory)
+    loadPublicFactory.mockResolvedValueOnce(null).mockResolvedValueOnce(pub(factory))
     setup()
     await userEvent.click(await screen.findByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })).toBeInTheDocument()
@@ -134,6 +141,22 @@ describe('FactoryPage', () => {
     expect(screen.getByText("Couldn't load this factory.")).toBeInTheDocument()
   })
 
+  it('a quota error loading the factory shows the service-busy message with Retry', async () => {
+    loadPublicFactory.mockRejectedValueOnce(Object.assign(new Error('quota'), { code: 'resource-exhausted' }))
+    setup()
+    expect(await screen.findByText('The service is busy right now — please try again later')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Factory unavailable' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })).toBeInTheDocument()
+  })
+
+  it('a quota error loading contacts shows the service-busy message', async () => {
+    auth.user = { uid: 'u1' }
+    loadContact.mockRejectedValueOnce(Object.assign(new Error('quota'), { code: 'resource-exhausted' }))
+    setup()
+    expect(await screen.findByText('The service is busy right now — please try again later')).toBeInTheDocument()
+  })
+
   it('contacts unavailable has a Retry that reloads', async () => {
     auth.user = { uid: 'u1' }
     loadContact.mockResolvedValueOnce(null).mockResolvedValueOnce({})
@@ -144,10 +167,45 @@ describe('FactoryPage', () => {
     expect(loadContact).toHaveBeenCalledTimes(2)
   })
 
-  it('shows the Demo badge for sample factories', async () => {
-    loadPublicFactory.mockResolvedValue({ ...factory, sample: true })
+  it('shows the shared Demo badge for sample factories only', async () => {
+    loadPublicFactory.mockResolvedValue(pub({ ...factory, sample: true }))
     setup()
-    expect(await screen.findByText('Demo')).toBeInTheDocument()
+    expect(await screen.findByText(en.demo.badge)).toHaveAttribute('data-demo-badge')
+  })
+
+  it('a public factory has no not-public banner', async () => {
+    setup()
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByText(en.factory.notPublic)).toBeNull()
+  })
+
+  it('not public (the owner reading their pending factory): warning banner, no contacts panel', async () => {
+    auth.user = { uid: 'u' }
+    auth.role = 'surveyor'
+    loadPublicFactory.mockResolvedValue(pub({ ...factory, status: 'pending' }))
+    setup()
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.getByText(en.factory.notPublic).closest('[role="status"]')).not.toBeNull()
+    expect(screen.queryByRole('region', { name: en.factory.contacts })).toBeNull()
+    expect(loadContact).not.toHaveBeenCalled()
+  })
+
+  it('not public, read by the admin: warning banner and the contacts panel', async () => {
+    auth.user = { uid: 'admin' }
+    auth.role = 'admin'
+    loadPublicFactory.mockResolvedValue(pub({ ...factory, status: 'hidden' }))
+    setup()
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.getByText(en.factory.notPublic)).toBeInTheDocument()
+    expect(await screen.findByText('Hassan')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: en.factory.contacts })).toBeInTheDocument()
+  })
+
+  it('area "other" shows the typed area name', async () => {
+    loadPublicFactory.mockResolvedValue(pub({ ...factory, area: 'other', areaOther: 'Abu Rawash' }))
+    setup()
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.getByText(/Abu Rawash/)).toBeInTheDocument()
   })
 
   it('Directions opens Google Maps safely', async () => {
@@ -208,6 +266,7 @@ describe('FactoryPage', () => {
     const router = setup()
     expect(await screen.findByText('Hassan')).toBeInTheDocument()
     auth.user = null
+  auth.role = 'visitor'
     await act(() => router.navigate('/f/f1?r=1'))
     expect(screen.queryByText('Hassan')).toBeNull()
     expect(screen.getByText('Sign in to see contacts')).toBeInTheDocument()
@@ -231,14 +290,41 @@ describe('FactoryPage', () => {
   })
 
   it('a late response for the old id does not overwrite the new one', async () => {
-    let resolveOld: (f: Factory) => void = () => {}
+    let resolveOld: (f: ReturnType<typeof pub>) => void = () => {}
     loadPublicFactory.mockImplementation((id: string) =>
-      id === 'f1' ? new Promise((r) => { resolveOld = r }) : Promise.resolve({ ...factory, id: 'f2', name: { en: 'Second Mill' } }),
+      id === 'f1' ? new Promise((r) => { resolveOld = r }) : Promise.resolve(pub({ ...factory, id: 'f2', name: { en: 'Second Mill' } })),
     )
     const router = setup()
     await act(() => router.navigate('/f/f2'))
     expect(await screen.findByRole('heading', { level: 1, name: 'Second Mill' })).toBeInTheDocument()
-    await act(async () => resolveOld(factory))
+    await act(async () => resolveOld(pub(factory)))
     expect(screen.getByRole('heading', { level: 1, name: 'Second Mill' })).toBeInTheDocument()
+  })
+
+  it('a second visit to the same factory in this session reads nothing again (session cache)', async () => {
+    const router = setup()
+    await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })
+    await waitFor(() => expect(screen.getAllByRole('img', { name: /Al-Nour Feed Mills/ }).length).toBeGreaterThan(0))
+    await act(() => router.navigate('/'))
+    await act(() => router.navigate('/f/f1'))
+    expect(screen.getByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })).toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: /Al-Nour Feed Mills/ }).length).toBeGreaterThan(0)
+    expect(loadPublicFactory).toHaveBeenCalledTimes(1)
+    expect(loadPhotos).toHaveBeenCalledTimes(1)
+  })
+
+  it('a missing factory or a failed photo read is not cached', async () => {
+    loadPublicFactory.mockResolvedValueOnce(null)
+    const router = setup()
+    await screen.findByRole('heading', { level: 1, name: 'Factory not found' })
+    loadPhotos.mockRejectedValueOnce(new Error('offline'))
+    await act(() => router.navigate('/'))
+    await act(() => router.navigate('/f/f1'))
+    await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })
+    await act(() => router.navigate('/'))
+    await act(() => router.navigate('/f/f1'))
+    await screen.findByRole('heading', { level: 1, name: 'Al-Nour Feed Mills' })
+    expect(loadPublicFactory).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(loadPhotos).toHaveBeenCalledTimes(2))
   })
 })

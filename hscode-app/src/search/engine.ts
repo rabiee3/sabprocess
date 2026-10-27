@@ -30,6 +30,21 @@ function commonPrefix(a: string, b: string): number {
   return i;
 }
 
+function passes(e: IndexEntry, f: SearchFilters): boolean {
+  if (f.area && e.a !== f.area) return false;
+  if (f.sector && e.s !== f.sector) return false;
+  if (f.hs) {
+    const d = normalizeHs(f.hs);
+    if (d && !e.m.some((p) => hsRelated(p.h, d))) return false;
+  }
+  return true;
+}
+
+/** The entries that pass the filters, newest first: what an empty query shows, without building an engine. */
+export function filterEntries(entries: IndexEntry[], f: SearchFilters): IndexEntry[] {
+  return entries.filter((e) => passes(e, f)).sort(byAt);
+}
+
 export function createEngine(entries: IndexEntry[], _lang: 'en' | 'ar'): Engine {
   const map = new Map(entries.map((e) => [e.id, e]));
   const areaById = new Map(areas().map((a) => [a.id, a]));
@@ -60,16 +75,6 @@ export function createEngine(entries: IndexEntry[], _lang: 'en' | 'ar'): Engine 
     },
   });
   mini.addAll(docs);
-
-  const passes = (e: IndexEntry, f: SearchFilters): boolean => {
-    if (f.area && e.a !== f.area) return false;
-    if (f.sector && e.s !== f.sector) return false;
-    if (f.hs) {
-      const d = normalizeHs(f.hs);
-      if (d && !e.m.some((p) => hsRelated(p.h, d))) return false;
-    }
-    return true;
-  };
 
   const textSearch = (q: string): IndexEntry[] => {
     let hits = mini.search(q);
@@ -112,6 +117,11 @@ export function createEngine(entries: IndexEntry[], _lang: 'en' | 'ar'): Engine 
 }
 
 const engines = new WeakMap<IndexEntry[], Engine>();
+
+/** The engine already built for these entries, if any (never builds). */
+export function peekEngine(entries: IndexEntry[]): Engine | undefined {
+  return engines.get(entries);
+}
 
 /** Memoised by array identity: loadIndex() returns the same array, so a remount never rebuilds. */
 export function getEngine(entries: IndexEntry[]): Engine {

@@ -26,12 +26,31 @@ if (useEmulator) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
   // Marker the e2e suite asserts, so a run against production config aborts.
   if (typeof document !== 'undefined') document.documentElement.dataset.emulator = 'true'
-} else if (typeof window !== 'undefined') {
-  // Analytics is lazy and never runs in emulator mode or unsupported environments (e.g. jsdom).
-  void import('firebase/analytics').then(async ({ getAnalytics, isSupported, logEvent }) => {
-    if (!(await isSupported())) return
-    const analytics = getAnalytics(app)
-    // A wrong site key or domain makes every read fail: log the first failure once.
-    if (appCheck) watchAppCheckErrors(appCheck, () => logEvent(analytics, 'app_check_error'))
-  })
 }
+
+/** Logs an Analytics event. */
+export type LogEvent = (name: string, params?: Record<string, unknown>) => void
+
+let analytics: Promise<LogEvent | null> | null = null
+
+/**
+ * Analytics, loaded lazily on first use and shared. Null in emulator mode, outside a browser, in unsupported
+ * environments (e.g. jsdom) or when the chunk cannot load.
+ */
+export function loadAnalytics(): Promise<LogEvent | null> {
+  if (useEmulator || typeof window === 'undefined') return Promise.resolve(null)
+  analytics ??= import('firebase/analytics')
+    .then(async ({ getAnalytics, isSupported, logEvent }) => {
+      if (!(await isSupported())) return null
+      const a = getAnalytics(app)
+      return ((name, params) => logEvent(a, name, params)) satisfies LogEvent
+    })
+    .catch(() => null)
+  return analytics
+}
+
+// Analytics starts with the app (outside the emulator). A wrong App Check site key or domain makes every read
+// fail: log the first failure once.
+void loadAnalytics().then((log) => {
+  if (log && appCheck) watchAppCheckErrors(appCheck, () => log('app_check_error'))
+})

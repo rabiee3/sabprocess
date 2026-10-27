@@ -2,7 +2,7 @@ import { areas, sectors } from '../data';
 import { normalizeArabic } from '../lib/arabic';
 import { indexTerms, queryTerm } from './terms';
 import { isHsQuery, normalizeHs } from '../lib/hs';
-import { searchHeadings } from '../hs/search';
+import type { HsHit } from '../hs/search';
 import type { Engine } from './engine';
 import { hsRelated } from './engine';
 
@@ -19,7 +19,11 @@ const MAX = 5;
 const productHay = (n: { en?: string; ar?: string }) =>
   `${n.en ?? ''} ${n.ar ?? ''}`.split(/\s+/).flatMap(indexTerms).join(' ');
 
-export function suggest(engine: Engine, q: string, lang: 'en' | 'ar'): Suggestions {
+/** HS heading search; it needs the lazily loaded HS table (src/hs/lazyTable.ts), so it is passed in. */
+export type HeadingSearch = (query: string, limit?: number) => HsHit[];
+
+/** Without `searchHs` (the HS table not loaded yet) the HS group stays empty. */
+export function suggest(engine: Engine, q: string, lang: 'en' | 'ar', searchHs?: HeadingSearch): Suggestions {
   const out: Suggestions = { products: [], hs: [], sectors: [], areas: [] };
   const needle = normalizeArabic(q);
   if (!needle) return out;
@@ -44,7 +48,7 @@ export function suggest(engine: Engine, q: string, lang: 'en' | 'ar'): Suggestio
     }
   }
 
-  for (const h of searchHeadings(isHsQuery(q) ? normalizeHs(q).slice(0, 4) : q, 200)) {
+  for (const h of searchHs?.(isHsQuery(q) ? normalizeHs(q).slice(0, 4) : q, 200) ?? []) {
     if (out.hs.length >= MAX) break;
     if ([...codes].some((c) => hsRelated(c, h.code))) {
       out.hs.push({ code: h.code, label: pick(h.en, h.ar) });

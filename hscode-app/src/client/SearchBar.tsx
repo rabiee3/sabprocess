@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import searchIcon from '../assets/icons/search.svg?raw'
 import closeIcon from '../assets/icons/close.svg?raw'
+import { useHsTable } from '../hs/lazyTable'
 import { formatHs } from '../lib/hs'
 import type { Engine } from '../search/engine'
 import { suggest, type Suggestions } from '../search/suggest'
@@ -31,18 +32,32 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
   const [active, setActive] = useState(-1)
   const [sug, setSug] = useState<Suggestions>(EMPTY)
   const input = useRef<HTMLInputElement>(null)
+  const typing = !!text.trim() && text !== value
+  // HS names for suggestions come from the HS table, fetched the first time someone types (spec §8).
+  const { table: hsTable } = useHsTable(typing)
 
-  useEffect(() => setText(value), [value])
+  // A new committed value (a search applied, Back, a cleared filter) replaces the text; adjusted while rendering.
+  const [shownValue, setShownValue] = useState(value)
+  if (value !== shownValue) {
+    setShownValue(value)
+    setText(value)
+  }
 
-  // Suggestions are debounced; the engine is built once elsewhere.
+  // Not typing (or no engine yet): no suggestions, cleared at once rather than after the debounce.
+  const suggesting = !!engine && typing
+  const [wasSuggesting, setWasSuggesting] = useState(suggesting)
+  if (suggesting !== wasSuggesting) {
+    setWasSuggesting(suggesting)
+    if (!suggesting) setSug(EMPTY)
+  }
+
+  // Suggestions are debounced; the engine is built elsewhere, when the browser is idle. Text typed before it is
+  // ready gets its suggestions once it is (the effect re-runs on `engine`), and HS names once the table arrives.
   useEffect(() => {
-    if (!engine || !text.trim() || text === value) {
-      setSug(EMPTY)
-      return
-    }
-    const h = setTimeout(() => setSug(suggest(engine, text, lang)), 150)
+    if (!engine || !typing) return
+    const h = setTimeout(() => setSug(suggest(engine, text, lang, hsTable?.searchHeadings)), 150)
     return () => clearTimeout(h)
-  }, [engine, text, lang, value])
+  }, [engine, text, lang, typing, hsTable])
 
   const options = useMemo<Option[]>(() => {
     const q = text.trim()
@@ -105,7 +120,7 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
           aria-expanded={show}
           aria-controls={listId}
           aria-activedescendant={show && active >= 0 ? `${uid}-o${active}` : undefined}
-          placeholder={t('map.searchPlaceholder')}
+          placeholder={t(engine ? 'map.searchPlaceholder' : 'map.preparingSearch')}
           value={text}
           onChange={(e) => {
             setText(e.target.value)

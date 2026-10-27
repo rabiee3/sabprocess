@@ -1,0 +1,1 @@
+import{V as e,g as t,t as n}from"./components-D5WostKZ.js";var r=e();function i(){let{search:e,hash:i}=t();return(0,r.jsx)(n,{to:{pathname:`/`,search:e,hash:i},replace:!0})}export{i as Component};

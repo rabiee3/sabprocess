@@ -3,6 +3,8 @@ import { expect, test, type Page } from '@playwright/test'
 import en from '../src/i18n/en.json' with { type: 'json' }
 import ar from '../src/i18n/ar.json' with { type: 'json' }
 import { signInGoogleEmulator } from './helpers/signInGoogleEmulator'
+import areas from '../src/data/areas.json' with { type: 'json' }
+import sectors from '../src/data/sectors.json' with { type: 'json' }
 
 // Seeded by seed/seed-emulator.ts. demo-cables is hidden by admin.spec (e), so it is never relied on here.
 const FEED_MILL = { id: 'demo-feed-mill', en: 'Delta Feed Mill', ar: 'مطحنة الدلتا للأعلاف', phone: '+20 100 000 0001' }
@@ -138,16 +140,16 @@ test('(g) the seeded sample carries a Demo badge on its card and its page; a rea
   await open(page, './')
   await expectPinsAndResults(page, en)
   const feedCard = cards(page).filter({ has: page.getByRole('heading', { level: 3, name: FEED_MILL.en }) })
-  await expect(feedCard.getByText(en.map.demo, { exact: true })).toBeVisible()
+  await expect(feedCard.getByText(en.demo.badge, { exact: true })).toBeVisible()
   const grainCard = cards(page).filter({ has: page.getByRole('heading', { level: 3, name: GRAIN_MILL.en }) })
   await expect(grainCard).toBeVisible()
-  await expect(grainCard.getByText(en.map.demo, { exact: true })).toHaveCount(0)
+  await expect(grainCard.getByText(en.demo.badge, { exact: true })).toHaveCount(0)
 
   await open(page, `f/${FEED_MILL.id}`)
-  await expect(page.getByRole('main').getByText(en.factory.demo, { exact: true })).toBeVisible()
+  await expect(page.getByRole('main').getByText(en.demo.badge, { exact: true })).toBeVisible()
   await open(page, `f/${GRAIN_MILL.id}`)
   await expect(page.getByRole('heading', { level: 1, name: GRAIN_MILL.en })).toBeVisible()
-  await expect(page.getByRole('main').getByText(en.factory.demo, { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('main').getByText(en.demo.badge, { exact: true })).toHaveCount(0)
 })
 
 test('(i) axe: the map, the results open, and the factory page', async ({ page }, testInfo) => {
@@ -186,4 +188,136 @@ test('an old /map?q= link lands on the root map with the query intact, and Back 
   await expect(searchBox(page)).toHaveValue('feed')
   await page.goBack()
   await expect(page).toHaveURL(new RegExp(`/hscode/f/${FEED_MILL.id}$`))
+})
+
+// ---- P5: the ☰ menu, the Google "G", long filter names, and axe in both languages (spec §11) ----
+
+const menuButton = (page: Page, s: Strings = en) => page.getByRole('banner').getByRole('button', { name: s.menu.open })
+const inViewport = async (page: Page, box: { x: number; width: number } | null) => {
+  const width = page.viewportSize()!.width
+  expect(box).not.toBeNull()
+  expect(box!.x).toBeGreaterThanOrEqual(0)
+  expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+}
+/** The Google "G" inside a button is rendered and visible (not just in the DOM). */
+async function expectGoogleG(button: ReturnType<Page['getByRole']>) {
+  await expect(button).toBeVisible()
+  const g = button.locator('svg').first()
+  await expect(g).toBeVisible()
+  const box = (await g.boundingBox())!
+  expect(box.width).toBeGreaterThanOrEqual(16)
+  expect(box.height).toBeGreaterThanOrEqual(16)
+}
+
+test('(k) ☰ menu by keyboard: Enter opens on the first item, ArrowDown moves, Escape returns focus, "For surveyors" reaches /survey', async ({ page }) => {
+  await open(page, './')
+  await expectPinsAndResults(page, en)
+  const button = menuButton(page)
+  await button.focus()
+  await page.keyboard.press('Enter')
+  const items = page.getByRole('menu').getByRole('menuitem')
+  await expect(button).toHaveAttribute('aria-expanded', 'true')
+  await expect(items.first()).toBeFocused()
+  await page.keyboard.press('ArrowDown')
+  await expect(items.nth(1)).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+  await expect(button).toBeFocused()
+  await expect(button).toHaveAttribute('aria-expanded', 'false')
+
+  await page.keyboard.press('Enter')
+  await expect(items.first()).toBeFocused()
+  await page.keyboard.press('ArrowDown')
+  await expect(items.nth(1)).toHaveText(en.menu.surveyors)
+  await expect(items.nth(1)).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/hscode\/survey$/)
+  await expect(page.getByRole('heading', { level: 1, name: en.survey.gate.signInTitle })).toBeVisible()
+})
+
+test('(l) Arabic: the ☰ menu opens on the inline end, inside the viewport, with the Arabic items', async ({ page }) => {
+  await open(page, './')
+  await page.locator('button[lang="ar"]').click()
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+  await menuButton(page, ar as Strings).click()
+  const menu = page.getByRole('menu', { name: ar.menu.open })
+  await expect(menu.getByRole('menuitem')).toHaveText([ar.menu.about, ar.menu.surveyors])
+  await inViewport(page, await menu.boundingBox())
+  expect(await noHScroll(page)).toBe(true)
+})
+
+test('(m) the Google "G" shows on the header Sign in and on the signed-out ContactsPanel', async ({ page }) => {
+  await open(page, './')
+  await expectGoogleG(page.getByRole('banner').getByRole('button', { name: en.nav.signIn }))
+  await open(page, `f/${FEED_MILL.id}`)
+  const contacts = page.getByRole('region', { name: en.factory.contacts })
+  await expectGoogleG(contacts.getByRole('button', { name: en.auth.continueWithGoogle }))
+  // Arabic: the full-width ContactsPanel button keeps its G and its label on one line inside the panel.
+  await page.locator('button[lang="ar"]').click()
+  const arButton = page.getByRole('region', { name: ar.factory.contacts }).getByRole('button', { name: ar.auth.continueWithGoogle })
+  await expectGoogleG(arButton)
+  await inViewport(page, await arButton.boundingBox())
+  expect((await arButton.boundingBox())!.height).toBeLessThanOrEqual(56) // one line, not wrapped
+  expect(await noHScroll(page)).toBe(true)
+})
+
+// The longest names in src/data: in English the "Industrial Extension" area, in Arabic Industrial Zone 2 (43 chars);
+// "Plastics and packaging" is the longest sector in both. seed-crates is in zone 2 + plastics, so AR has a result.
+const LONGEST = {
+  en: { area: 'oct6-extension', sector: 'plastics-packaging' },
+  ar: { area: 'oct6-zone-2', sector: 'plastics-packaging' },
+} as const
+
+for (const lang of ['en', 'ar'] as const) {
+  test(`(n) ${lang.toUpperCase()}: the longest area and sector selected never scroll the page or the desktop filter row`, async ({ page }, testInfo) => {
+    const s = (lang === 'en' ? en : ar) as Strings
+    await open(page, `./?area=${LONGEST[lang].area}&sector=${LONGEST[lang].sector}`)
+    if (lang === 'ar') await page.locator('button[lang="ar"]').click()
+    await expect(page.locator('html')).toHaveAttribute('lang', lang)
+    const areaChip = page.locator('main button[aria-haspopup="dialog"]').first()
+    const sectorChip = page.locator('main button[aria-haspopup="dialog"]').nth(1)
+    const name = (list: { id: string; en: string; ar: string }[], id: string) => list.find((x) => x.id === id)![lang]
+    await expect(areaChip).toHaveAttribute('title', name(areas, LONGEST[lang].area))
+    await expect(sectorChip).toHaveAttribute('title', name(sectors, LONGEST[lang].sector))
+    await expect(areaChip).toHaveAccessibleName(name(areas, LONGEST[lang].area))
+    await expect(page.getByRole('button', { name: s.map.nearMe })).toBeVisible()
+    if (lang === 'ar') await expect(cardNames(page, s).filter({ hasText: 'المنطقة الثانية للصناديق والتعبئة' })).toBeVisible()
+    expect(await noHScroll(page)).toBe(true)
+    const row = areaChip.locator('..')
+    if (testInfo.project.name === 'desktop') {
+      // Desktop wraps instead of scrolling: every chip is on screen and the row never overflows sideways.
+      for (const chip of [areaChip, sectorChip]) await inViewport(page, await chip.boundingBox())
+      expect(await row.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
+    } else {
+      // Phones keep one scrolling row, but no chip is wider than the viewport minus 32px.
+      const max = page.viewportSize()!.width - 32
+      for (const chip of [areaChip, sectorChip]) expect((await chip.boundingBox())!.width).toBeLessThanOrEqual(max)
+      await inViewport(page, await areaChip.boundingBox())
+    }
+    await page.screenshot({ path: testInfo.outputPath(`filters-${lang}.png`) })
+  })
+}
+
+test('(o) axe in EN and AR: the map, the ☰ menu open, and the factory page', async ({ page }) => {
+  const scan = async (label: string) => {
+    const results = await new AxeBuilder({ page }).analyze()
+    expect(results.violations, label).toEqual([])
+  }
+  for (const lang of ['en', 'ar'] as const) {
+    const s = (lang === 'en' ? en : ar) as Strings
+    await open(page, './')
+    await page.locator(`header button[lang="${lang}"]`).click()
+    await expect(page.locator('html')).toHaveAttribute('lang', lang)
+    await expectPinsAndResults(page, s)
+    await scan(`${lang} map`)
+    await menuButton(page, s).click()
+    await expect(page.getByRole('menu')).toBeVisible()
+    await scan(`${lang} menu open`)
+    await page.keyboard.press('Escape')
+
+    await open(page, `f/${FEED_MILL.id}`)
+    await expect(page.getByRole('heading', { level: 1, name: lang === 'en' ? FEED_MILL.en : FEED_MILL.ar })).toBeVisible()
+    await expect(page.getByRole('region', { name: s.factory.contacts })).toBeVisible()
+    await scan(`${lang} factory page`)
+  }
 })

@@ -1,4 +1,4 @@
-import { headings } from '../data';
+import { headings } from '../data/hsTable';
 import { normalizeArabic } from '../lib/arabic';
 import { isHsQuery, normalizeHs } from '../lib/hs';
 

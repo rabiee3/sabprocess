@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import emptyIcon from '../assets/icons/search-empty.svg?raw'
 import type { IndexEntry } from '../lib/types'
@@ -20,7 +20,13 @@ type Props = {
   fromCache?: boolean
   onSelect: (id: string) => void
   onTry: (q: string) => void
+  /** Phone: the sheet's height in px whenever it changes (the map pads its fit by it). */
+  onHeight?: (px: number) => void
 }
+
+// The phone sheet's heights, as fractions of the map area (the h-[40%] / h-[85%] classes below).
+const COLLAPSED = 0.4
+const EXPANDED = 0.85
 
 function Skeletons() {
   return (
@@ -44,8 +50,27 @@ export function ResultsSheet(p: Props) {
   const { entries, selectedId } = p
   const [expanded, setExpanded] = useState(false)
   const [limit, setLimit] = useState(PAGE)
+  const sheet = useRef<HTMLElement>(null)
+  const { desktop, onHeight } = p
 
-  useEffect(() => setLimit(PAGE), [entries])
+  // From the target fraction of the map area, not offsetHeight, which lags behind during the height transition.
+  useLayoutEffect(() => {
+    if (desktop || !onHeight) return
+    const measure = () => {
+      const area = sheet.current?.parentElement?.clientHeight || window.innerHeight
+      onHeight(Math.round(area * (expanded ? EXPANDED : COLLAPSED)))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [desktop, onHeight, expanded])
+
+  // A new result list starts again at the first page (adjusted while rendering, not in an effect).
+  const [pagedEntries, setPagedEntries] = useState(entries)
+  if (entries !== pagedEntries) {
+    setPagedEntries(entries)
+    setLimit(PAGE)
+  }
   useEffect(() => {
     if (selectedId) document.getElementById(`card-${selectedId}`)?.scrollIntoView?.({ block: 'nearest' })
   }, [selectedId])
@@ -122,6 +147,7 @@ export function ResultsSheet(p: Props) {
   }
   return (
     <section
+      ref={sheet}
       aria-label={t('map.resultsLabel')}
       className={`absolute inset-x-0 bottom-0 z-[1050] flex flex-col rounded-t-(--radius-sheet) bg-surface shadow-(--shadow-sheet) transition-[height] ${
         expanded ? 'h-[85%]' : 'h-[40%]'

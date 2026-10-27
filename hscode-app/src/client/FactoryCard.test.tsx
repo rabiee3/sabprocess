@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { initI18n, setLanguage } from '../i18n'
 import type { IndexEntry } from '../lib/types'
+import en from '../i18n/en.json'
 
 vi.mock('../firebase', () => ({ db: {} }))
 const getDoc = vi.fn()
@@ -46,12 +47,17 @@ describe('FactoryCard', () => {
     expect(screen.getByText('1005')).toBeInTheDocument()
   })
 
-  it('Demo badge only for samples', () => {
+  it('the shared Demo badge only for samples', () => {
     const { unmount } = show(base)
-    expect(screen.queryByText('Demo')).toBeNull()
+    expect(screen.queryByText(en.demo.badge)).toBeNull()
     unmount()
     show({ ...base, x: true })
-    expect(screen.getByText('Demo')).toBeInTheDocument()
+    expect(screen.getByText(en.demo.badge)).toHaveAttribute('data-demo-badge')
+  })
+
+  it('area "other" shows the typed area name from the index', () => {
+    show({ ...base, a: 'other', ao: 'Abu Rawash' })
+    expect(screen.getByText(/Abu Rawash/)).toBeInTheDocument()
   })
 
   it('formats distance per locale and omits it when unknown', () => {

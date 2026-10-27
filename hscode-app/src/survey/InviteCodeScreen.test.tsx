@@ -7,7 +7,7 @@ import en from '../i18n/en.json'
 const claimInvite = vi.fn()
 let online = true
 let role = 'client'
-vi.mock('../auth/api', () => ({ claimInvite: (...a: unknown[]) => claimInvite(...a), signInWithGoogle: vi.fn(), signOutUser: vi.fn() }))
+vi.mock('../auth/api', () => ({ claimInvite: (...a: unknown[]) => claimInvite(...a), signInWithGoogle: vi.fn() }))
 vi.mock('../ui/useOnline', () => ({ useOnline: () => online }))
 vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({ user: { uid: 'u1', email: 'a@b.com', displayName: 'A' }, role, active: false, loading: false }),

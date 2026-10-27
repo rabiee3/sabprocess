@@ -1,13 +1,14 @@
 import { Link, useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth/useAuth'
-import { signOutUser } from '../auth/api'
+import { useSignOut } from '../auth/useSignOut'
 import { useGoogleSignIn } from '../auth/useGoogleSignIn'
 import { GoogleButton } from '../ui/GoogleButton'
 import { LangToggle } from '../ui/LangToggle'
 import { Logo } from '../ui/Logo'
 import { Bdi } from '../ui/Bdi'
 import { Banner } from '../ui/Banner'
+import { SignOutKeptBanner } from '../ui/SignOutKeptBanner'
 import { ClientMenu } from '../ui/ClientMenu'
 import { Icon } from '../ui/Icon'
 import logoutIcon from '../assets/icons/logout.svg?raw'
@@ -26,6 +27,7 @@ export function ClientHeader({ onAbout }: { onAbout?: () => void } = {}) {
   const { user } = useAuth()
   const { signIn, failed, clearError } = useGoogleSignIn()
   const { canInstall, install } = usePwa()
+  const { signOut, busy } = useSignOut()
   return (
     <>
     <header className="z-[1200] flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3">
@@ -40,9 +42,15 @@ export function ClientHeader({ onAbout }: { onAbout?: () => void } = {}) {
               <Bdi>{user.displayName || user.email}</Bdi>
             </span>
             {/* Below 640px only the icon, so Logo · LangToggle · Sign out · ☰ fit 360px in Arabic; never wraps. */}
-            <button type="button" className={`${btn} min-w-11 whitespace-nowrap`} onClick={() => void signOutUser()}>
+            <button
+              type="button"
+              className={`${btn} min-w-11 whitespace-nowrap disabled:opacity-60`}
+              disabled={busy}
+              aria-busy={busy || undefined}
+              onClick={() => void signOut()}
+            >
               <Icon svg={logoutIcon} className="size-5 sm:hidden rtl:-scale-x-100" />
-              <span className="max-sm:sr-only">{t('nav.signOut')}</span>
+              <span className="max-sm:sr-only">{t(busy ? 'nav.signingOut' : 'nav.signOut')}</span>
             </button>
           </>
         ) : (
@@ -59,6 +67,7 @@ export function ClientHeader({ onAbout }: { onAbout?: () => void } = {}) {
         <Banner tone="danger" onClose={() => clearError()}>{t('errors.generic')}</Banner>
       </div>
     )}
+    <SignOutKeptBanner />
     </>
   )
 }

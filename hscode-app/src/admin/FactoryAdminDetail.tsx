@@ -37,7 +37,7 @@ export function FactoryAdminDetail({ fid }: { fid: string }) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { refreshPending } = useAdmin()
-  const { state, reload: load, setDraft } = useFactoryLoad(fid)
+  const { state, reload: load, dispatch } = useFactoryLoad(fid)
   const [showErrors, setShowErrors] = useState(false)
   const [error, setError] = useState<ActionError | null>(null)
   const created = (useLocation().state as { created?: string } | null)?.created
@@ -132,7 +132,7 @@ export function FactoryAdminDetail({ fid }: { fid: string }) {
       {error && <ActionErrorBanner error={error} onReload={reload} />}
       {errors.length > 0 && <Banner tone="danger">{t('admin.factories.detail.fixErrors')}</Banner>}
 
-      <AdminFactoryForm value={draft} errors={errors} onChange={(next) => setDraft(data, next)} />
+      <AdminFactoryForm value={draft} errors={errors} dispatch={dispatch} />
       <PhotosAndContact photos={data.photos} contact={data.contact} />
 
       {dirty && status !== 'pending' && status !== 'rejected' && (

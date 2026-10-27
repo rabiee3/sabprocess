@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, Route, Routes } from 'react-router'
 import { useGoogleSignIn } from '../auth/useGoogleSignIn'
 import { GoogleButton } from '../ui/GoogleButton'
 import { Banner } from '../ui/Banner'
 import { useAuth } from '../auth/useAuth'
+import { loadHsTable } from '../hs/lazyTable'
+import { whenIdle } from '../lib/idle'
 import splashPattern from '../assets/patterns/splash-pattern.svg'
 import { Placeholder } from '../routes/Placeholder'
 import { AppHeader } from '../ui/AppHeader'
@@ -49,6 +51,9 @@ function SignInPanel() {
 }
 
 export function Component() {
+  // Warm the HS table chunk once the page is idle: the service worker caches it, so the HS picker still works
+  // when the surveyor is offline in the field later (spec §8). The client map never does this.
+  useEffect(() => whenIdle(() => void loadHsTable().catch(() => {})), [])
   const { t } = useTranslation()
   const { role, active, loading } = useAuth()
 

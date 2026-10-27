@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { loadEnv, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
-import { APP_CHUNKS_CACHE } from './src/pwa/cacheNames.ts'
+import { APP_CHUNKS_CACHE, APP_CHUNKS_MAX } from './src/pwa/cacheNames.ts'
 
 // Brand tokens (src/styles/index.css): brand-500 and surface.
 const THEME_COLOR = '#ffc53d'
@@ -82,16 +82,46 @@ export default defineConfig(({ mode }) => {
               return { manifest: entries.filter((e) => !e.url.startsWith('assets/') || shell.has(e.url)), warnings: [] }
             },
           ],
-          // Runtime caching: lazy route chunks (and their assets) and OSM tiles only. Firestore, Google auth,
-          // reCAPTCHA and Analytics have no route, so the service worker never touches them (check-build
-          // asserts it).
+          // Runtime caching: lazy route chunks (and their assets), Google Fonts and OSM tiles only. Firestore,
+          // Google auth, reCAPTCHA and Analytics have no route, so the service worker never touches them
+          // (check-build asserts it).
           runtimeCaching: [
             {
-              urlPattern: /\/hscode\/assets\//,
+              // Same origin, path-anchored: never matches a query string that merely contains the path.
+              urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/hscode/assets/'),
               handler: 'StaleWhileRevalidate',
-              // Hashed, immutable files. ignoreVary: a `Vary: Origin` response (vite preview, CORS) must still
-              // match the page's module-script request, which carries Origin while the cached one may not.
-              options: { cacheName: APP_CHUNKS_CACHE, expiration: { maxEntries: 60 }, matchOptions: { ignoreVary: true } },
+              options: {
+                cacheName: APP_CHUNKS_CACHE,
+                expiration: { maxEntries: APP_CHUNKS_MAX },
+                // Hashed, immutable files. ignoreVary: a `Vary: Origin` response (vite preview, CORS) must still
+                // match the page's module-script request, which carries Origin while the cached one may not.
+                matchOptions: { ignoreVary: true },
+                plugins: [
+                  {
+                    // Mirrors isCacheableAsset (src/pwa/cacheNames.ts), inlined because Workbox serialises it:
+                    // only a 200 of the right type, never HTML (an SPA rewrite of a missing chunk).
+                    cacheWillUpdate: async ({ request, response }) => {
+                      const ct = (response.headers.get('content-type') || '').toLowerCase()
+                      const path = new URL(request.url).pathname
+                      if (response.status !== 200 || ct.includes('text/html')) return null
+                      if (path.endsWith('.js')) return ct.includes('javascript') ? response : null
+                      if (path.endsWith('.css')) return ct.includes('text/css') ? response : null
+                      return response
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              // The shell's fonts (spec §7). They are Google Fonts, not self-hosted, so they are cached on first
+              // use instead of precached: the stylesheet and the woff2 files, exactly these two hosts.
+              urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\//,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-fonts',
+                expiration: { maxEntries: 30, maxAgeSeconds: 31536000 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
             },
             {
               urlPattern: /^https:\/\/tile\.openstreetmap\.org\//,
@@ -107,7 +137,7 @@ export default defineConfig(({ mode }) => {
         devOptions: { enabled: false },
       }),
     ],
-    build: { outDir: '../hscode', emptyOutDir: true },
+    build: { outDir: '../hscode', emptyOutDir: true, manifest: true },
     test: {
       alias: { 'virtual:pwa-register': 'vite-plugin-pwa/dist/client/dev/register.js' },
       // Every test run (unit and rules) targets the emulators / demo-hscode, never production.

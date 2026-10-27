@@ -8,8 +8,9 @@ import en from '../i18n/en.json'
 
 let auth: Record<string, unknown> = {}
 vi.mock('../auth/useAuth', () => ({ useAuth: () => auth }))
-const signOutUser = vi.fn()
-vi.mock('../auth/api', () => ({ signInAdmin: vi.fn(), signOutUser: () => signOutUser() }))
+const signOutAndWipe = vi.hoisted(() => vi.fn())
+vi.mock('../auth/api', () => ({ signInAdmin: vi.fn() }))
+vi.mock('../auth/signOutAndWipe', () => ({ signOutAndWipe: () => signOutAndWipe() }))
 vi.mock('../firebase', () => ({ db: {} }))
 const getCount = vi.fn()
 vi.mock('firebase/firestore', () => ({
@@ -55,7 +56,7 @@ describe('AdminRoute', () => {
   beforeEach(() => {
     initI18n()
     getCount.mockReset().mockResolvedValue({ data: () => ({ count: 4 }) })
-    signOutUser.mockReset()
+    signOutAndWipe.mockReset()
   })
 
   it('loading shows a spinner and an sr-only h1', () => {
@@ -75,7 +76,38 @@ describe('AdminRoute', () => {
     expect(screen.getByText(en.admin.notAdmin.title)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: en.admin.notAdmin.survey })).toHaveAttribute('href', '/survey')
     await userEvent.click(screen.getByRole('button', { name: en.nav.signOut }))
-    expect(signOutUser).toHaveBeenCalled()
+    expect(signOutAndWipe).toHaveBeenCalled()
+  })
+  it('admin Sign out is disabled and busy while it runs', async () => {
+    let done: (v: string) => void = () => {}
+    signOutAndWipe.mockImplementation(() => new Promise((r) => { done = r }))
+    auth = { user, role: 'admin', active: true, loading: false }
+    renderAt()
+    await userEvent.click(screen.getByRole('button', { name: en.nav.signOut }))
+    const btn = screen.getByRole('button', { name: en.nav.signingOut })
+    expect(btn).toBeDisabled()
+    expect(btn).toHaveAttribute('aria-busy', 'true')
+    await act(async () => done('wiped'))
+    expect(screen.getByRole('button', { name: en.nav.signOut })).toBeEnabled()
+  })
+  it('admin sign-out with writes still pending: the kept-data note survives the switch to the sign-in form', async () => {
+    signOutAndWipe.mockResolvedValue('kept')
+    auth = { user, role: 'admin', active: true, loading: false }
+    const { rerender } = renderAt()
+    await userEvent.click(screen.getByRole('button', { name: en.nav.signOut }))
+    auth = { user: null, role: 'visitor', active: false, loading: false }
+    rerender(
+      <MemoryRouter initialEntries={['/admin']}>
+        <Routes>
+          <Route path="/admin/*" element={<AdminRoute />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(screen.getByLabelText(en.admin.signIn.email)).toBeInTheDocument()
+    const msg = await screen.findByText(en.nav.signOutKeptData)
+    expect(msg.closest('.fixed')).not.toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: en.common.close }))
+    expect(screen.queryByText(en.nav.signOutKeptData)).toBeNull()
   })
   it('admin sees 5 nav links, the pending badge and redirects to review', async () => {
     auth = { user, role: 'admin', active: true, loading: false }

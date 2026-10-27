@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router'
 import { initI18n } from '../i18n'
@@ -8,18 +8,32 @@ import { safeStorage } from '../lib/safeStorage'
 
 vi.mock('../firebase', () => ({ db: {}, auth: {} }))
 const signInWithGoogle = vi.fn()
-vi.mock('../auth/api', () => ({ signInWithGoogle: (...a: unknown[]) => signInWithGoogle(...a), signOutUser: vi.fn() }))
+vi.mock('../auth/api', () => ({ signInWithGoogle: (...a: unknown[]) => signInWithGoogle(...a) }))
+vi.mock('../auth/signOutAndWipe', () => ({ signOutAndWipe: vi.fn() }))
 vi.mock('firebase/firestore', () => ({ doc: () => ({}), getDoc: vi.fn().mockResolvedValue({ exists: () => false }) }))
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
 
 const loadIndex = vi.fn()
-vi.mock('../search/indexSource', () => ({ loadIndex: () => loadIndex() }))
+vi.mock('../search/indexSource', () => ({ loadIndex: (...a: unknown[]) => loadIndex(...a) }))
+
+// The HS table: who asks for it (SearchBar asks only once someone types).
+const loadHsTable = vi.fn(() => new Promise(() => {}))
+const hsWanted = vi.fn()
+vi.mock('../hs/lazyTable', () => ({
+  loadHsTable: () => loadHsTable(),
+  useHsTable: (enabled = true) => {
+    if (enabled) hsWanted()
+    return { table: null, failed: false }
+  },
+}))
 
 const near = { status: 'idle' as string, pos: undefined as { lat: number; lng: number } | undefined, request: vi.fn() }
 vi.mock('./useNearMe', () => ({ useNearMe: () => near }))
 
+const mapProps = vi.hoisted(() => ({ last: {} as Record<string, unknown> }))
 vi.mock('../map/ResultsMap', () => ({
-  ResultsMap: ({ entries, onSelect, userPos }: { entries: IndexEntry[]; onSelect: (id: string) => void; userPos?: unknown }) => (
+  ResultsMap: ({ entries, onSelect, userPos, ...rest }: { entries: IndexEntry[]; onSelect: (id: string) => void; userPos?: unknown }) => (
+    (mapProps.last = rest),
     <div data-testid="map" data-user={userPos ? 'yes' : 'no'}>
       {entries.map((e) => (
         <button key={e.id} type="button" data-testid={`pin-${e.id}`} onClick={() => onSelect(e.id)} />
@@ -162,12 +176,37 @@ describe('MapHome', () => {
     expect(screen.queryByRole('article')).toBeNull()
   })
 
-  it('shows the Demo badge for sample factories and the saved-results note from cache', async () => {
+  it('on a phone the map gets the sheet height and the search overlay to pad its fit; expanding the sheet grows it', async () => {
+    setup()
+    await screen.findAllByRole('article')
+    expect(mapProps.last.desktop).toBe(false)
+    const ref = mapProps.last.topOverlayRef as { current: HTMLElement | null }
+    expect(ref.current).not.toBeNull()
+    expect(within(ref.current!).getByRole('combobox')).toBeInTheDocument()
+    const collapsed = mapProps.last.sheetPx as number
+    expect(collapsed).toBeGreaterThan(0)
+    await userEvent.click(screen.getByRole('button', { name: 'Expand or collapse results' }))
+    await waitFor(() => expect(mapProps.last.sheetPx as number).toBeGreaterThan(collapsed))
+  })
+
+  it('shows the Demo badge for sample factories and the saved-results note from cache while offline', async () => {
+    loadIndex.mockResolvedValue({ entries: ENTRIES, fromCache: true })
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    try {
+      setup()
+      await screen.findAllByRole('article')
+      expect(screen.getAllByText('Demo')).toHaveLength(1)
+      expect(screen.getByText('Showing saved results')).toBeInTheDocument()
+    } finally {
+      online.mockRestore()
+    }
+  })
+
+  it('a cached index shown while online has no saved-results note (it is being revalidated)', async () => {
     loadIndex.mockResolvedValue({ entries: ENTRIES, fromCache: true })
     setup()
     await screen.findAllByRole('article')
-    expect(screen.getAllByText('Demo')).toHaveLength(1)
-    expect(screen.getByText('Showing saved results')).toBeInTheDocument()
+    expect(screen.queryByText('Showing saved results')).toBeNull()
   })
 
   it('loads the index once and does not reload on typing', async () => {
@@ -184,6 +223,47 @@ describe('MapHome', () => {
     expect(screen.getByTestId('loc').textContent).not.toContain('near')
   })
 
+  it('arriving with near=1 and a recent location fix keeps near and sorts by distance, without asking again', async () => {
+    near.status = 'ok'
+    near.pos = { lat: 30, lng: 31 }
+    setup('/?near=1')
+    await screen.findAllByRole('article')
+    expect(near.request).not.toHaveBeenCalled()
+    expect(screen.getByTestId('loc').textContent).toContain('near=1')
+    expect(names()).toEqual(['Maize Growers', 'Nile Fodder', 'Delta Feed Mill'])
+  })
+
+  it('a quota error on the index shows the service-busy message with Retry', async () => {
+    loadIndex.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'quota' }))
+    setup()
+    expect(await screen.findByText('The service is busy right now — please try again later')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+
+  it('closing the Near me message hides it; a new failed request shows it again', async () => {
+    near.status = 'denied'
+    setup()
+    await screen.findAllByRole('article')
+    await userEvent.click(screen.getByRole('button', { name: /Near me/ }))
+    const msg = await screen.findByText(/Location is blocked/)
+    await userEvent.click(within(msg.closest('[role="status"]') as HTMLElement).getByRole('button'))
+    expect(screen.queryByText(/Location is blocked/)).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /Near me/ }))
+    expect(await screen.findByText(/Location is blocked/)).toBeInTheDocument()
+  })
+
+  it('a new result list starts again at the first page of cards', async () => {
+    const many = Array.from({ length: 60 }, (_, i) => entry(`m${i}`, `Mill ${i}`, 30 + i / 100, i))
+    loadIndex.mockResolvedValue({ entries: many, fromCache: false })
+    setup()
+    await screen.findAllByRole('article')
+    expect(screen.getAllByRole('article')).toHaveLength(50)
+    await userEvent.click(screen.getByRole('button', { name: /show more/i }))
+    expect(screen.getAllByRole('article')).toHaveLength(60)
+    await userEvent.type(screen.getByRole('combobox'), 'mill{Enter}')
+    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(50))
+  })
+
   it('Back steps through committed searches', async () => {
     const router = setup()
     await screen.findAllByRole('article')
@@ -194,6 +274,8 @@ describe('MapHome', () => {
     expect(screen.getByTestId('loc').textContent).toContain('q=fodder')
     await act(() => router.navigate(-1))
     expect(screen.getByTestId('loc').textContent).toContain('q=maize')
+    // The search box follows at once.
+    expect(box).toHaveValue('maize')
   })
 
   it('selecting two cards then Back returns to the search without a selection', async () => {
@@ -220,6 +302,8 @@ describe('MapHome', () => {
     setup()
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     await vi.waitFor(() => expect(signInWithGoogle).toHaveBeenCalledTimes(1))
+    // Let the rejection settle first: asserted at once, a wrongly shown error would not be on screen yet.
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)) })
     expect(screen.queryByText(/went wrong/)).toBeNull()
     signInWithGoogle.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'auth/network-request-failed' }))
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
@@ -232,10 +316,83 @@ describe('MapHome', () => {
     createEngineSpy.mockClear()
     const a = render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <MapHome /> }], { initialEntries: ['/'] })} />)
     await screen.findAllByRole('article')
+    // The engine is built when the browser is idle; wait for it before unmounting.
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Search a product, HS code, or industry…'))
     a.unmount()
     render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <MapHome /> }], { initialEntries: ['/'] })} />)
     await screen.findAllByRole('article')
+    // Ready at once on the remount: no "Preparing search…" and no second build.
+    expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Search a product, HS code, or industry…')
     expect(createEngineSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('never preloads the HS table on the map (only typing in search fetches it)', async () => {
+    loadHsTable.mockClear()
+    hsWanted.mockClear()
+    setup()
+    await screen.findAllByRole('article')
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Search a product, HS code, or industry…'))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(loadHsTable).not.toHaveBeenCalled()
+    expect(hsWanted).not.toHaveBeenCalled()
+    await userEvent.type(screen.getByRole('combobox'), 'f')
+    expect(hsWanted).toHaveBeenCalled()
+  })
+
+  it('renders pins and cards from the entries before the search engine is built', async () => {
+    const w = window as unknown as { requestIdleCallback?: unknown; cancelIdleCallback?: unknown }
+    w.requestIdleCallback = vi.fn(() => 1) // the browser never gets idle in this test
+    w.cancelIdleCallback = vi.fn()
+    try {
+      loadIndex.mockResolvedValue({ entries: [...ENTRIES], fromCache: false })
+      setup()
+      expect(await screen.findByTestId('pin-f1')).toBeInTheDocument()
+      expect(screen.getByTestId('pin-f3')).toBeInTheDocument()
+      expect(screen.getAllByRole('article')).toHaveLength(3)
+      expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Preparing search…')
+    } finally {
+      delete w.requestIdleCallback
+      delete w.cancelIdleCallback
+    }
+  })
+
+  it('while the engine for a newer index builds, the previous results stay (no blank map)', async () => {
+    let onUpdate: ((l: { entries: IndexEntry[]; fromCache: boolean }) => void) | undefined
+    loadIndex.mockImplementation((_fs: unknown, cb: typeof onUpdate) => {
+      onUpdate = cb
+      return Promise.resolve({ entries: [...ENTRIES], fromCache: true })
+    })
+    setup('/?q=feed&sel=f1')
+    await waitFor(() => expect(names()).toContain('Delta Feed Mill'))
+    const w = window as unknown as { requestIdleCallback?: unknown; cancelIdleCallback?: unknown }
+    w.requestIdleCallback = vi.fn(() => 1) // the new engine never gets built in this test
+    w.cancelIdleCallback = vi.fn()
+    try {
+      const fresh = [...ENTRIES, entry('f4', 'Cairo Feed Co', 30.2, 400, { m: [{ n: { en: 'Fish feed' }, h: '2309' }] })]
+      await act(async () => onUpdate?.({ entries: fresh, fromCache: false }))
+      expect(w.requestIdleCallback).toHaveBeenCalled()
+      expect(names()).toContain('Delta Feed Mill')
+      expect(screen.getByTestId('pin-f1')).toBeInTheDocument()
+    } finally {
+      delete w.requestIdleCallback
+      delete w.cancelIdleCallback
+    }
+  })
+
+  it('a newer index from the server replaces the cached one and keeps the search and selection', async () => {
+    let onUpdate: ((l: { entries: IndexEntry[]; fromCache: boolean }) => void) | undefined
+    loadIndex.mockImplementation((_fs: unknown, cb: typeof onUpdate) => {
+      onUpdate = cb
+      return Promise.resolve({ entries: [...ENTRIES], fromCache: true })
+    })
+    setup('/?q=feed&sel=f1')
+    await screen.findAllByRole('article')
+    const fresh = [...ENTRIES, entry('f4', 'Cairo Feed Co', 30.2, 400, { m: [{ n: { en: 'Fish feed' }, h: '2309' }] })]
+    await act(async () => onUpdate?.({ entries: fresh, fromCache: false }))
+    await waitFor(() => expect(names()).toContain('Cairo Feed Co'))
+    expect(names()).not.toContain('Maize Growers')
+    expect(screen.getByTestId('loc').textContent).toBe('?q=feed&sel=f1')
+    expect(screen.getByRole('combobox')).toHaveValue('feed')
   })
 })
 

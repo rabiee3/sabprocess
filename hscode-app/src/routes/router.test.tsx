@@ -1,10 +1,16 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, Link, RouterProvider } from 'react-router'
 
 vi.mock('../client/MapHome', () => ({ Component: () => <p>map home</p> }))
 
 import { BASENAME, routes, withBaseSlash } from './router'
+import { RouteError } from '../ui/RouteError'
+import { initI18n } from '../i18n'
+
+beforeAll(() => {
+  initI18n()
+})
 
 describe('routes', () => {
   it('renders the client map at /', async () => {
@@ -21,6 +27,25 @@ describe('routes', () => {
     expect(router.state.location.search).toBe('?q=x&near=1')
     expect(router.state.location.hash).toBe('#h')
     expect(router.state.historyAction).toBe('REPLACE')
+  })
+})
+
+describe('route error boundary', () => {
+  it('every route has the RouteError errorElement', () => {
+    expect(routes.length).toBeGreaterThan(0)
+    for (const r of routes) {
+      expect(r.errorElement, r.path).toBeTruthy()
+      expect((r.errorElement as { type?: unknown }).type, r.path).toBe(RouteError)
+    }
+  })
+
+  it('a route that fails to load shows the RouteError page', async () => {
+    const router = createMemoryRouter(
+      routes.map((r) => (r.path === '/f/:id' ? { ...r, lazy: () => Promise.reject(new TypeError('Failed to fetch dynamically imported module')) } : r)),
+      { initialEntries: ['/f/x'] },
+    )
+    render(<RouterProvider router={router} />)
+    expect(await screen.findByRole('button', { name: 'Reload' })).toBeInTheDocument()
   })
 })
 
@@ -41,5 +66,19 @@ describe('basename', () => {
     expect(withBaseSlash({ pathname: '/hscode', search: '?q=feed&near=1', hash: '#h' })).toBe('/hscode/?q=feed&near=1#h')
     expect(withBaseSlash({ pathname: '/hscode/', search: '?q=x', hash: '' })).toBeNull()
     expect(withBaseSlash({ pathname: '/hscode/f/a', search: '', hash: '' })).toBeNull()
+  })
+
+  it('rewrites a hard load of /hscode to /hscode/ before the router reads the URL, keeping query, hash and state', async () => {
+    window.history.replaceState({ keep: 1 }, '', '/hscode?q=feed#h')
+    try {
+      vi.resetModules()
+      await import('./router')
+      expect(window.location.pathname).toBe('/hscode/')
+      expect(window.location.search).toBe('?q=feed')
+      expect(window.location.hash).toBe('#h')
+      expect(window.history.state).toMatchObject({ keep: 1 })
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
   })
 })

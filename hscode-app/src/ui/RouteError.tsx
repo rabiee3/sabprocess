@@ -1,4 +1,7 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useRouteError } from 'react-router'
+import { reportError } from '../telemetry/reportError'
 
 /**
  * Route-level error boundary: render errors and failed dynamic imports (a stale chunk after a deploy).
@@ -6,6 +9,9 @@ import { useTranslation } from 'react-i18next'
  */
 export function RouteError() {
   const { t } = useTranslation()
+  const error = useRouteError()
+  // Logged to Analytics (no personal data; never in the emulator).
+  useEffect(() => reportError(error, 'route'), [error])
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-start justify-center gap-4 bg-surface px-4 text-ink">
       <h1 className="text-xl font-bold text-ink-strong">{t('errors.crashTitle')}</h1>

@@ -28,6 +28,11 @@ describe('toIndexEntry', () => {
       at: f.approvedAt!.getTime(),
     });
   });
+  it('carries the typed area name (ao) only for area "other"', () => {
+    expect(toIndexEntry({ ...base, area: 'other', areaOther: ' Abu Rawash ' }).ao).toBe('Abu Rawash');
+    expect('ao' in toIndexEntry({ ...base, area: 'other', areaOther: '  ' })).toBe(false);
+    expect('ao' in toIndexEntry({ ...base, area: 'sadat', areaOther: 'stale' })).toBe(false);
+  });
   it('omits s and at when absent', () => {
     const e = toIndexEntry({ ...base, sector: undefined, approvedAt: undefined });
     expect('s' in e).toBe(false);

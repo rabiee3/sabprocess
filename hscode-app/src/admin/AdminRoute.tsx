@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, Route, Routes } from 'react-router'
-import { signOutUser } from '../auth/api'
+import { useSignOut } from '../auth/useSignOut'
+import { SignOutKeptBanner } from '../ui/SignOutKeptBanner'
 import { useAuth } from '../auth/useAuth'
 import { AdminCreateFactory } from './AdminCreateFactory'
 import { AdminLayout } from './AdminLayout'
@@ -14,6 +15,7 @@ import { SurveyorsPage } from './SurveyorsPage'
 
 function NotAdmin() {
   const { t } = useTranslation()
+  const { signOut, busy } = useSignOut()
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-alt p-6 text-center">
       <h1 className="text-xl font-semibold text-ink-strong">{t('admin.notAdmin.title')}</h1>
@@ -21,10 +23,12 @@ function NotAdmin() {
       <div className="flex flex-wrap justify-center gap-3">
         <button
           type="button"
-          onClick={() => void signOutUser()}
-          className="min-h-cta rounded bg-brand-500 px-4 text-body font-semibold text-ink-strong"
+          disabled={busy}
+          aria-busy={busy || undefined}
+          onClick={() => void signOut()}
+          className="min-h-cta rounded bg-brand-500 px-4 text-body font-semibold text-ink-strong disabled:opacity-60"
         >
-          {t('nav.signOut')}
+          {t(busy ? 'nav.signingOut' : 'nav.signOut')}
         </button>
         <Link
           to="/survey"
@@ -37,7 +41,18 @@ function NotAdmin() {
   )
 }
 
+// The admin layout and the not-admin screen unmount as soon as the user signs out: the kept-data note
+// (nav.signOutKeptData) is drawn here, above them, so it stays on the sign-in form that follows.
 export function Component() {
+  return (
+    <>
+      <AdminScreens />
+      <SignOutKeptBanner />
+    </>
+  )
+}
+
+function AdminScreens() {
   const { t } = useTranslation()
   const { user, role, loading } = useAuth()
 

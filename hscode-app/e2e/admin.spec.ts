@@ -106,7 +106,7 @@ test('(f) dashboard shows counts, and no export or download control exists', asy
   const tiles = page.getByRole('region', { name: a.dash.statusTitle }).getByRole('listitem')
   await expect(tiles).toHaveCount(4)
   await expect(tiles.first().locator('p').nth(1)).toHaveText(/^\d+$/)
-  // The seed has 7 approved + 3 pending + 1 rejected; other tests only move factories between statuses.
+  // The seed has 8 approved + 3 pending + 1 rejected; other tests only move factories between statuses.
   await expect
     .poll(async () => (await tiles.locator('p:nth-child(2)').allTextContents()).reduce((n, t) => n + Number(t), 0))
     .toBeGreaterThanOrEqual(6)
@@ -212,4 +212,26 @@ test('(k) sign-in: logo above the card, lang toggle clear of it, no scroll, axe 
     }
     await page.locator('button[lang="en"]').click()
   }
+})
+
+// Runs in the desktop project and sets both sizes itself, like (k).
+test('(l) the admin logo links back to the client map at /, on the sign-in screen and in the signed-in layout', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('hscode.introSeen', '1'))
+  const mapReady = () => expect(page.locator('main [role="combobox"]')).toBeAttached()
+  for (const size of [{ width: 360, height: 740 }, { width: 1280, height: 800 }]) {
+    await page.setViewportSize(size)
+    await page.goto('admin')
+    await expect(page.locator('html'), 'app is not in emulator mode').toHaveAttribute('data-emulator', 'true')
+    const signInLogo = page.getByRole('link', { name: 'HSCode' })
+    await expect(signInLogo).toHaveAttribute('title', en.nav.backToMap)
+    await signInLogo.click()
+    await expect(page).toHaveURL(/\/hscode\/$/)
+    await mapReady()
+  }
+  await signInAdmin(page)
+  const brand = page.locator('aside').getByRole('link', { name: new RegExp(en.portal.admin) }) // the sidebar, always shown at 1280
+  await expect(brand).toHaveAttribute('title', en.nav.backToMap)
+  await brand.click()
+  await expect(page).toHaveURL(/\/hscode\/$/)
+  await mapReady()
 })

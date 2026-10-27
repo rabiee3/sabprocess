@@ -16,14 +16,19 @@
     "surveyors": "Surveyors",
     "signIn": "Sign in",
     "signOut": "Sign out",
+    "signingOut": "Signing out…",
     "admin": "Admin",
-    "backToMap": "Back to the map"
+    "backToMap": "Back to the map",
+    "signOutKeptData": "Signed out. Some survey changes are still waiting to upload, so this phone keeps its saved data until they sync."
   },
   "common": {
     "comingSoon": "Coming soon",
     "close": "Close",
     "loading": "Loading…",
     "reload": "Reload"
+  },
+  "demo": {
+    "badge": "Demo"
   },
   "portal": {
     "surveyor": "Surveyor",
@@ -157,13 +162,14 @@
     "noResults": "No matching heading. Try another word or a code.",
     "back": "Back",
     "chapter": "Chapter {{code}}",
-    "needsConnection": "More detail needs a connection"
+    "needsConnection": "More detail needs a connection",
+    "listNeedsConnection": "The HS code list needs a connection. You can skip this step for now."
   },
   "errors": {
     "offline": "You're offline — connect to continue",
     "accessOff": "Your surveyor access was turned off",
     "rejected": "This factory couldn't be saved — open it and check the details.",
-    "quota": "HSCode is busy right now — please try again later",
+    "quota": "The service is busy right now — please try again later",
     "indexFull": "Search index is full — approving is blocked until space is freed.",
     "generic": "Something went wrong. Please try again.",
     "tooLong": "Too long — use at most {{max}} characters.",
@@ -427,6 +433,7 @@
     "title": "Factory map",
     "searchLabel": "Search factories",
     "searchPlaceholder": "Search a product, HS code, or industry…",
+    "preparingSearch": "Preparing search…",
     "clear": "Clear search",
     "searchFor": "Search for “{{q}}”",
     "sugProducts": "Products",
@@ -448,7 +455,6 @@
     "showMore": "Show more",
     "saved": "Showing saved results",
     "viewFactory": "View factory",
-    "demo": "Demo",
     "makes": "Makes",
     "needs": "Needs",
     "km": "km",
@@ -468,8 +474,8 @@
     "back": "Back to the map",
     "notFoundTitle": "Factory not found",
     "notFoundBody": "This factory isn't available. It may have been removed or isn't public yet.",
+    "notPublic": "Not public yet. Only approved factories appear on the public map.",
     "backToMap": "Back to the map",
-    "demo": "Demo",
     "verified": "Verified on site · {{date}}",
     "photoAlt": "Photo {{n}} of {{total}} — {{name}}",
     "photoPrev": "Previous photo",

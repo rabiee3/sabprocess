@@ -21,7 +21,7 @@ type Props = {
 
 export function ReviewDetail({ fid, submittedBy, onDone }: Props) {
   const { t, i18n } = useTranslation()
-  const { state, reload: load, setDraft } = useFactoryLoad(fid)
+  const { state, reload: load, dispatch } = useFactoryLoad(fid)
   const [showErrors, setShowErrors] = useState(false)
   const [error, setError] = useState<ActionError | null>(null)
   const [busy, setBusy] = useState<'approve' | 'reject' | null>(null)
@@ -88,7 +88,7 @@ export function ReviewDetail({ fid, submittedBy, onDone }: Props) {
       {error && <ActionErrorBanner error={error} onReload={reload} />}
       {errors.length > 0 && <Banner tone="danger">{t('admin.review.fixErrors')}</Banner>}
 
-      <AdminFactoryForm value={draft} errors={errors} onChange={(next) => setDraft(data, next)} />
+      <AdminFactoryForm value={draft} errors={errors} dispatch={dispatch} />
       <PhotosAndContact photos={data.photos} contact={data.contact} />
 
       {pending && (

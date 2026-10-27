@@ -1,6 +1,3 @@
-import chaptersJson from './hs-chapters.json';
-import headingsJson from './hs-headings.json';
-import headingsArJson from './hs-headings-ar.json';
 import areasJson from './areas.json';
 import sectorsJson from './sectors.json';
 
@@ -13,12 +10,8 @@ export interface Sector { id: string; en: string; ar: string }
 // One chunk per chapter; Vite splits these so subheadings stay out of the main bundle.
 const subLoaders = import.meta.glob<HsSub[]>('./hs-sub/*.json', { import: 'default' });
 
-export const chapters = (): HsChapter[] => chaptersJson;
-const headingsAr = headingsArJson as Record<string, string>;
-const headingList: HsHeading[] = headingsJson.map((h) =>
-  headingsAr[h.code] ? { ...h, ar: headingsAr[h.code] } : h,
-);
-export const headings = (): HsHeading[] => headingList;
+// The HS chapters and headings (about 128 KB gzip) live in ./hsTable, loaded lazily (src/hs/lazyTable.ts):
+// never import it statically from code on the map's first load.
 export const areas = (): Area[] => areasJson;
 export const sectors = (): Sector[] => sectorsJson;
 

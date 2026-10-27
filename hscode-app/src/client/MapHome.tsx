@@ -5,8 +5,10 @@ import { ResultsMap } from '../map/ResultsMap'
 import { distanceKm } from '../lib/geo'
 import { formatHs } from '../lib/hs'
 import type { IndexEntry } from '../lib/types'
-import { getEngine } from '../search/engine'
+import { filterEntries } from '../search/engine'
 import { loadIndex, type IndexErrorCode } from '../search/indexSource'
+import { useEngine } from '../search/useEngine'
+import { useOnline } from '../ui/useOnline'
 import { Banner } from '../ui/Banner'
 import { useIsDesktop } from '../admin/useIsDesktop'
 import { ClientHeader } from './ClientHeader'
@@ -43,18 +45,27 @@ export function Component() {
     return touch ? title.current : controls.current?.querySelector<HTMLElement>('[role="combobox"]')
   }, [])
   const nearMe = useNearMe()
-  const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
-  const [toast, setToast] = useState<string | null>(null)
+  // The index load of the current attempt; a retry starts loading again until its own answer arrives.
+  const [loaded, setLoad] = useState<{ attempt: number; load: Load } | null>(null)
+  const load: Load = loaded?.attempt === attempt ? loaded.load : { status: 'loading' }
+  // Near me requests made from the chip, and the one whose failure message was closed (or toggled off).
+  const [nearAsked, setNearAsked] = useState(0)
+  const [nearDismissed, setNearDismissed] = useState(0)
+  // Phone: the results sheet's height, so the map fits its pins into the part the sheet does not cover.
+  const [sheetPx, setSheetPx] = useState(() => Math.round(window.innerHeight * 0.4))
 
   useEffect(() => {
     let live = true
-    setLoad({ status: 'loading' })
-    loadIndex().then(
-      (r) => live && setLoad({ status: 'ready', entries: r.entries, fromCache: r.fromCache }),
+    // Cache first (spec §8): a newer index from the server swaps in later; the query, filters and selection live
+    // in the URL, so they stay.
+    const ready = (r: { entries: IndexEntry[]; fromCache: boolean }) =>
+      live && setLoad({ attempt, load: { status: 'ready', entries: r.entries, fromCache: r.fromCache } })
+    loadIndex(undefined, ready).then(
+      ready,
       (e: unknown) => {
         const c = (e as { code?: IndexErrorCode })?.code
-        if (live) setLoad({ status: 'error', code: c && CODES.includes(c) ? c : 'generic' })
+        if (live) setLoad({ attempt, load: { status: 'error', code: c && CODES.includes(c) ? c : 'generic' } })
       },
     )
     return () => {
@@ -63,26 +74,35 @@ export function Component() {
   }, [attempt])
 
   const entries = load.status === 'ready' ? load.entries : null
-  // Matching does not depend on the language: built once per loaded index (cached across mounts), never per keystroke.
-  const engine = useMemo(() => (entries ? getEngine(entries) : null), [entries])
+  // Matching does not depend on the language: built once per loaded index (cached across mounts), never per
+  // keystroke, and only when the browser is idle, so the pins paint first.
+  const engine = useEngine(entries)
+  const online = useOnline()
+  // The saved-results note is for an offline visit; online, a cached index is being checked against the server.
+  const fromCache = load.status === 'ready' && load.fromCache && !online
+  // Until the engine is ready, a text query cannot run yet: the list waits (loading) instead of showing everything.
+  const waiting = !!entries && !engine && !!q.trim()
 
   const nearOk = wantNear && nearMe.status === 'ok' && !!nearMe.pos
   const { results, distances } = useMemo(() => {
-    if (!engine) return { results: [] as IndexEntry[], distances: undefined }
-    const found = engine.search(q, { area, sector, hs })
+    if (!entries) return { results: [] as IndexEntry[], distances: undefined }
+    // Pins render straight from the entries while the engine builds; filters need no engine.
+    const found = engine ? engine.search(q, { area, sector, hs }) : q.trim() ? [] : filterEntries(entries, { area, sector, hs })
     if (!nearOk || !nearMe.pos) return { results: found, distances: undefined }
     const pos = nearMe.pos
     const d = new Map(found.map((e) => [e.id, distanceKm(pos, e)]))
     return { results: [...found].sort((a, b) => d.get(a.id)! - d.get(b.id)!), distances: d }
-  }, [engine, q, area, sector, hs, nearOk, nearMe.pos])
+  }, [entries, engine, q, area, sector, hs, nearOk, nearMe.pos])
 
-  // Denied / unavailable: untoggle and say why.
+  // Denied / unavailable: untoggle (an effect: it changes the URL) and say why. The message is derived, not copied
+  // into state: it belongs to the latest Near me request (counted on the chip) until closed or toggled off.
+  const failed = nearMe.status === 'denied' || nearMe.status === 'unavailable' ? nearMe.status : null
+  const nearFailed = wantNear ? failed : null
   useEffect(() => {
-    if (wantNear && (nearMe.status === 'denied' || nearMe.status === 'unavailable')) {
-      set({ near: false })
-      setToast(t(nearMe.status === 'denied' ? 'map.nearDenied' : 'map.nearUnavailable'))
-    }
-  }, [wantNear, nearMe.status, set, t])
+    if (nearFailed) set({ near: false })
+  }, [nearFailed, set])
+  const toast =
+    failed && nearAsked > 0 && nearDismissed !== nearAsked ? t(failed === 'denied' ? 'map.nearDenied' : 'map.nearUnavailable') : null
 
   // A link with near=1 never prompts for location: drop it on arrival; only the chip asks.
   const arrived = useRef(false)
@@ -93,8 +113,12 @@ export function Component() {
   })
 
   const toggleNear = () => {
-    if (wantNear) return set({ near: false }, { push: true })
-    setToast(null)
+    if (wantNear) {
+      // Toggled off while locating: a late failure of that request says nothing.
+      setNearDismissed(nearAsked)
+      return set({ near: false }, { push: true })
+    }
+    setNearAsked((n) => n + 1)
     set({ near: true }, { push: true })
     nearMe.request()
   }
@@ -114,6 +138,9 @@ export function Component() {
               onSelect={select}
               userPos={nearOk ? nearMe.pos : undefined}
               className="size-full"
+              desktop={desktop}
+              topOverlayRef={controls}
+              sheetPx={sheetPx}
             />
           </div>
           <div ref={controls} className="absolute inset-x-2 top-2 z-[1100] flex flex-col gap-2 lg:max-w-md">
@@ -134,7 +161,7 @@ export function Component() {
               onSector={(id) => set({ sector: id }, { push: true })}
               onNear={toggleNear}
             />
-            {toast && <Banner tone="warning" onClose={() => setToast(null)}>{toast}</Banner>}
+            {toast && <Banner tone="warning" onClose={() => setNearDismissed(nearAsked)}>{toast}</Banner>}
             {load.status === 'error' && (
               <Banner tone="danger">
                 <p>{t(`errors.${load.code}`)}</p>
@@ -151,30 +178,31 @@ export function Component() {
           {!desktop && (
             <ResultsSheet
               entries={results}
-              loading={load.status === 'loading'}
+              loading={load.status === 'loading' || waiting}
               error={load.status === 'error'}
               lang={lang}
               desktop={false}
               selectedId={sel}
               distances={distances}
               hsFilter={hs ? formatHs(hs) : undefined}
-              fromCache={load.status === 'ready' && load.fromCache}
+              fromCache={fromCache}
               onSelect={select}
               onTry={(w) => set({ q: w, hs: '' }, { push: true })}
+              onHeight={setSheetPx}
             />
           )}
         </div>
         {desktop && (
           <ResultsSheet
             entries={results}
-            loading={load.status === 'loading'}
+            loading={load.status === 'loading' || waiting}
               error={load.status === 'error'}
             lang={lang}
             desktop
             selectedId={sel}
             distances={distances}
             hsFilter={hs ? formatHs(hs) : undefined}
-            fromCache={load.status === 'ready' && load.fromCache}
+            fromCache={fromCache}
             onSelect={select}
             onTry={(w) => set({ q: w, hs: '' }, { push: true })}
           />

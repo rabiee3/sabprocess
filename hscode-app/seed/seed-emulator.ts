@@ -131,6 +131,22 @@ const factories: { f: Factory; contact: Record<string, unknown> }[] = [
     },
     contact: { phone: '+20 100 000 0009', whatsappSameAsPhone: true },
   },
+  // The longest Arabic area (Industrial Zone 2) with the longest Arabic sector (plastics and packaging), so the
+  // filter-row e2e selects names that really have a result (client.spec, long names).
+  {
+    f: {
+      ...base,
+      sample: false,
+      id: 'seed-crates',
+      name: { en: 'Zone Two Crates & Packaging', ar: 'المنطقة الثانية للصناديق والتعبئة' },
+      area: 'oct6-zone-2',
+      sector: 'plastics-packaging',
+      location: { lat: 29.9262, lng: 30.8985, accuracyM: 14, pinMoved: false },
+      productsMade: [product('Plastic crates', 'صناديق بلاستيك', '3923')],
+      productsNeeded: [],
+    },
+    contact: { phone: '+20 100 000 0010', whatsappSameAsPhone: true },
+  },
 ]
 
 const ts = (d: Date) => Timestamp.fromDate(d)

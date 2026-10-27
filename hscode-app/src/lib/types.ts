@@ -50,6 +50,8 @@ export interface IndexEntry {
   lat: number;
   lng: number;
   a: string;
+  /** The typed area name when `a` is `other`. */
+  ao?: string;
   s?: string;
   m: { n: LocalizedName; h?: string }[];
   d: { n: LocalizedName; h?: string }[];

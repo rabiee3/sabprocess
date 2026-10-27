@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BottomSheet } from '../ui/BottomSheet'
-import { chapters, headings, loadSubheadings, type HsSub } from '../data'
+import { loadSubheadings, type HsSub } from '../data'
 import { formatHs, normalizeHs, validateHs } from '../lib/hs'
 import type { HsCode } from '../lib/types'
-import { searchHeadings } from './search'
+import { loadHsTable, useHsTable } from './lazyTable'
 import { HsBadge } from './HsBadge'
 
 type Props = {
@@ -32,6 +32,8 @@ export function HsPicker({ open, productLabel, value, onUse, onClose }: Props) {
   const [subs, setSubs] = useState<HsSub[]>([])
   const [subsFailed, setSubsFailed] = useState(false)
   const seq = useRef(0)
+  // The HS table (chapters, headings) is a lazy chunk (spec §8): fetched when the picker first opens.
+  const { table, failed: tableFailed } = useHsTable(open)
 
   useEffect(() => {
     if (!open) return
@@ -68,11 +70,11 @@ export function HsPicker({ open, productLabel, value, onUse, onClose }: Props) {
     }
   }, [heading])
 
-  const headingInfo = useMemo(() => headings().find((h) => h.code === heading), [heading])
-  const hits = useMemo(() => (query.trim() ? searchHeadings(query) : []), [query])
+  const headingInfo = useMemo(() => table?.headings().find((h) => h.code === heading), [table, heading])
+  const hits = useMemo(() => (table && query.trim() ? table.searchHeadings(query) : []), [table, query])
   const chapterHeadings = useMemo(
-    () => (chapter ? headings().filter((h) => h.code.startsWith(chapter)) : []),
-    [chapter],
+    () => (table && chapter ? table.headings().filter((h) => h.code.startsWith(chapter)) : []),
+    [table, chapter],
   )
 
   function clearDetail() {
@@ -94,9 +96,10 @@ export function HsPicker({ open, productLabel, value, onUse, onClose }: Props) {
     const digits = normalizeHs(q)
     if (!DIGIT_ONLY.test(q.trim()) || (digits.length !== 6 && digits.length !== 10)) return
     const code = digits.slice(0, 4)
-    if (!headings().some((h) => h.code === code)) return
     const my = ++seq.current
-    void loadSubheadings(code).catch((): HsSub[] => []).then((list) => {
+    void loadHsTable().then(async (tbl) => {
+      if (!tbl.headings().some((h) => h.code === code)) return
+      const list = await loadSubheadings(code).catch((): HsSub[] => [])
       if (my !== seq.current) return
       const subCode = digits.slice(0, 6)
       const subOk = list.some((s) => s.code === subCode)
@@ -107,7 +110,7 @@ export function HsPicker({ open, productLabel, value, onUse, onClose }: Props) {
       setTariffRaw(tariffOk ? digits : '')
       setShowTariff(tariffOk)
       setBrowsing(false)
-    })
+    }, () => {})
   }
 
   const tariffDigits = normalizeHs(tariffRaw)
@@ -161,7 +164,11 @@ export function HsPicker({ open, productLabel, value, onUse, onClose }: Props) {
               aria-label={t('hs.searchPlaceholder')}
               className="min-h-control w-full rounded border border-line-strong px-3"
             />
-            {heading ? null : query.trim() ? (
+            {heading ? null : !table ? (
+              <p role="status" className="py-3 text-sm text-ink-muted">
+                {t(tableFailed ? 'hs.listNeedsConnection' : 'common.loading')}
+              </p>
+            ) : query.trim() ? (
               hits.length ? (
                 <ul>
                   {hits.map((h) => (
@@ -197,7 +204,7 @@ export function HsPicker({ open, productLabel, value, onUse, onClose }: Props) {
                           </button>
                         </li>
                       ))
-                    : chapters().map((c) => (
+                    : table.chapters().map((c) => (
                         <li key={c.code}>
                           <button type="button" className={row} onClick={() => setChapter(c.code)}>
                             <span dir="ltr" className="font-mono text-sm font-semibold">
