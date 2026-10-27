@@ -43,3 +43,62 @@ describe('SearchBar', () => {
     expect(heading).toHaveTextContent('2309')
   })
 })
+
+// Phone: closing the keyboard (Back, or tapping the map) must not lose what was typed.
+describe('SearchBar: closing the keyboard applies the typed text', () => {
+  const setup = (value = '') => {
+    const onApply = vi.fn()
+    const onClear = vi.fn()
+    render(<SearchBar engine={createEngine(fixtures, 'en')} lang="en" value={value} onApply={onApply} onClear={onClear} />)
+    return { box: screen.getByRole('combobox'), onApply, onClear }
+  }
+
+  it('blurring with new text applies it as the search, once', async () => {
+    const { box, onApply } = setup()
+    await userEvent.type(box, '  starch ')
+    box.blur()
+    expect(onApply).toHaveBeenCalledTimes(1)
+    expect(onApply).toHaveBeenCalledWith({ q: 'starch', hs: '' })
+  })
+
+  it('blurring with nothing new typed applies nothing', async () => {
+    const { box, onApply } = setup('feed')
+    box.focus()
+    box.blur()
+    await userEvent.type(box, '   ')
+    await userEvent.clear(box)
+    box.blur()
+    expect(onApply).not.toHaveBeenCalled()
+  })
+
+  it('Enter applies once; the blur that follows does not apply again', async () => {
+    const { box, onApply } = setup()
+    await userEvent.type(box, 'starch{Enter}')
+    box.blur()
+    expect(onApply).toHaveBeenCalledTimes(1)
+  })
+
+  it('the clear button keeps focus in the box, so clearing never applies the half-typed text', async () => {
+    const { box, onApply, onClear } = setup()
+    await userEvent.type(box, 'star')
+    await userEvent.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(onClear).toHaveBeenCalledTimes(1)
+    expect(onApply).not.toHaveBeenCalled()
+    expect(box).toHaveFocus()
+  })
+
+  it('the keyboard closing without a blur (the visual viewport grows back) applies the text and leaves the box', async () => {
+    const vv = Object.assign(new EventTarget(), { height: 400 })
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true })
+    try {
+      const { box, onApply } = setup()
+      await userEvent.type(box, 'glucose')
+      vv.height = 800
+      vv.dispatchEvent(new Event('resize'))
+      expect(onApply).toHaveBeenCalledWith({ q: 'glucose', hs: '' })
+      expect(box).not.toHaveFocus()
+    } finally {
+      Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true })
+    }
+  })
+})
