@@ -423,7 +423,6 @@
     "f3Title": "Contact directly",
     "f3Body": "Phone and WhatsApp unlock after a quick Google sign-in.",
     "by": "by SAB Process Technology",
-    "surveyorCta": "Are you a field surveyor? Sign in →",
     "sampleName": "Demo Feed Mills (sample)",
     "sampleMeta": "Industrial Zone 3 · Animal feed",
     "sampleMakes": "Makes poultry feed",
@@ -519,6 +518,7 @@
     "install": "Install app"
   },
   "intro": {
-    "close": "Close"
+    "close": "Close",
+    "adminLogin": "Login as Admin"
   }
 }

@@ -1,1 +1,0 @@
-import{l as e,w as t}from"./index.esm-eLnxd885.js";import{t as n}from"./db-BApWMVVh.js";import{n as r}from"./api-BhD1u4fl.js";function i(r,i,a){return e(t(n,`users`,r),{includeMetadataChanges:!0},i,a)}export{r as ensureUserDoc,i as watchUserDoc};
