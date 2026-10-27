@@ -32,6 +32,8 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
   const [active, setActive] = useState(-1)
   const [sug, setSug] = useState<Suggestions>(EMPTY)
   const input = useRef<HTMLInputElement>(null)
+  // The text last applied (Enter, a suggestion, leaving the box), so the blur after Enter does not apply it again.
+  const applied = useRef<string | null>(null)
   const typing = !!text.trim() && text !== value
   // HS names for suggestions come from the HS table, fetched the first time someone types (spec §8).
   const { table: hsTable } = useHsTable(typing)
@@ -70,8 +72,35 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
     return o
   }, [sug, text, value, t])
 
+  // Phone: closing the keyboard (Back, or a tap on the map) leaves the box. Typed text that was never applied
+  // becomes the search then, as Enter would, instead of being silently dropped.
+  const onLeave = () => {
+    setOpen(false)
+    setActive(-1)
+    const q = text.trim()
+    if (q && text !== value && text !== applied.current) {
+      applied.current = text
+      onApply({ q, hs: '' })
+    }
+  }
+
+  // Android can hide the keyboard without a blur; the visual viewport growing back by more than 100px while the
+  // box has focus is that, so leave the box (its blur then runs onLeave).
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    let last = vv.height
+    const onResize = () => {
+      if (vv.height > last + 100 && document.activeElement === input.current) input.current?.blur()
+      last = vv.height
+    }
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [])
+
   const show = open && options.length > 0
   const pick = (o: Option) => {
+    applied.current = text
     onApply(o.patch)
     setOpen(false)
     setActive(-1)
@@ -93,6 +122,7 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
       e.preventDefault()
       if (show && active >= 0) pick(options[active])
       else {
+        applied.current = text
         onApply({ q: text.trim(), hs: '' })
         setOpen(false)
       }
@@ -128,7 +158,7 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
             setActive(-1)
           }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
+          onBlur={onLeave}
           onKeyDown={onKey}
           className="min-h-control min-w-0 flex-1 bg-transparent text-body outline-none [&::-webkit-search-cancel-button]:appearance-none"
         />
@@ -136,6 +166,8 @@ export function SearchBar({ engine, lang, value, onApply, onClear }: Props) {
           <button
             type="button"
             aria-label={t('map.clear')}
+            // Keeps focus in the box: a blur here would apply the half-typed text just before clearing it.
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               setText('')
               onClear()

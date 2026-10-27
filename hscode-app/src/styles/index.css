@@ -79,3 +79,12 @@
     background: var(--color-surface);
   }
 }
+
+/* Phone results list: ResultsSheet draws its own always-visible amber scroll thumb, so the native bar is hidden
+   (a narrow desktop window would otherwise show both). */
+.sheet-scroll {
+  scrollbar-width: none;
+}
+.sheet-scroll::-webkit-scrollbar {
+  display: none;
+}

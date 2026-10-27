@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { areas, sectors } from '../data'
 import { headings } from '../data/hsTable'
 import { validateFactoryFields } from '../lib/factoryValidation'
-import { insideEgypt } from '../lib/geo'
+import { distanceKm, insideEgypt } from '../lib/geo'
 import { validateHs } from '../lib/hs'
 import { DEMO_FACTORIES } from './demoFactories'
 
@@ -12,10 +12,10 @@ const fictional = DEMO_FACTORIES.filter((f) => !REAL.includes(f.name.en ?? ''))
 const subs = import.meta.glob<{ code: string }[]>('../data/hs-sub/*.json', { eager: true, import: 'default' })
 
 describe('DEMO_FACTORIES', () => {
-  it('has the two real factories and 6-8 fictional ones, with unique English names', () => {
+  it('has the two real factories and 45-48 fictional ones, with unique English names', () => {
     expect(real).toHaveLength(2)
-    expect(fictional.length).toBeGreaterThanOrEqual(6)
-    expect(fictional.length).toBeLessThanOrEqual(8)
+    expect(fictional.length).toBeGreaterThanOrEqual(45)
+    expect(fictional.length).toBeLessThanOrEqual(48)
     const names = DEMO_FACTORIES.map((f) => f.name.en)
     expect(new Set(names).size).toBe(names.length)
   })
@@ -91,5 +91,21 @@ describe('DEMO_FACTORIES', () => {
       expect(linked.length).toBeGreaterThan(0)
     }
     for (const h of ['1005', '2304', '3923', '7408']) expect(made(h).length).toBeGreaterThan(0)
+  })
+  it('has a starch and glucose value chain: mills, derivatives and their buyers across the industrial cities', () => {
+    const makes = (h: string) => fictional.filter((f) => f.productsMade.some((p) => p.hs?.heading === h))
+    const needs = (h: string) => fictional.filter((f) => f.productsNeeded.some((p) => p.hs?.heading === h))
+    expect(makes('1108').length).toBeGreaterThanOrEqual(8)
+    expect(makes('1702').length).toBeGreaterThanOrEqual(6)
+    expect(makes('3505').length).toBeGreaterThanOrEqual(3)
+    expect(needs('1108').length + needs('1702').length + needs('3505').length).toBeGreaterThanOrEqual(15)
+    const chain = new Set([...makes('1108'), ...makes('1702'), ...needs('1108'), ...needs('1702')].map((f) => f.area))
+    for (const a of ['10th-ramadan', 'sadat-city', 'obour', 'borg-el-arab']) expect(chain.has(a)).toBe(true)
+  })
+  it('pins each factory within about 5 km of its area centre', () => {
+    for (const f of DEMO_FACTORIES) {
+      const c = areas().find((a) => a.id === f.area)!.center
+      expect(distanceKm(c, f.location)).toBeLessThan(5)
+    }
   })
 })

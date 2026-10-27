@@ -78,9 +78,39 @@ export function ResultsSheet(p: Props) {
   const selIdx = selectedId ? entries.findIndex((e) => e.id === selectedId) : -1
   const shown = entries.slice(0, Math.max(limit, selIdx + 1))
 
+  // Phone: an always-visible amber scroll thumb and a bottom fade while more list is below the fold. Drawn by us:
+  // phones hide native scrollbars until you scroll (and iOS ignores scrollbar styles), so the list read as static.
+  const list = useRef<HTMLDivElement>(null)
+  const [scroll, setScroll] = useState<{ top: number; size: number; offset: number; track: number } | null>(null)
+  const more = !!scroll && scroll.top + scroll.size < 1 - 0.005
+  const checkMore = () => {
+    const el = list.current
+    if (!el) return
+    const { scrollTop, clientHeight, scrollHeight, offsetTop } = el
+    setScroll((prev) => {
+      const next =
+        scrollHeight > clientHeight + 1
+          ? { top: scrollTop / scrollHeight, size: clientHeight / scrollHeight, offset: offsetTop, track: clientHeight - 8 }
+          : null
+      const same = prev && next && Object.keys(next).every((k) => prev[k as keyof typeof next] === next[k as keyof typeof next])
+      return same || prev === next ? prev : next
+    })
+  }
+  useLayoutEffect(() => {
+    if (desktop) return
+    checkMore()
+    window.addEventListener('resize', checkMore)
+    return () => window.removeEventListener('resize', checkMore)
+  })
+
   const ok = !p.loading && !p.error
   const body = (
-    <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+    <div
+      ref={list}
+      data-testid="sheet-list"
+      onScroll={desktop ? undefined : checkMore}
+      className={`min-h-0 flex-1 overflow-y-auto px-3 pb-4 ${desktop ? '' : 'sheet-scroll'}`}
+    >
       <div aria-live="polite" className="px-1 py-2">
         {!p.error && (
           <h2 className="text-section font-semibold text-ink-strong">{p.loading ? t('map.loading') : t('map.results', { count: entries.length })}</h2>
@@ -163,6 +193,26 @@ export function ResultsSheet(p: Props) {
         <span aria-hidden="true" className="h-1 w-10 rounded-full bg-line-strong" />
       </button>
       {body}
+      {scroll && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute end-1 w-1.5 rounded-full bg-brand-50"
+          style={{ top: scroll.offset + 4, height: scroll.track }}
+        >
+          <div
+            data-testid="sheet-thumb"
+            className="w-full rounded-full bg-brand-500"
+            style={{ height: `${scroll.size * scroll.track}px`, transform: `translateY(${scroll.top * scroll.track}px)` }}
+          />
+        </div>
+      )}
+      {more && (
+        <div
+          aria-hidden="true"
+          data-testid="sheet-more"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-linear-to-t from-surface to-transparent"
+        />
+      )}
     </section>
   )
 }
