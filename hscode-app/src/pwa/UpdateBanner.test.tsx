@@ -9,6 +9,11 @@ vi.mock('./usePwa', () => ({
   usePwa: () => ({ ...pwa, canInstall: false, install: vi.fn(), isIosSafari: false }),
 }))
 
+const signOut = vi.hoisted(() => ({ busy: false, kept: false }))
+vi.mock('../auth/useSignOut', () => ({
+  useSignOut: () => ({ ...signOut, signOut: vi.fn(), dismiss: vi.fn() }),
+}))
+
 import { UpdateBanner } from './UpdateBanner'
 
 describe('UpdateBanner', () => {
@@ -17,6 +22,7 @@ describe('UpdateBanner', () => {
     await setLanguage('en')
     pwa.needRefresh = false
     pwa.update.mockReset()
+    signOut.busy = false
   })
 
   it('is hidden by default', () => {
@@ -36,14 +42,20 @@ describe('UpdateBanner', () => {
     expect(pwa.update).toHaveBeenCalledTimes(1)
   })
 
-  it('sits at the top under the header, like the other banners, so it never covers the surveyor Add button', () => {
+  it('while a sign-out is running, Reload is disabled, so a reload cannot skip the cache wipe', async () => {
     pwa.needRefresh = true
-    render(<UpdateBanner />)
-    const box = screen.getByRole('status').parentElement!
-    expect(box.className).toContain('fixed')
-    expect(box.className).toContain('top-14')
-    expect(box.className).toContain('z-[1300]')
-    expect(box.className).not.toMatch(/bottom-/)
+    signOut.busy = true
+    const { rerender } = render(<UpdateBanner />)
+    const reload = screen.getByRole('button', { name: en.pwa.reload })
+    expect(reload).toBeDisabled()
+    expect(reload).toHaveAttribute('aria-busy', 'true')
+    await userEvent.click(reload)
+    expect(pwa.update).not.toHaveBeenCalled()
+    signOut.busy = false
+    rerender(<UpdateBanner />)
+    expect(reload).toBeEnabled()
+    await userEvent.click(reload)
+    expect(pwa.update).toHaveBeenCalledTimes(1)
   })
 
   it('can be dismissed without reloading', async () => {

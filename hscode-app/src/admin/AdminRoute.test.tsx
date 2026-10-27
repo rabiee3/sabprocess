@@ -27,6 +27,7 @@ vi.mock('./ReviewQueue', () => ({ ReviewQueue: () => null }))
 import { Component as AdminRoute } from './AdminRoute'
 import { useAdmin } from './AdminContext'
 import { AdminLayout } from './AdminLayout'
+import { FloatingBanners } from '../ui/FloatingBanners'
 
 let refresh2: () => void
 function BackButton() {
@@ -48,6 +49,7 @@ function renderAt(path = '/admin') {
       <Routes>
         <Route path="/admin/*" element={<AdminRoute />} />
       </Routes>
+      <FloatingBanners />
     </MemoryRouter>,
   )
 }
@@ -101,6 +103,7 @@ describe('AdminRoute', () => {
         <Routes>
           <Route path="/admin/*" element={<AdminRoute />} />
         </Routes>
+        <FloatingBanners />
       </MemoryRouter>,
     )
     expect(screen.getByLabelText(en.admin.signIn.email)).toBeInTheDocument()

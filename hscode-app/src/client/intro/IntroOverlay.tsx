@@ -141,12 +141,8 @@ export function IntroOverlay({
                   }}
                   className={CHIP}
                 >
-                  <span
-                    lang={c === t('home.chipFeed') ? 'ar' : undefined}
-                    dir={c === t('home.chipFeed') ? 'rtl' : undefined}
-                  >
-                    {c}
-                  </span>
+                  {/* Each chip is in the UI language, so it needs no lang or dir of its own. */}
+                  <bdi>{c}</bdi>
                 </Link>
               ))}
             </div>

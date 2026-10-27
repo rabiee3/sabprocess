@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, Route, Routes } from 'react-router'
 import { useSignOut } from '../auth/useSignOut'
-import { SignOutKeptBanner } from '../ui/SignOutKeptBanner'
 import { useAuth } from '../auth/useAuth'
 import { AdminCreateFactory } from './AdminCreateFactory'
 import { AdminLayout } from './AdminLayout'
@@ -41,15 +40,10 @@ function NotAdmin() {
   )
 }
 
-// The admin layout and the not-admin screen unmount as soon as the user signs out: the kept-data note
-// (nav.signOutKeptData) is drawn here, above them, so it stays on the sign-in form that follows.
+// The kept-data note (nav.signOutKeptData) is drawn by FloatingBanners, outside the router, so it outlives the
+// admin layout, which unmounts as soon as the user signs out.
 export function Component() {
-  return (
-    <>
-      <AdminScreens />
-      <SignOutKeptBanner />
-    </>
-  )
+  return <AdminScreens />
 }
 
 function AdminScreens() {

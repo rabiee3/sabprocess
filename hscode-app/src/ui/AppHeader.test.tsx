@@ -12,6 +12,7 @@ const signOutAndWipe = vi.hoisted(() => vi.fn())
 vi.mock('../auth/signOutAndWipe', () => ({ signOutAndWipe: () => signOutAndWipe() }))
 vi.mock('../auth/useAuth', () => ({ useAuth: () => auth }))
 
+import { FloatingBanners } from './FloatingBanners'
 import { AppHeader } from './AppHeader'
 
 describe('AppHeader sign-in', () => {
@@ -62,7 +63,7 @@ describe('AppHeader sign-in', () => {
   it('Sign out wipes the cache; when survey writes are still pending it says the data was kept (fixed info banner)', async () => {
     signOutAndWipe.mockResolvedValue('kept')
     auth.user = { displayName: 'Mona', email: 'm@example.com' }
-    render(<MemoryRouter><AppHeader /></MemoryRouter>)
+    render(<MemoryRouter><AppHeader /><FloatingBanners /></MemoryRouter>)
     expect(screen.queryByText(en.nav.signOutKeptData)).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: en.nav.signOut }))
     expect(signOutAndWipe).toHaveBeenCalledTimes(1)

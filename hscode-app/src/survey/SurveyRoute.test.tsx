@@ -46,6 +46,24 @@ describe('SurveyRoute', () => {
     const btn = screen.getByRole('button', { name: en.auth.continueWithGoogle })
     expect(btn.querySelectorAll('svg path')).toHaveLength(4)
   })
+  it('signed out: exactly one logo and one Google button (the header keeps the portal brand and its link to /)', () => {
+    auth = { user: null, role: 'visitor', active: false, loading: false }
+    renderAt()
+    expect(screen.getAllByRole('img', { name: 'HSCode' })).toHaveLength(1)
+    const googleButtons = screen.getAllByRole('button').filter((b) => b.querySelectorAll('svg path').length === 4)
+    expect(googleButtons).toHaveLength(1)
+    expect(googleButtons[0]).toHaveAccessibleName(en.auth.continueWithGoogle)
+    expect(screen.queryByRole('button', { name: en.nav.signIn })).toBeNull()
+    const brand = screen.getByRole('banner').querySelector('a')!
+    expect(brand).toHaveAttribute('href', '/')
+    expect(brand).toHaveTextContent(en.portal.surveyor)
+  })
+  it('signed in, the header has no Google sign-in button', () => {
+    auth = { user, role: 'client', active: false, loading: false }
+    renderAt()
+    expect(screen.getAllByRole('img', { name: 'HSCode' })).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: en.nav.signIn })).toBeNull()
+  })
   it('client sees the invite screen', () => {
     auth = { user, role: 'client', active: false, loading: false }
     renderAt()

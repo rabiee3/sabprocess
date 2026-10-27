@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import userEvent from '@testing-library/user-event'
-import { initI18n } from '../i18n'
+import { initI18n, setLanguage } from '../i18n'
 import en from '../i18n/en.json'
+import ar from '../i18n/ar.json'
 
 const signInAdmin = vi.fn()
 vi.mock('../auth/api', () => ({ signInAdmin: (...a: unknown[]) => signInAdmin(...a) }))
@@ -96,5 +97,25 @@ describe('AdminSignIn layout', () => {
     expect(link).not.toHaveAttribute('aria-label')
     expect(link).toHaveAccessibleDescription(en.nav.backToMap)
     expect(screen.getByText(en.portal.admin)).toBeInTheDocument()
+  })
+  it.each(['en', 'ar'] as const)('%s: the Admin tag is readable and anchored under the logo the same way in both languages', (lang) => {
+    initI18n()
+    setLanguage(lang)
+    try {
+      render(<MemoryRouter><AdminSignIn /></MemoryRouter>)
+      const tag = screen.getByText(lang === 'en' ? en.portal.admin : ar.portal.admin)
+      const cls = tag.className.split(/\s+/)
+      expect(cls).not.toContain('text-xs')
+      expect(cls).toContain('text-sm')
+      const link = screen.getByRole('link', { name: 'HSCode' })
+      expect(tag.parentElement).toBe(link.parentElement)
+      // The column is LTR like the logo, so in AR too the tag sits under the logo's start (the HS mark).
+      const column = tag.parentElement!
+      expect(column).toHaveAttribute('dir', 'ltr')
+      expect(column.className.split(/\s+/)).toContain('items-start')
+      expect(tag).toHaveAttribute('dir', 'auto')
+    } finally {
+      setLanguage('en')
+    }
   })
 })

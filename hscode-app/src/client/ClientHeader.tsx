@@ -8,7 +8,6 @@ import { LangToggle } from '../ui/LangToggle'
 import { Logo } from '../ui/Logo'
 import { Bdi } from '../ui/Bdi'
 import { Banner } from '../ui/Banner'
-import { SignOutKeptBanner } from '../ui/SignOutKeptBanner'
 import { ClientMenu } from '../ui/ClientMenu'
 import { Icon } from '../ui/Icon'
 import logoutIcon from '../assets/icons/logout.svg?raw'
@@ -67,7 +66,6 @@ export function ClientHeader({ onAbout }: { onAbout?: () => void } = {}) {
         <Banner tone="danger" onClose={() => clearError()}>{t('errors.generic')}</Banner>
       </div>
     )}
-    <SignOutKeptBanner />
     </>
   )
 }

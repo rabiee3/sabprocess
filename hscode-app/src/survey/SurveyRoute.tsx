@@ -10,16 +10,15 @@ import { whenIdle } from '../lib/idle'
 import splashPattern from '../assets/patterns/splash-pattern.svg'
 import { Placeholder } from '../routes/Placeholder'
 import { AppHeader } from '../ui/AppHeader'
-import { PortalBrand } from '../ui/PortalBrand'
 import { InviteCodeScreen } from './InviteCodeScreen'
 import { FactoryStepper } from './FactoryStepper'
 import { ALLOW_EDIT } from './features'
 import { MySubmissions } from './MySubmissions'
 
-function Shell({ children }: { children: ReactNode }) {
+function Shell({ children, signInPanel }: { children: ReactNode; signInPanel?: boolean }) {
   return (
     <>
-      <AppHeader areaLabel="surveyor" />
+      <AppHeader areaLabel="surveyor" hideSignIn={signInPanel} />
       {children}
     </>
   )
@@ -33,9 +32,6 @@ function SignInPanel() {
       className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center gap-5 bg-ink-strong p-6 text-center"
       style={{ backgroundImage: `url(${splashPattern})` }}
     >
-      <span className="rounded bg-surface p-2">
-        <PortalBrand portal="surveyor" />
-      </span>
       <h1 className="text-display font-semibold text-surface">{t('survey.gate.signInTitle')}</h1>
       <p className="max-w-sm text-body text-line">{t('survey.gate.signInBody')}</p>
       {failed && (
@@ -73,7 +69,8 @@ export function Component() {
   }
   if (role === 'visitor') {
     return (
-      <Shell>
+      // One logo and one Google button: the header keeps the portal brand, the panel keeps the button.
+      <Shell signInPanel>
         <SignInPanel />
       </Shell>
     )
