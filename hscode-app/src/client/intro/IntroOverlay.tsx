@@ -26,7 +26,8 @@ const PINS = [
 
 /**
  * The first-visit intro (the former splash) as a full-screen modal over the map.
- * One staff link only (surveyors); there is deliberately no admin link.
+ * The footer carries one small admin link, so an installed app (no URL bar) can reach /admin.
+ * Surveyors use the ☰ menu.
  */
 export function IntroOverlay({
   onDismiss,
@@ -190,8 +191,8 @@ export function IntroOverlay({
               sabprocess.com
             </a>
           </p>
-          <Link to="/survey" className="inline-flex min-h-touch items-center font-semibold text-brand-500 underline">
-            {t('home.surveyorCta')}
+          <Link to="/admin" className="inline-flex min-h-touch items-center text-sm text-white/70 underline hover:text-white">
+            {t('intro.adminLogin')}
           </Link>
         </div>
       </DarkBackdrop>

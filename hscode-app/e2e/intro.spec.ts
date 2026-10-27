@@ -31,7 +31,7 @@ test('first visit: the intro is over an inert map, passes axe in EN and AR, and 
   await expect(intro(page)).toBeVisible()
   await expect(page.locator('main')).toHaveAttribute('inert', '')
   await expect(intro(page).getByRole('heading', { level: 1 })).toBeFocused()
-  await expect(intro(page).locator('a[href$="/survey"]')).toHaveCount(1)
+  await expect(intro(page).locator('a[href$="/survey"]')).toHaveCount(0)
 
   for (const lang of ['en', 'ar'] as const) {
     const s = lang === 'en' ? en : ar
@@ -175,11 +175,14 @@ test('browser Back while it is open leaves the page normally', async ({ page }) 
   await expect(page.getByRole('heading', { level: 1, name: en.survey.gate.signInTitle })).toBeVisible()
 })
 
-test('no link to /admin on /, /f/<id> or /survey', async ({ page }) => {
+test('the only admin link is "Login as Admin" in the open intro; none on the map, /f/<id> or /survey', async ({ page }) => {
   await open(page, './')
   await expect(intro(page)).toBeVisible()
-  await expect(page.locator('a[href*="/admin"]')).toHaveCount(0)
+  await expect(page.locator('a[href*="/admin"]')).toHaveCount(1)
+  await expect(intro(page).locator('a[href*="/admin"]')).toHaveText('Login as Admin')
   await page.keyboard.press('Escape')
+  await expect(intro(page)).toHaveCount(0)
+  await expect(page.locator('a[href*="/admin"]')).toHaveCount(0)
   await menuButton(page).click()
   await expect(page.getByRole('menu')).toBeVisible()
   await expect(page.locator('a[href*="/admin"]')).toHaveCount(0)
@@ -193,6 +196,24 @@ test('no link to /admin on /, /f/<id> or /survey', async ({ page }) => {
   await open(page, 'survey')
   await expect(page.getByRole('heading', { level: 1, name: en.survey.gate.signInTitle })).toBeVisible()
   await expect(page.locator('a[href*="/admin"]')).toHaveCount(0)
+})
+
+test('the admin link also shows when the intro is reopened through About, and in AR reads «دخول المشرف»', async ({ page }) => {
+  await page.addInitScript((k) => localStorage.setItem(k, '1'), KEY)
+  await open(page, './')
+  await mapReady(page)
+  await menuButton(page).click()
+  await page.getByRole('menuitem', { name: en.menu.about }).click()
+  await expect(intro(page).locator('a[href*="/admin"]')).toHaveCount(1)
+  await intro(page).locator('button[lang="ar"]').click()
+  await expect(intro(page, ar).getByRole('link', { name: 'دخول المشرف' })).toBeVisible()
+})
+
+test('clicking "Login as Admin" lands on the admin sign-in page', async ({ page }) => {
+  await open(page, './')
+  await intro(page).getByRole('link', { name: 'Login as Admin' }).click()
+  await expect(page).toHaveURL(/\/hscode\/admin$/)
+  await expect(page.getByLabel(en.admin.signIn.email)).toBeVisible()
 })
 
 test('an old /map?q=x link on a first visit lands on /?q=x with no intro (Back covered in client.spec)', async ({ page }) => {

@@ -462,10 +462,11 @@ describe('MapHome first-visit intro', () => {
     set.mockRestore()
   })
 
-  it('the page has no link to /admin with the intro open or the menu open', async () => {
+  it('the page has one admin link while the intro is open, and none once it is closed or the menu is open', async () => {
     setup()
-    expect(document.querySelectorAll('a[href*="/admin"]')).toHaveLength(0)
+    expect(document.querySelectorAll('a[href*="/admin"]')).toHaveLength(1)
     await userEvent.keyboard('{Escape}')
+    expect(document.querySelectorAll('a[href*="/admin"]')).toHaveLength(0)
     await userEvent.click(screen.getByRole('button', { name: 'Menu' }))
     expect(document.querySelectorAll('a[href*="/admin"]')).toHaveLength(0)
   })

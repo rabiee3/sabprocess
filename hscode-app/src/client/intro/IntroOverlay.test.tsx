@@ -79,14 +79,14 @@ describe('IntroOverlay', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1)
   })
 
-  it('has exactly one staff link, to /survey, and no link to /admin', () => {
+  it('has exactly one link to /admin, "Login as Admin", and no link to /survey', () => {
     const { dialog } = setup()
     const links = within(dialog).getAllByRole('link')
-    const survey = links.filter((l) => l.getAttribute('href')?.endsWith('/survey'))
-    expect(survey).toHaveLength(1)
-    expect(survey[0]).toHaveTextContent(en.home.surveyorCta)
-    expect(links.filter((l) => l.getAttribute('href')?.includes('/admin'))).toHaveLength(0)
-    expect(dialog.querySelectorAll('a[href*="/admin"]')).toHaveLength(0)
+    const admin = links.filter((l) => l.getAttribute('href')?.endsWith('/admin'))
+    expect(admin).toHaveLength(1)
+    expect(admin[0]).toHaveTextContent('Login as Admin')
+    expect(admin[0]).toHaveTextContent(en.intro.adminLogin)
+    expect(links.filter((l) => l.getAttribute('href')?.endsWith('/survey'))).toHaveLength(0)
   })
 
   it('keeps the footer credit with the sabprocess.com link', () => {
