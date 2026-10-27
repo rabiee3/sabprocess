@@ -16,6 +16,7 @@ vi.mock('../pwa/usePwa', () => ({
   usePwa: () => ({ ...pwa, needRefresh: false, update: vi.fn(), isIosSafari: false }),
 }))
 
+import { FloatingBanners } from '../ui/FloatingBanners'
 import { ClientHeader } from './ClientHeader'
 
 describe('ClientHeader sign-in', () => {
@@ -67,7 +68,7 @@ describe('ClientHeader sign-in', () => {
   it('Sign out wipes the cache; when survey writes are still pending it says the data was kept (fixed info banner)', async () => {
     signOutAndWipe.mockResolvedValue('kept')
     auth.user = { displayName: 'Mona', email: 'm@example.com' }
-    render(<MemoryRouter><ClientHeader /></MemoryRouter>)
+    render(<MemoryRouter><ClientHeader /><FloatingBanners /></MemoryRouter>)
     expect(screen.queryByText(en.nav.signOutKeptData)).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: en.nav.signOut }))
     expect(signOutAndWipe).toHaveBeenCalledTimes(1)

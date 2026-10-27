@@ -3,7 +3,6 @@ import { useSignOut } from '../auth/useSignOut'
 import { useGoogleSignIn } from '../auth/useGoogleSignIn'
 import { GoogleButton } from './GoogleButton'
 import { Banner } from './Banner'
-import { SignOutKeptBanner } from './SignOutKeptBanner'
 import { useAuth, type Role } from '../auth/useAuth'
 import { LangToggle } from './LangToggle'
 import { Link } from 'react-router'
@@ -14,8 +13,11 @@ import logoutIcon from '../assets/icons/logout.svg?raw'
 
 const BTN = 'min-h-touch rounded border border-line bg-surface px-3 text-sm font-semibold whitespace-nowrap text-ink-strong'
 
-/** `areaLabel` picks the portal brand (surveyor or admin); any other value gets a plain logo link to the client map. */
-export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
+/**
+ * `areaLabel` picks the portal brand (surveyor or admin); any other value gets a plain logo link to the client map.
+ * `hideSignIn` drops the header's Google button on a screen that is itself a sign-in panel (one button per screen).
+ */
+export function AppHeader({ areaLabel, hideSignIn }: { areaLabel?: Role; hideSignIn?: boolean }) {
   const { t } = useTranslation()
   const { user, loading } = useAuth()
   const { signIn, failed, clearError } = useGoogleSignIn()
@@ -50,7 +52,7 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
                 <span className="max-sm:sr-only">{t(busy ? 'nav.signingOut' : 'nav.signOut')}</span>
               </button>
             </>
-          ) : (
+          ) : hideSignIn ? null : (
             <GoogleButton compact iconOnlyOnPhone onClick={signIn} label={t('nav.signIn')} />
           ))}
       </div>
@@ -60,7 +62,6 @@ export function AppHeader({ areaLabel }: { areaLabel?: Role }) {
         <Banner tone="danger" onClose={clearError}>{t('errors.generic')}</Banner>
       </div>
     )}
-    <SignOutKeptBanner />
     </>
   )
 }

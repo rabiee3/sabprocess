@@ -449,7 +449,7 @@
     "all": "الكل",
     "filterArea": "اختر منطقة",
     "filterSector": "اختر قطاعًا",
-    "results_zero": "لا توجد مصانع",
+    "results_zero": "{{count}} مصانع",
     "results_one": "مصنع واحد",
     "results_two": "مصنعان",
     "results_few": "{{count}} مصانع",

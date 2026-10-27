@@ -51,12 +51,16 @@ export function AdminSignIn() {
       <div className="absolute top-3 end-3">
         <LangToggle />
       </div>
-      <div className="flex w-full max-w-sm flex-col items-start gap-2">
+      {/* The logo is always LTR, so the tag is anchored the same way in EN and AR: under its start, the "HS" mark,
+          instead of drifting to the far ("code") end in RTL. */}
+      <div dir="ltr" className="flex w-full max-w-sm flex-col items-start gap-2">
         {/* Named by the visible logo (WCAG 2.5.3); "Back to the map" is the title. */}
         <Link to="/" title={t('nav.backToMap')} className="block w-full rounded">
           <Logo variant="dark" className="h-auto w-full" />
         </Link>
-        <span className="rounded bg-white/15 px-2 py-1 text-xs font-semibold text-white">{t('portal.admin')}</span>
+        <span dir="auto" className="rounded bg-white/15 px-3 py-1 text-sm font-semibold text-white">
+          {t('portal.admin')}
+        </span>
       </div>
       <form
         onSubmit={(e) => void onSubmit(e)}
