@@ -321,3 +321,35 @@ test('(o) axe in EN and AR: the map, the ☰ menu open, and the factory page', a
     await scan(`${lang} factory page`)
   }
 })
+
+test('(p) phone: the results list shows an amber scroll thumb that follows the list', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'the thumb is for the phone sheet')
+  await open(page, './')
+  await expectPinsAndResults(page, en)
+  const list = page.getByTestId('sheet-list')
+  // Force an overflow (the seed has few factories), then let the sheet re-measure.
+  await list.evaluate((el) => {
+    el.style.maxHeight = '120px'
+    el.dispatchEvent(new Event('scroll'))
+  })
+  const thumb = page.getByTestId('sheet-thumb')
+  await expect(thumb).toBeVisible()
+  expect(await thumb.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(255, 197, 61)')
+  await expect(page.getByTestId('sheet-more')).toBeVisible()
+  const y = () => thumb.evaluate((el) => el.getBoundingClientRect().top)
+  const before = await y()
+  await list.evaluate((el) => el.scrollTo({ top: el.scrollHeight }))
+  await expect.poll(y).toBeGreaterThan(before)
+  await expect(page.getByTestId('sheet-more')).toBeHidden()
+})
+
+test('(q) typed text is applied when the box is left (the keyboard closed), not dropped', async ({ page }) => {
+  await open(page, './')
+  await expectPinsAndResults(page, en)
+  await searchBox(page).fill('maize')
+  await searchBox(page).blur()
+  await expect(page).toHaveURL(/[?&]q=maize/)
+  await expect(searchBox(page)).toHaveValue('maize')
+  await page.goBack()
+  await expect(page).not.toHaveURL(/[?&]q=/)
+})
